@@ -1,39 +1,25 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Cockpid</title>
-  <style>
-    body{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:32px;background:#f6f6f3;color:#222}
-    header{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-    section{background:white;border:1px solid #ddd;border-radius:14px;padding:18px}
-    h1,h2{margin-top:0}.item{padding:12px 0;border-top:1px solid #eee}.item:first-child{border-top:0}
-    .meta{font-size:12px;color:#777}.score{float:right;font-weight:600}
-    #status{font-size:13px;color:#777}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpid</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:32px;background:#f6f6f3;color:#222}header{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}section{background:white;border:1px solid #ddd;border-radius:14px;padding:18px}h1,h2{margin-top:0}.item{padding:12px 0;border-top:1px solid #eee}.item:first-child{border-top:0}.meta{font-size:12px;color:#777}#status{font-size:13px;color:#777}dialog{border:1px solid #ccc;border-radius:12px;padding:20px;max-width:480px}input{width:100%;box-sizing:border-box;padding:10px;margin:8px 0 12px}button{padding:9px 14px;cursor:pointer}.settings{font-size:13px}
+</style>
 </head>
 <body>
-<header><div><h1>Cockpid</h1><div id="status">Loading knowledge…</div></div></header>
-<div class="grid">
-  <section><h2>Ideas</h2><div id="ideas"></div></section>
-  <section><h2>Actions</h2><div id="actions"></div></section>
-  <section><h2>Hypotheses</h2><div id="hypotheses"></div></section>
-  <section><h2>Serendipity</h2><div id="connections"></div></section>
-</div>
+<header><div><h1>Cockpid</h1><div id="status">Storage connection required</div></div><button id="settings" class="settings">Storage settings</button></header>
+<div class="grid"><section><h2>Ideas</h2><div id="ideas"></div></section><section><h2>Actions</h2><div id="actions"></div></section><section><h2>Hypotheses</h2><div id="hypotheses"></div></section><section><h2>Serendipity</h2><div id="connections"></div></section></div>
+<dialog id="dialog"><h2>Storage connection</h2><p>Private GitHub repositoryを読むためのGitHub tokenを入力してください。tokenはこのブラウザのlocalStorageにのみ保存します。</p><label>GitHub token<input id="token" type="password" autocomplete="off" spellcheck="false"></label><div><button id="save">Save & connect</button> <button id="clear">Clear</button> <button id="close">Cancel</button></div></dialog>
 <script>
-const STORAGE='https://raw.githubusercontent.com/plzsayyes3/my-storage-note/main/';
-async function load(path){const r=await fetch(STORAGE+path+'?t='+Date.now());if(!r.ok)throw new Error(path+' '+r.status);return r.json()}
-function render(id,items){document.getElementById(id).innerHTML=items.length?items.map(x=>`<div class="item"><strong>${esc(x.title||'Untitled')}</strong><p>${esc(x.summary||'')}</p><div class="meta">confidence ${Math.round((x.confidence||0)*100)}%</div></div>`).join(''):'<div class="meta">No items</div>'}
+const OWNER='plzsayyes3',REPO='my-storage-note',TOKEN_KEY='cockpid.github.token';
+const paths={ideas:'extracted/idea/2026-08-26.json',actions:'extracted/action/2026-08-26.json',hypotheses:'extracted/hypothesis/2026-08-26.json',connections:'connections/semantic.json'};
+const token=()=>localStorage.getItem(TOKEN_KEY)||'';
+async function load(path){const t=token();if(!t)throw new Error('GitHub token is not configured');const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${t}`}});if(!r.ok){if(r.status===401||r.status===403)throw new Error('Token is invalid or lacks repository access');throw new Error(`${path} ${r.status}`)}const j=await r.json();return JSON.parse(atob(j.content.replace(/\n/g,'')))}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function main(){try{
- const [i,a,h,c]=await Promise.all([load('extracted/idea/2026-08-26.json'),load('extracted/action/2026-08-26.json'),load('extracted/hypothesis/2026-08-26.json'),load('connections/semantic.json')]);
- render('ideas',i.items||[]);render('actions',a.items||[]);render('hypotheses',h.items||[]);
- document.getElementById('connections').innerHTML=(c.connections||[]).map(x=>`<div class="item"><strong>${Math.round(x.score*100)}% connection</strong><p>${esc(x.reason)}</p><div class="meta">${esc(x.from)} → ${esc(x.to)}</div></div>`).join('')||'<div class="meta">No connections</div>';
- document.getElementById('status').textContent='Live data from my-storage-note';
- }catch(e){document.getElementById('status').textContent='Data unavailable: '+e.message}}
+function render(id,items){document.getElementById(id).innerHTML=items.length?items.map(x=>`<div class="item"><strong>${esc(x.title||'Untitled')}</strong><p>${esc(x.summary||'')}</p><div class="meta">confidence ${Math.round((x.confidence||0)*100)}%</div></div>`).join(''):'<div class="meta">No items</div>'}
+async function main(){try{const[i,a,h,c]=await Promise.all([load(paths.ideas),load(paths.actions),load(paths.hypotheses),load(paths.connections)]);render('ideas',i.items||[]);render('actions',a.items||[]);render('hypotheses',h.items||[]);document.getElementById('connections').innerHTML=(c.connections||[]).map(x=>`<div class="item"><strong>${Math.round(x.score*100)}% connection</strong><p>${esc(x.reason)}</p><div class="meta">${esc(x.from)} → ${esc(x.to)}</div></div>`).join('')||'<div class="meta">No connections</div>';document.getElementById('status').textContent='Connected to private my-storage-note';}catch(e){document.getElementById('status').textContent=e.message}}
+settings.onclick=()=>{token.value=token();dialog.showModal()};save.onclick=()=>{if(!token.value.trim())return;localStorage.setItem(TOKEN_KEY,token.value.trim());dialog.close();main()};clear.onclick=()=>{localStorage.removeItem(TOKEN_KEY);token.value='';dialog.close();document.getElementById('status').textContent='Storage connection cleared'};close.onclick=()=>dialog.close();
 main();
 </script>
-</body>
-</html>
+</body></html>
