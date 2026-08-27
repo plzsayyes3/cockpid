@@ -10,16 +10,20 @@ body{font-family:system-ui,sans-serif;max-width:1100px;margin:auto;padding:32px;
 <body>
 <header><div><h1>Cockpid</h1><div id="status">Storage connection required</div></div><button id="settings" class="settings">Storage settings</button></header>
 <div class="grid"><section><h2>Ideas</h2><div id="ideas"></div></section><section><h2>Actions</h2><div id="actions"></div></section><section><h2>Hypotheses</h2><div id="hypotheses"></div></section><section><h2>Serendipity</h2><div id="connections"></div></section></div>
-<dialog id="dialog"><h2>Storage connection</h2><p>Private GitHub repositoryを読むためのGitHub tokenを入力してください。tokenはこのブラウザのlocalStorageにのみ保存します。</p><label>GitHub token<input id="token" type="password" autocomplete="off" spellcheck="false"></label><div><button id="save">Save & connect</button> <button id="clear">Clear</button> <button id="close">Cancel</button></div></dialog>
+<dialog id="dialog"><h2>Storage connection</h2><p>Private GitHub repositoryを読むためのGitHub tokenを入力してください。tokenはこのブラウザのlocalStorageにのみ保存します。</p><label>GitHub token<input id="tokenInput" type="password" autocomplete="off" spellcheck="false"></label><div><button id="save">Save & connect</button> <button id="clear">Clear</button> <button id="close">Cancel</button></div></dialog>
 <script>
 const OWNER='plzsayyes3',REPO='my-storage-note',TOKEN_KEY='cockpid.github.token';
 const paths={ideas:'extracted/idea/2026-08-26.json',actions:'extracted/action/2026-08-26.json',hypotheses:'extracted/hypothesis/2026-08-26.json',connections:'connections/semantic.json'};
-const token=()=>localStorage.getItem(TOKEN_KEY)||'';
-async function load(path){const t=token();if(!t)throw new Error('GitHub token is not configured');const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${t}`}});if(!r.ok){if(r.status===401||r.status===403)throw new Error('Token is invalid or lacks repository access');throw new Error(`${path} ${r.status}`)}const j=await r.json();return JSON.parse(atob(j.content.replace(/\n/g,'')))}
+const getToken=()=>localStorage.getItem(TOKEN_KEY)||'';
+async function load(path){const t=getToken();if(!t)throw new Error('GitHub token is not configured');const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${t}`}});if(!r.ok){if(r.status===401||r.status===403)throw new Error('Token is invalid or lacks repository access');throw new Error(`${path} ${r.status}`)}const j=await r.json();return JSON.parse(atob(j.content.replace(/\n/g,'')))}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(id,items){document.getElementById(id).innerHTML=items.length?items.map(x=>`<div class="item"><strong>${esc(x.title||'Untitled')}</strong><p>${esc(x.summary||'')}</p><div class="meta">confidence ${Math.round((x.confidence||0)*100)}%</div></div>`).join(''):'<div class="meta">No items</div>'}
 async function main(){try{const[i,a,h,c]=await Promise.all([load(paths.ideas),load(paths.actions),load(paths.hypotheses),load(paths.connections)]);render('ideas',i.items||[]);render('actions',a.items||[]);render('hypotheses',h.items||[]);document.getElementById('connections').innerHTML=(c.connections||[]).map(x=>`<div class="item"><strong>${Math.round(x.score*100)}% connection</strong><p>${esc(x.reason)}</p><div class="meta">${esc(x.from)} → ${esc(x.to)}</div></div>`).join('')||'<div class="meta">No connections</div>';document.getElementById('status').textContent='Connected to private my-storage-note';}catch(e){document.getElementById('status').textContent=e.message}}
-settings.onclick=()=>{token.value=token();dialog.showModal()};save.onclick=()=>{if(!token.value.trim())return;localStorage.setItem(TOKEN_KEY,token.value.trim());dialog.close();main()};clear.onclick=()=>{localStorage.removeItem(TOKEN_KEY);token.value='';dialog.close();document.getElementById('status').textContent='Storage connection cleared'};close.onclick=()=>dialog.close();
+const settingsButton=document.getElementById('settings'),saveButton=document.getElementById('save'),clearButton=document.getElementById('clear'),closeButton=document.getElementById('close'),dialog=document.getElementById('dialog'),tokenInput=document.getElementById('tokenInput');
+settingsButton.onclick=()=>{tokenInput.value=getToken();dialog.showModal()};
+saveButton.onclick=()=>{const value=tokenInput.value.trim();if(!value){tokenInput.focus();return;}localStorage.setItem(TOKEN_KEY,value);dialog.close();main()};
+clearButton.onclick=()=>{localStorage.removeItem(TOKEN_KEY);tokenInput.value='';dialog.close();document.getElementById('status').textContent='Storage connection cleared'};
+closeButton.onclick=()=>dialog.close();
 main();
 </script>
 </body></html>
