@@ -46,7 +46,7 @@ Core interaction:
 ## Current entry points
 
 - `index.html` — GitHub Pages root / primary cockpit
-- `board.html` — Deep Dive Board / 並べて深く考えるための独立ページ (linked from the cockpit toolbar)
+- `board.html` — Deck Board 4×4 / カードを並べて深く考える独立ページ (linked from the cockpit toolbar)
 - `index-00.html` — UI gallery and pattern launcher
 - `main.html` — dynamic Mission Control build
 - `pattern-01.html` — Mission Control
@@ -56,22 +56,46 @@ Core interaction:
 - `pattern-05.html` — Hybrid Command Deck
 - `prototype-common.js` — shared GitHub API/data access and previous-day lookup
 
-## Deep Dive Board (`board.html`)
+## Deck Board 4×4 (`board.html`)
 
 The cockpit is optimized for *scanning*. The board is the opposite mode: a separate,
-self-contained page for **laying analysis items out side by side and thinking slowly**.
+self-contained page for **placing a small number of cards deliberately and thinking slowly**.
 `index.html` is unchanged apart from the toolbar link that opens it.
 
-- reads the same `extracted/{idea,theme,action}/YYYY-MM-DD.json` files as the cockpit,
-  over a user-chosen day window, and places each item as a draggable card
-- the user adds their own 付箋 (sticky notes) and draws connections between any two cards —
-  this is the **human** counterpart to the AI-generated `connections/semantic.json`,
-  not a replacement for it
-- layout, notes and connections live only in `localStorage` under `cockpid.board.v1`;
-  the board never writes analysis data back to `my-storage-note`
-- `⇪ mynotebookへ書き出す` posts the notes and connections as a single new memo into
-  `mynotebook/00_inbox`, so a synthesis session re-enters the pipeline as source material
-  (same write channel as ZEN V2)
+### Model
+
+```text
+LIBRARY            DECK                     GRID 4×4
+extracted/*.json → JSON cards (snapshot) → 16 slots, 1 card per slot
+(fetched)          localStorage             position = meaning
+```
+
+- **Card** — an idea/theme/action normalized into a JSON object
+  (`id`, `type`, `title`, `summary`, `date`, `source`). `source` keeps the
+  `repo / path / index` of the extracted record, so a card on the grid is still traceable
+  back to the analysis layer. 自作カード (`type: note`) use the same shape with `source: null`.
+- **Deck** — a named set of cards plus their arrangement. Adding a card to a deck
+  **snapshots its JSON into the deck**, so a deck stays readable without re-fetching.
+  Multiple decks can be created, renamed, duplicated, deleted and switched.
+- **Grid** — 4×4, one card per cell. The 16-slot ceiling is the point: it forces selection
+  rather than accumulation. Cards not placed sit in 控え (the deck's bench).
+
+### Why a grid instead of free placement
+
+Free placement made tidying the board the work, not thinking. The grid removes that cost.
+The cells are differentiated only just enough to carry meaning — editable labels on both
+axes (default: 種 / 育つ / 形 / 動く × 強い引力 / 気になる / 様子見 / 保留) and a very faint
+tint that deepens toward the "動く × 強い引力" corner. Nothing else. Where a card sits
+*is* the interpretation, so the axes are meant to be rewritten as the thinking changes.
+
+### State and I/O
+
+- decks live only in `localStorage` under `cockpid.deck.v2`; the board never writes
+  analysis data back to `my-storage-note`
+- `JSON` panel shows the active deck as JSON and can import one back — the backup/restore path
+- `⇪ 書き出す` posts the deck as one memo into `mynotebook/00_inbox`: the 4×4 layout as a
+  markdown table, the bench, and a card-provenance list. A synthesis session therefore
+  re-enters the pipeline as source material (same write channel as ZEN V2)
 
 It shares `index.html`'s token key, so a token entered on either page works on both.
 

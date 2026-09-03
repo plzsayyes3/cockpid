@@ -3,207 +3,313 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>COCKPID — Deep Dive Board</title>
+<title>COCKPID — Deck Board 4×4</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2305090d'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle' font-family='monospace' fill='%2345e59b'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#05090d;--panel:#0a1118;--panel2:#081017;--line:#182733;--line2:#284050;--text:#dce8ef;--muted:#718492;--green:#45e59b;--cyan:#43cbe8;--amber:#e4b84f;--purple:#aa8ceb;--shadow:0 14px 40px #0008}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh;background:radial-gradient(circle at 50% -12%,#172832 0,#05090d 45%)}button,input,textarea{font:inherit}
-.wrap{max-width:1760px;margin:auto;padding:14px}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh;background:radial-gradient(circle at 50% -12%,#172832 0,#05090d 45%)}button,input,textarea,select{font:inherit}
+.wrap{max-width:1600px;margin:auto;padding:14px}
 .top{border:1px solid var(--line);background:#091119ee;box-shadow:var(--shadow);padding:13px 16px;display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}.brand{font:700 19px ui-monospace,monospace;letter-spacing:2px}.sub{font:9px ui-monospace;color:var(--muted);letter-spacing:1.5px;margin-top:4px}
-.btn{display:inline-block;text-decoration:none;border:1px solid var(--line2);background:#0b141c;color:#aebdca;padding:7px 10px;cursor:pointer;font:10px ui-monospace;transition:.18s;white-space:nowrap}.btn:hover{border-color:var(--green);color:var(--green);background:#0c1917}.btn.primary{border-color:#24664b;color:var(--green);background:#0a1712}.btn.cyan{color:var(--cyan)}.btn.active{border-color:var(--cyan);color:var(--cyan);background:#0a1a1f;box-shadow:0 0 10px #43cbe855}.btn.danger:hover{border-color:#e05a5a;color:#e05a5a;background:#1a0c0c}
-.toolbar{display:flex;justify-content:space-between;align-items:center;margin:10px 0;gap:10px;flex-wrap:wrap}.navgroup{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.field{display:flex;align-items:center;gap:5px;font:9px ui-monospace;color:var(--muted);border:1px solid var(--line2);background:#0b141c;padding:6px 8px}.field input[type=number]{width:40px;background:transparent;border:none;color:var(--text);outline:none}.field input[type=checkbox]{accent-color:var(--green)}
+.btn{display:inline-block;text-decoration:none;border:1px solid var(--line2);background:#0b141c;color:#aebdca;padding:7px 10px;cursor:pointer;font:10px ui-monospace;transition:.18s;white-space:nowrap}.btn:hover{border-color:var(--green);color:var(--green);background:#0c1917}.btn.primary{border-color:#24664b;color:var(--green);background:#0a1712}.btn.cyan{color:var(--cyan)}.btn.danger:hover{border-color:#e05a5a;color:#e05a5a;background:#1a0c0c}.btn:disabled{opacity:.45;cursor:default}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin:10px 0;gap:10px;flex-wrap:wrap}.navgroup{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.field{display:flex;align-items:center;gap:5px;font:9px ui-monospace;color:var(--muted);border:1px solid var(--line2);background:#0b141c;padding:6px 8px}.field input[type=number]{width:38px;background:transparent;border:none;color:var(--text);outline:none}.field input[type=checkbox]{accent-color:var(--green)}
+select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--green);padding:6px 8px;font:10px ui-monospace;outline:none;max-width:220px}
 .status-pill{font:9px ui-monospace;color:var(--muted);border:1px solid var(--line);padding:6px 9px;background:var(--panel2)}
-.hint-bar{font:9px ui-monospace;color:var(--muted);letter-spacing:.5px;margin:0 0 8px;padding:0 2px}
-.board-scroll{position:relative;overflow:auto;border:1px solid var(--line);background:var(--panel2);box-shadow:0 7px 24px #0005;height:calc(100vh - 190px);min-height:420px}
-.board-canvas{position:relative;width:3600px;height:2400px;background-image:radial-gradient(#182733 1px,transparent 1px);background-size:26px 26px}
-.board-canvas.linking .card{cursor:crosshair}
-#linkLayer{position:absolute;inset:0;pointer-events:none;overflow:visible}
-#linkLayer line.hit{stroke:transparent;stroke-width:14;cursor:pointer;pointer-events:stroke}
-#linkLayer line.visible{stroke:var(--cyan);stroke-width:1.4;opacity:.75;pointer-events:none}
-#linkLayer text{fill:var(--cyan);font:9px ui-monospace;pointer-events:none}
-.card{position:absolute;width:250px;border:1px solid var(--line2);background:#0a131a;box-shadow:0 6px 18px #0007;padding:0;user-select:none;touch-action:none}
-.card .card-body{user-select:text}
-.card .card-head{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:grab;font:9px ui-monospace;color:var(--muted);letter-spacing:.5px}
-.card .card-head:active{cursor:grabbing}
-.card .card-del{border:none;background:none;color:var(--muted);cursor:pointer;font:11px ui-monospace;padding:0 2px}.card .card-del:hover{color:#e05a5a}
-.card .card-body{padding:9px 10px;max-height:230px;overflow-y:auto}
-.card.source{border-left:3px solid var(--cyan)}.card.source.type-idea{border-left-color:var(--cyan)}.card.source.type-theme{border-left-color:var(--purple)}.card.source.type-action{border-left-color:var(--amber)}
-.card.source h3{margin:0 0 6px;font-size:12px;line-height:1.5}.card.source p{margin:0;font-size:10px;line-height:1.6;color:#c3d3dd}
-.card.note{border-left:3px solid var(--green);background:#0b1c17}
-.card.note textarea{width:100%;min-height:90px;resize:vertical;background:#081410;border:1px solid var(--line2);color:var(--text);padding:7px;font-size:11px;line-height:1.6;outline:none}
-.card.note textarea:focus{border-color:#2b7053}
-.card.selecting{outline:2px solid var(--cyan);outline-offset:2px}
-.card.dragging{opacity:.85;z-index:20}
-.token-box{border:1px solid var(--line);padding:10px;margin-top:10px;max-width:420px}.token-box label{display:block;font:9px ui-monospace;color:var(--muted);margin-bottom:5px}.token-box input{width:100%;background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font:10px ui-monospace}.small{font-size:9px;color:var(--muted);line-height:1.5;margin-top:6px}.token-settings{display:none}.token-settings.open{display:block}
-.footer{padding:12px 2px 2px;color:#40515e;font:8px ui-monospace;display:flex;justify-content:space-between}
-@media(max-width:700px){.wrap{padding:9px}.top{align-items:flex-start}}
+.hint-bar{font:9px ui-monospace;color:var(--muted);margin:0 0 8px;padding:0 2px;line-height:1.7}
+.layout{display:grid;grid-template-columns:1fr 322px;gap:9px;align-items:start}
+.panel{border:1px solid var(--line);background:linear-gradient(180deg,#0d151e,#091017);box-shadow:0 7px 24px #0005;padding:12px}
+.grid-scroll{overflow-x:auto}
+.grid{display:grid;grid-template-columns:78px repeat(4,minmax(150px,1fr));grid-template-rows:auto repeat(4,minmax(132px,1fr));gap:6px;min-width:740px}
+.corner{display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px}.corner span{font:8px ui-monospace;color:#2c3f4c;letter-spacing:1px}
+.col-head,.row-head{display:flex;align-items:center}.row-head{justify-content:flex-end;padding-right:4px}
+.axis-input{width:100%;background:transparent;border:none;border-bottom:1px dashed var(--line2);color:var(--muted);font:9px ui-monospace;padding:4px 2px;outline:none;text-align:center;letter-spacing:.5px}
+.row-head .axis-input{text-align:right;border-bottom:none;border-right:1px dashed var(--line2);padding-right:6px}
+.axis-input:focus{color:var(--green);border-color:var(--green)}
+.cell{border:1px solid var(--line);background:rgba(69,229,155,calc(var(--t,0)*.013));position:relative;padding:4px;transition:border-color .15s,box-shadow .15s}
+.cell.empty{cursor:pointer}
+.cell.empty:after{content:attr(data-key);position:absolute;left:7px;bottom:6px;font:8px ui-monospace;color:#21313c;letter-spacing:1px}
+.cell.empty:hover{border-color:var(--line2)}
+.cell.armed{border-color:var(--green);box-shadow:inset 0 0 0 1px #45e59b55}
+.cell.drop{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.card{border:1px solid var(--line2);background:#0a131a;padding:7px 8px 6px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;height:100%;cursor:grab;touch-action:none;user-select:none}
+.card:active{cursor:grabbing}
+.card.idea{border-left:3px solid var(--cyan)}.card.theme{border-left:3px solid var(--purple)}.card.action{border-left:3px solid var(--amber)}.card.note{border-left:3px solid var(--green);background:#0b1a15}
+.card.selected{outline:2px solid var(--green);outline-offset:1px}
+.c-meta{font:8px ui-monospace;color:var(--muted);display:flex;justify-content:space-between;gap:6px;letter-spacing:.5px;padding-right:14px}
+.c-title{font-size:11px;line-height:1.45;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical}
+.c-sum{font-size:9px;line-height:1.55;color:#94a6b3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;margin:0}
+.c-btns{position:absolute;right:3px;top:3px;display:flex;gap:2px}
+.c-btns button{border:none;background:none;color:#3f5563;cursor:pointer;font:10px ui-monospace;padding:1px 2px;line-height:1}
+.c-btns button:hover{color:var(--green)}.c-btns button.x:hover{color:#e05a5a}
+.side{display:flex;flex-direction:column;gap:8px}
+.tabs{display:flex;gap:5px}.tab{flex:1;text-align:center}.tab.on{border-color:var(--green);color:var(--green);background:#0c1917}
+.side-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:calc(100vh - 300px);min-height:180px;padding-right:2px}
+.side-list .card{height:auto;cursor:pointer}
+.side-empty{border:1px dashed var(--line2);color:var(--muted);font:9px ui-monospace;padding:16px;text-align:center;line-height:1.6}
+.side-drop{border-color:var(--cyan)!important}
+.mk{display:flex;flex-direction:column;gap:6px}
+.mk input,.mk textarea{background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font-size:11px;outline:none;width:100%}
+.mk textarea{min-height:88px;resize:vertical;line-height:1.6}
+.mk input:focus,.mk textarea:focus{border-color:#2b7053}
+.fold{display:none;margin-top:9px}.fold.open{display:block}
+.token-box{border:1px solid var(--line);padding:10px;max-width:460px}.token-box label{display:block;font:9px ui-monospace;color:var(--muted);margin-bottom:5px}.token-box input{width:100%;background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font:10px ui-monospace}
+.small{font-size:9px;color:var(--muted);line-height:1.6;margin-top:6px}
+#jsonBox{width:100%;min-height:170px;background:#060b10;border:1px solid var(--line2);color:#9fb0bc;padding:9px;font:10px ui-monospace;line-height:1.5;resize:vertical;outline:none}
+.ghost{position:fixed;z-index:99;width:190px;pointer-events:none;opacity:.92;transform:translate(-50%,-50%);box-shadow:0 12px 30px #000b}
+.footer{padding:12px 2px 2px;color:#40515e;font:8px ui-monospace;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+@media(max-width:1080px){.layout{grid-template-columns:1fr}.side-list{max-height:320px}}
+@media(max-width:700px){.wrap{padding:9px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header class="top">
-  <div><div class="brand">COCKPID / DEEP DIVE BOARD</div><div class="sub">MEMO ARRANGEMENT — SYNTHESIS SPACE</div></div>
+  <div><div class="brand">COCKPID / DECK BOARD 4×4</div><div class="sub">JSON CARDS — POSITION IS THE MEANING</div></div>
   <a class="btn" href="index.html">◂ コックピットへ戻る</a>
 </header>
+
 <div class="toolbar">
+  <div class="navgroup">
+    <select class="deck-select" id="deckSelect"></select>
+    <button class="btn" id="deckNew">＋ 新規</button>
+    <button class="btn" id="deckRename">名前</button>
+    <button class="btn" id="deckDup">複製</button>
+    <button class="btn danger" id="deckDel">削除</button>
+  </div>
   <div class="navgroup">
     <label class="field">過去<input id="dayWindow" type="number" min="1" max="90" value="14">日</label>
     <label class="field"><input type="checkbox" id="fIdea" checked>IDEA</label>
     <label class="field"><input type="checkbox" id="fTheme" checked>THEME</label>
     <label class="field"><input type="checkbox" id="fAction" checked>ACTION</label>
     <button class="btn primary" id="loadBtn">◈ 読み込み</button>
-  </div>
-  <div class="navgroup">
-    <button class="btn" id="addNoteBtn">＋ 付箋</button>
-    <button class="btn cyan" id="linkModeBtn">🔗 接続モード</button>
-    <button class="btn" id="exportBtn">⇪ mynotebookへ書き出す</button>
-    <button class="btn danger" id="clearBtn">🗑 クリア</button>
+    <button class="btn" id="exportBtn">⇪ 書き出す</button>
+    <button class="btn" id="jsonToggle">JSON</button>
     <span class="status-pill" id="boardStatus">READY</span>
   </div>
 </div>
-<div class="hint-bar">カードはドラッグで移動 / 「＋ 付箋」で自分の考えを書き足す / 接続モードでカードを2つクリックすると線を引ける（線クリックで削除）</div>
-<div class="board-scroll" id="boardScroll">
-  <div class="board-canvas" id="boardCanvas">
-    <svg id="linkLayer"></svg>
-  </div>
+<div class="hint-bar">カードをクリック → 空きマスをクリックで配置（ドラッグでも可）／ マスの上のカードをクリック → 別のマスで移動・入れ替え ／ 軸ラベルは直接書き換えられます</div>
+
+<div class="layout">
+  <section class="panel grid-scroll"><div class="grid" id="grid"></div></section>
+  <section class="panel side">
+    <div class="tabs">
+      <button class="btn tab on" data-tab="tray" id="tabTray">控え <span id="cntTray">0</span></button>
+      <button class="btn tab" data-tab="lib" id="tabLib">ライブラリ <span id="cntLib">0</span></button>
+      <button class="btn tab" data-tab="mk" id="tabMk">自作</button>
+    </div>
+    <div class="side-list" id="sideList"></div>
+    <div class="mk" id="mkForm" style="display:none">
+      <input id="mkTitle" placeholder="カードの見出し" maxlength="120">
+      <textarea id="mkBody" placeholder="考えていること……"></textarea>
+      <button class="btn primary" id="mkAdd">＋ デックに追加</button>
+      <div class="small">自作カードは <b>note</b> 型として、抽出カードと同じ JSON 構造でデックに入ります。</div>
+    </div>
+  </section>
 </div>
-<button class="btn token-toggle" id="tokenToggle" style="margin-top:10px">▸ 接続設定を表示</button>
-<div class="token-settings" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">index.html と同じ localStorage キーを共有します。TokenはlocalStorageにのみ保存。<b>mynotebook と my-storage-note の両方</b>に Contents 権限が必要です。</div></div></div>
-<footer class="footer"><span>COCKPID // DEEP DIVE BOARD</span><span>SOURCE → ANALYSIS DATA → HUMAN SYNTHESIS</span></footer>
+
+<button class="btn" id="tokenToggle" style="margin-top:10px">▸ 接続設定を表示</button>
+<div class="fold" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">index.html と同じ localStorage キーを共有します。Tokenは localStorage にのみ保存。<b>mynotebook と my-storage-note の両方</b>に Contents 権限が必要です。</div></div></div>
+<div class="fold" id="jsonPanel"><div class="panel"><textarea id="jsonBox" spellcheck="false"></textarea><div class="navgroup" style="margin-top:8px"><button class="btn" id="jsonShow">現在のデックを表示</button><button class="btn primary" id="jsonImport">JSONから読み込み</button><span class="small" style="margin:0">デックは localStorage（<b>cockpid.deck.v2</b>）にのみ保存されます。</span></div></div></div>
+
+<footer class="footer"><span>COCKPID // DECK BOARD</span><span>SOURCE → ANALYSIS DATA → HUMAN SYNTHESIS</span></footer>
 </div>
 <script>
 const CFG={owner:'plzsayyes3',sourceRepo:'mynotebook',analysisRepo:'my-storage-note',inboxDir:'00_inbox'};
 const tokenKey='zen-note-github-token';
-const stateKey='cockpid.board.v1';
+const stateKey='cockpid.deck.v2';
+const N=4;
+const DEFAULT_AXES={cols:['種','育つ','形','動く'],rows:['強い引力','気になる','様子見','保留']};
+
 function pad(n){return String(n).padStart(2,'0')}
 function iso(d){return d.toISOString().slice(0,10)}
 function addDays(d,n){const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x}
 function jst(d=new Date()){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const y=+p.find(x=>x.type==='year').value,m=+p.find(x=>x.type==='month').value,dd=+p.find(x=>x.type==='day').value;return new Date(Date.UTC(y,m-1,dd))}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function uid(p){return p+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)}
 function token(){return localStorage.getItem(tokenKey)||''}
 function headers(){const t=token();return t?{Authorization:`Bearer ${t}`,Accept:'application/vnd.github+json'}:{Accept:'application/vnd.github+json'}}
 async function repoGetSafe(repo,path){const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${path}`,{headers:headers()});if(r.status===404)return null;if(!r.ok)throw new Error(`${r.status} ${repo}/${path}`);return r.json()}
 function decode64(s){const raw=atob((s||'').replace(/\n/g,''));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
-function normalizeItems(data,type,date,path){if(!data)return[];const arr=Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.results)?data.results:[]));return arr.map((x,i)=>({id:`${path}#${i}`,type:x.type||type,title:x.title||x.name||`${type} ${i+1}`,summary:x.summary||x.description||x.content||'',date:x.date||x.source?.date||x.created_at||date})).filter(x=>x.title)}
-async function loadExtractedDay(type,date){const j=await repoGetSafe(CFG.analysisRepo,`extracted/${type}/${date}.json`);if(!j||!j.content)return[];return normalizeItems(JSON.parse(decode64(j.content)),type,date,`extracted/${type}/${date}.json`)}
-async function loadExtractedRange(type,days){const out=[];for(let i=1;i<=days;i++)out.push(...await loadExtractedDay(type,iso(addDays(jst(),-i))));return out}
-
-let sourceCards=[];
-let state={notes:[],positions:{},links:[],autoSlot:0};
-function loadState(){try{const raw=localStorage.getItem(stateKey);if(raw){const p=JSON.parse(raw);state={notes:p.notes||[],positions:p.positions||{},links:p.links||[],autoSlot:p.autoSlot||0}}}catch(e){console.error(e)}}
-let saveTimer=null;
-function saveState(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(stateKey,JSON.stringify(state));setStatus('SAVED ✓')}catch(e){console.error(e);setStatus('SAVE ERROR')}},250)}
 function setStatus(t){document.getElementById('boardStatus').textContent=t}
 
-function cardMeta(id){const s=sourceCards.find(c=>c.id===id);if(s)return{kind:'source',...s};const n=state.notes.find(x=>x.id===id);if(n)return{kind:'note',...n};return null}
-function allCardIds(){return[...sourceCards.map(c=>c.id),...state.notes.map(n=>n.id)]}
-function defaultPos(){const cols=6,cw=270,ch=190,gap=20;const col=state.autoSlot%cols,row=Math.floor(state.autoSlot/cols);state.autoSlot++;return{x:30+col*(cw+gap),y:30+row*(ch+gap)}}
-function posFor(id){if(!state.positions[id]){state.positions[id]=defaultPos()}return state.positions[id]}
+/* ---- card JSON ---- */
+function toCards(data,type,date,path){
+  if(!data)return[];
+  const arr=Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.results)?data.results:[]));
+  return arr.map((x,i)=>({
+    id:`${path}#${i}`,
+    type:x.type||type,
+    title:x.title||x.name||`${type} ${i+1}`,
+    summary:x.summary||x.description||x.content||'',
+    date:x.date||x.source?.date||x.created_at||date,
+    source:{repo:CFG.analysisRepo,path,index:i}
+  })).filter(x=>x.title);
+}
+async function loadDay(type,date){const j=await repoGetSafe(CFG.analysisRepo,`extracted/${type}/${date}.json`);if(!j||!j.content)return[];return toCards(JSON.parse(decode64(j.content)),type,date,`extracted/${type}/${date}.json`)}
+async function loadRange(type,days){const out=[];for(let i=1;i<=days;i++)out.push(...await loadDay(type,iso(addDays(jst(),-i))));return out}
 
-let linkMode=false,pendingLink=null;
-function toggleLinkMode(){linkMode=!linkMode;pendingLink=null;document.getElementById('linkModeBtn').classList.toggle('active',linkMode);document.getElementById('boardCanvas').classList.toggle('linking',linkMode);render()}
+/* ---- state ---- */
+let library=[],state=null,selected=null,tab='tray';
+function newDeck(name){return{id:uid('deck'),name:name||'DECK 01',createdAt:new Date().toISOString(),axes:{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]},cards:{},slots:{},tray:[]}}
+function loadState(){
+  try{const raw=localStorage.getItem(stateKey);if(raw){const p=JSON.parse(raw);if(p&&p.decks&&p.decks.length){state=p;}}}catch(e){console.error(e)}
+  if(!state){const d=newDeck('DECK 01');state={version:2,activeId:d.id,decks:[d]}}
+  if(!state.decks.some(d=>d.id===state.activeId))state.activeId=state.decks[0].id;
+  state.decks.forEach(d=>{d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};d.cards=d.cards||{};d.slots=d.slots||{};d.tray=d.tray||[]});
+}
+let saveTimer=null;
+function saveState(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(stateKey,JSON.stringify(state));setStatus('SAVED ✓')}catch(e){console.error(e);setStatus('SAVE ERROR')}},250)}
+function deck(){return state.decks.find(d=>d.id===state.activeId)}
+function placedIds(){return Object.values(deck().slots).filter(Boolean)}
+function cellOf(id){return Object.keys(deck().slots).find(k=>deck().slots[k]===id)||null}
 
-function addNote(){const id='note-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);const n={id,text:''};state.notes.push(n);posFor(id);saveState();render();setTimeout(()=>{const ta=document.querySelector(`[data-id="${id}"] textarea`);if(ta)ta.focus()},30)}
-function deleteNote(id){state.notes=state.notes.filter(n=>n.id!==id);delete state.positions[id];state.links=state.links.filter(l=>l.a!==id&&l.b!==id);saveState();render()}
-function deleteLink(id){state.links=state.links.filter(l=>l.id!==id);saveState();render()}
-
-function onCardClick(id){
-  if(!linkMode)return;
-  if(!pendingLink){pendingLink=id;render();return}
-  if(pendingLink===id){pendingLink=null;render();return}
-  const a=pendingLink,b=id;pendingLink=null;
-  if(state.links.some(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a))){render();return}
-  const label=prompt('この接続のメモ（任意）','')||'';
-  state.links.push({id:'link-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),a,b,label:label.trim()});
-  saveState();render();
+/* ---- deck ops ---- */
+function addToDeck(card){const d=deck();if(d.cards[card.id])return;d.cards[card.id]=JSON.parse(JSON.stringify(card));d.tray.push(card.id);saveState();renderAll()}
+function dropFromDeck(id){const d=deck();delete d.cards[id];d.tray=d.tray.filter(x=>x!==id);const k=cellOf(id);if(k)delete d.slots[k];if(selected===id)selected=null;saveState();renderAll()}
+function toTray(id){const d=deck();const k=cellOf(id);if(k)delete d.slots[k];if(!d.tray.includes(id))d.tray.push(id);saveState();renderAll()}
+function place(id,key){
+  const d=deck();const from=cellOf(id),occupant=d.slots[key];
+  if(from===key)return;
+  if(occupant&&occupant!==id){
+    if(from)d.slots[from]=occupant;              // swap between cells
+    else{d.tray=d.tray.filter(x=>x!==occupant);d.tray.push(occupant)} // bumped card goes to tray
+  }else if(from)delete d.slots[from];
+  d.slots[key]=id;
+  d.tray=d.tray.filter(x=>x!==id);
+  selected=null;saveState();renderAll();
 }
 
-function makeCardEl(id){
-  const meta=cardMeta(id);if(!meta)return null;
-  const pos=posFor(id);
-  const el=document.createElement('div');
-  el.className='card '+(meta.kind==='source'?`source type-${meta.type}`:'note');
-  if(pendingLink===id)el.classList.add('selecting');
-  el.dataset.id=id;
-  el.style.left=pos.x+'px';el.style.top=pos.y+'px';
-  if(meta.kind==='source'){
-    el.innerHTML=`<div class="card-head"><span>${esc((meta.type||'').toUpperCase())} / ${esc(meta.date||'—')}</span><span></span></div><div class="card-body"><h3>${esc(meta.title)}</h3><p>${esc(meta.summary)||'詳細情報なし'}</p></div>`;
-  }else{
-    el.innerHTML=`<div class="card-head"><span>付箋 MEMO</span><button class="card-del" title="削除">✕</button></div><div class="card-body"><textarea placeholder="ここに考えたことを書く……"></textarea></div>`;
-    const ta=el.querySelector('textarea');ta.value=meta.text||'';
-    ta.addEventListener('input',()=>{const n=state.notes.find(x=>x.id===id);if(n){n.text=ta.value;saveState()}});
-    ta.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.querySelector('.card-del').addEventListener('click',e=>{e.stopPropagation();if(confirm('この付箋を削除しますか？'))deleteNote(id)});
-  }
-  el.addEventListener('click',e=>{if(dragMoved)return;onCardClick(id)});
-  el.querySelector('.card-head').addEventListener('pointerdown',e=>startDrag(e,id,el));
+/* ---- rendering ---- */
+function makeCard(card,where,key){
+  const el=document.createElement('article');
+  el.className='card '+(card.type||'note');
+  if(selected===card.id)el.classList.add('selected');
+  el.dataset.id=card.id;el.dataset.where=where;
+  const btns=where==='cell'?'<button class="back" title="控えに戻す">▾</button><button class="x" title="デックから外す">✕</button>'
+           :where==='tray'?'<button class="x" title="デックから外す">✕</button>':'';
+  el.innerHTML=`<div class="c-meta"><span>${esc((card.type||'note').toUpperCase())}</span><span>${esc(card.date||'—')}</span></div>`
+    +`<div class="c-title">${esc(card.title)}</div>`
+    +(card.summary?`<p class="c-sum">${esc(card.summary)}</p>`:'')
+    +(btns?`<div class="c-btns">${btns}</div>`:'');
+  const x=el.querySelector('.x');if(x)x.addEventListener('click',e=>{e.stopPropagation();dropFromDeck(card.id)});
+  const b=el.querySelector('.back');if(b)b.addEventListener('click',e=>{e.stopPropagation();toTray(card.id)});
+  el.addEventListener('pointerdown',e=>startDrag(e,card,where));
   return el;
 }
+function renderGrid(){
+  const d=deck(),g=document.getElementById('grid');
+  g.innerHTML='';
+  const corner=document.createElement('div');corner.className='corner';corner.innerHTML='<span>▚ 4×4</span>';g.appendChild(corner);
+  for(let c=0;c<N;c++){
+    const h=document.createElement('div');h.className='col-head';
+    const i=document.createElement('input');i.className='axis-input';i.maxLength=12;i.dataset.axis='cols';i.dataset.i=c;i.value=d.axes.cols[c]||'';
+    h.appendChild(i);g.appendChild(h);
+  }
+  for(let r=0;r<N;r++){
+    const rh=document.createElement('div');rh.className='row-head';
+    const ri=document.createElement('input');ri.className='axis-input';ri.maxLength=12;ri.dataset.axis='rows';ri.dataset.i=r;ri.value=d.axes.rows[r]||'';
+    rh.appendChild(ri);g.appendChild(rh);
+    for(let c=0;c<N;c++){
+      const key=`r${r}c${c}`,cell=document.createElement('div');
+      cell.className='cell';cell.dataset.cell=key;cell.dataset.key=key.toUpperCase();
+      cell.style.setProperty('--t',String((N-1-r)+c));
+      const cid=d.slots[key];
+      if(cid&&d.cards[cid])cell.appendChild(makeCard(d.cards[cid],'cell',key));
+      else{cell.classList.add('empty');if(selected)cell.classList.add('armed')}
+      g.appendChild(cell);
+    }
+  }
+}
+function renderSide(){
+  const d=deck(),list=document.getElementById('sideList'),form=document.getElementById('mkForm');
+  document.getElementById('cntTray').textContent=d.tray.length;
+  const libCards=library.filter(c=>!d.cards[c.id]);
+  document.getElementById('cntLib').textContent=libCards.length;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===tab));
+  form.style.display=tab==='mk'?'flex':'none';
+  list.style.display=tab==='mk'?'none':'flex';
+  if(tab==='mk')return;
+  list.innerHTML='';
+  const items=tab==='tray'?d.tray.map(id=>d.cards[id]).filter(Boolean):libCards;
+  if(!items.length){
+    const e=document.createElement('div');e.className='side-empty';
+    e.textContent=tab==='tray'?'控えは空です。ライブラリから追加してください。':(library.length?'すべてデックに入っています。':'未読み込み。「◈ 読み込み」でカードを取得します。');
+    list.appendChild(e);return;
+  }
+  items.forEach(c=>list.appendChild(makeCard(c,tab==='tray'?'tray':'lib')));
+}
+function renderDeckBar(){
+  const sel=document.getElementById('deckSelect');
+  sel.innerHTML=state.decks.map(d=>`<option value="${esc(d.id)}"${d.id===state.activeId?' selected':''}>${esc(d.name)} (${Object.keys(d.cards).length})</option>`).join('');
+  document.getElementById('deckDel').disabled=state.decks.length<=1;
+}
+function renderAll(){renderDeckBar();renderGrid();renderSide()}
 
-let dragState=null,dragMoved=false;
-function startDrag(e,id,el){
-  if(linkMode)return; // in link mode, clicks select instead of drag
-  if(e.target.closest('.card-del')||e.target.closest('textarea'))return;
-  e.preventDefault();
-  const pos=posFor(id);
-  dragState={id,el,startX:e.clientX,startY:e.clientY,origX:pos.x,origY:pos.y};
-  dragMoved=false;
-  el.classList.add('dragging');
-  el.setPointerCapture(e.pointerId);
-  el.addEventListener('pointermove',onDragMove);
-  el.addEventListener('pointerup',onDragEnd);
-  el.addEventListener('pointercancel',onDragEnd);
+/* ---- click / drag ---- */
+function onCardClick(card,where){
+  if(where==='lib'){addToDeck(card);return}
+  selected=(selected===card.id)?null:card.id;
+  renderAll();
 }
-function onDragMove(e){
-  if(!dragState)return;
-  const dx=e.clientX-dragState.startX,dy=e.clientY-dragState.startY;
-  if(Math.abs(dx)>4||Math.abs(dy)>4)dragMoved=true;
-  const nx=Math.max(0,dragState.origX+dx),ny=Math.max(0,dragState.origY+dy);
-  state.positions[dragState.id]={x:nx,y:ny};
-  dragState.el.style.left=nx+'px';dragState.el.style.top=ny+'px';
-  drawLinks();
+function onCellClick(key){
+  const d=deck();
+  if(selected){place(selected,key);return}
+  const cid=d.slots[key];
+  if(cid){selected=cid;renderAll()}
 }
-function onDragEnd(e){
-  if(!dragState)return;
-  dragState.el.classList.remove('dragging');
-  dragState.el.removeEventListener('pointermove',onDragMove);
-  dragState.el.removeEventListener('pointerup',onDragEnd);
-  dragState.el.removeEventListener('pointercancel',onDragEnd);
-  dragState=null;
-  saveState();
-  setTimeout(()=>{dragMoved=false},0);
+let drag=null;
+function startDrag(e,card,where){
+  if(e.button!==undefined&&e.button!==0)return;
+  if(e.target.closest('.c-btns'))return;
+  drag={card,where,x0:e.clientX,y0:e.clientY,moved:false,ghost:null,target:null};
 }
+function clearDrop(){document.querySelectorAll('.cell.drop,.side-drop').forEach(el=>el.classList.remove('drop','side-drop'))}
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(!drag.moved){
+    if(Math.abs(e.clientX-drag.x0)<5&&Math.abs(e.clientY-drag.y0)<5)return;
+    drag.moved=true;
+    const g=makeCard(drag.card,'ghost');g.classList.add('ghost');document.body.appendChild(g);drag.ghost=g;
+  }
+  drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
+  clearDrop();
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+  const cell=under&&under.closest('.cell'),side=under&&under.closest('#sideList');
+  drag.target=cell?{kind:'cell',key:cell.dataset.cell}:(side?{kind:'side'}:null);
+  if(cell)cell.classList.add('drop');else if(side)side.classList.add('side-drop');
+});
+document.addEventListener('pointerup',e=>{
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.ghost)d.ghost.remove();
+  clearDrop();
+  if(!d.moved){
+    const cellEl=e.target.closest?e.target.closest('.cell'):null;
+    if(d.where==='cell'&&cellEl&&deck().slots[cellEl.dataset.cell]===d.card.id&&selected&&selected!==d.card.id){onCellClick(cellEl.dataset.cell);return}
+    onCardClick(d.card,d.where);return;
+  }
+  if(!d.target)return;
+  if(d.target.kind==='cell'){
+    if(d.where==='lib')addToDeck(d.card);
+    place(d.card.id,d.target.key);
+  }else if(d.target.kind==='side'){
+    if(d.where==='lib')addToDeck(d.card);else toTray(d.card.id);
+  }
+});
+document.getElementById('grid').addEventListener('click',e=>{
+  if(e.target.closest('.card'))return;
+  const cell=e.target.closest('.cell');
+  if(cell)onCellClick(cell.dataset.cell);
+});
+document.getElementById('grid').addEventListener('input',e=>{
+  const i=e.target.closest('.axis-input');if(!i)return;
+  deck().axes[i.dataset.axis][+i.dataset.i]=i.value;saveState();
+});
 
-function cardCenter(id){
-  const el=document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
-  const pos=posFor(id);
-  const w=el?el.offsetWidth:250,h=el?el.offsetHeight:80;
-  return{x:pos.x+w/2,y:pos.y+h/2};
-}
-function drawLinks(){
-  const svg=document.getElementById('linkLayer');
-  svg.innerHTML='';
-  state.links.forEach(l=>{
-    if(!cardMeta(l.a)||!cardMeta(l.b))return;
-    const p1=cardCenter(l.a),p2=cardCenter(l.b);
-    const mk=(cls)=>{const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',p1.x);line.setAttribute('y1',p1.y);line.setAttribute('x2',p2.x);line.setAttribute('y2',p2.y);line.setAttribute('class',cls);return line};
-    const visible=mk('visible');svg.appendChild(visible);
-    const hit=mk('hit');hit.addEventListener('click',()=>{if(confirm('この接続を削除しますか？'))deleteLink(l.id)});svg.appendChild(hit);
-    if(l.label){const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',(p1.x+p2.x)/2);t.setAttribute('y',(p1.y+p2.y)/2-4);t.textContent=l.label;svg.appendChild(t)}
-  });
-}
-
-function render(){
-  const canvas=document.getElementById('boardCanvas');
-  canvas.querySelectorAll('.card').forEach(c=>c.remove());
-  allCardIds().forEach(id=>{const el=makeCardEl(id);if(el)canvas.appendChild(el)});
-  drawLinks();
-  saveState();
-}
-
-async function loadBoardData(){
+/* ---- library load ---- */
+async function loadLibrary(){
   setStatus('LOADING…');
-  document.getElementById('loadBtn').disabled=true;
+  const btn=document.getElementById('loadBtn');btn.disabled=true;
   try{
     const days=Math.max(1,Math.min(90,Number(document.getElementById('dayWindow').value)||14));
     const types=[];
@@ -213,72 +319,81 @@ async function loadBoardData(){
     // A fine-grained PAT returns 404 (not 403) for a repo outside its access, so probe a real
     // subpath first: without this, "access denied" is silently reported as "no data for these days".
     const root=await repoGetSafe(CFG.analysisRepo,'extracted');
-    if(root===null){setStatus('ACCESS DENIED / my-storage-note');sourceCards=[];render();return}
-    const results=await Promise.all(types.map(t=>loadExtractedRange(t,days)));
-    sourceCards=results.flat().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-    sourceCards.forEach(c=>posFor(c.id));
-    saveState();
-    render();
-    setStatus(sourceCards.length?`LOADED ${sourceCards.length} 件`:'NO DATA');
-  }catch(e){
-    console.error(e);
-    setStatus('LOAD ERROR / TOKEN確認');
-  }finally{
-    document.getElementById('loadBtn').disabled=false;
-  }
+    if(root===null){library=[];setStatus('ACCESS DENIED / my-storage-note');renderSide();return}
+    const res=await Promise.all(types.map(t=>loadRange(t,days)));
+    library=res.flat().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    setStatus(library.length?`LIBRARY ${library.length} 枚`:'NO DATA');
+    renderSide();
+  }catch(e){console.error(e);setStatus('LOAD ERROR / TOKEN確認')}
+  finally{btn.disabled=false}
 }
 
+/* ---- export ---- */
 function stamp(){const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
-function buildExportText(){
-  const notes=state.notes.filter(n=>n.text&&n.text.trim());
-  if(!notes.length)return null;
-  const lines=[`# DEEP DIVE BOARD SYNTHESIS`,`生成日時: ${new Date().toISOString()}`,'','## 付箋 (Notes)'];
-  notes.forEach(n=>lines.push(`- ${n.text.trim().replace(/\n/g,' ')}`));
-  const linked=state.links.map(l=>{
-    const a=cardMeta(l.a),b=cardMeta(l.b);if(!a||!b)return null;
-    const fmt=m=>m.kind==='source'?`${m.title}(${m.date})`:`[付箋] ${(m.text||'').slice(0,40).replace(/\n/g,' ')}`;
-    return `- ${fmt(a)} → ${fmt(b)}${l.label?` : ${l.label}`:''}`;
-  }).filter(Boolean);
-  if(linked.length){lines.push('','## 接続 (Connections)');lines.push(...linked)}
-  return lines.join('\n')+'\n';
+function buildExport(){
+  const d=deck();
+  if(!Object.keys(d.cards).length)return null;
+  const L=[`# DECK: ${d.name}`,`生成日時: ${new Date().toISOString()}`,'','## 配置 (4×4)',''];
+  L.push('| |'+d.axes.cols.map(c=>` ${c||'—'} |`).join(''));
+  L.push('| --- |'+d.axes.cols.map(()=>' --- |').join(''));
+  for(let r=0;r<N;r++){
+    const row=[`| ${d.axes.rows[r]||'—'} |`];
+    for(let c=0;c<N;c++){const id=d.slots[`r${r}c${c}`];row.push(` ${id&&d.cards[id]?d.cards[id].title.replace(/\|/g,'/'):''} |`)}
+    L.push(row.join(''));
+  }
+  const tray=d.tray.map(id=>d.cards[id]).filter(Boolean);
+  if(tray.length){L.push('','## 控え','');tray.forEach(c=>L.push(`- ${c.title}`))}
+  L.push('','## カード出典','');
+  Object.values(d.cards).forEach(c=>L.push(`- ${c.title} — ${c.source?`${c.source.repo}/${c.source.path}#${c.source.index}`:'自作カード'}`));
+  return L.join('\n')+'\n';
 }
-async function exportBoard(){
-  const text=buildExportText();
-  if(!text){setStatus('付箋がありません');return}
+async function exportToNotebook(){
+  const text=buildExport();
+  if(!text){setStatus('デックが空です');return}
   if(!token()){setStatus('TOKEN REQUIRED');return}
-  const name=`${stamp()}-board.md`,path=`${CFG.inboxDir}/${name}`;
+  const name=`${stamp()}-deck.md`,path=`${CFG.inboxDir}/${name}`;
   setStatus('POSTING…');
   try{
-    const payload={message:`cockpid: deep dive board export ${name}`,content:btoa(unescape(encodeURIComponent(text)))};
+    const payload={message:`cockpid: deck export ${name}`,content:btoa(unescape(encodeURIComponent(text)))};
     const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.sourceRepo}/contents/${path}`,{method:'PUT',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!r.ok)throw new Error(await r.text());
     setStatus(`SAVED ✓ ${name}`);
-  }catch(e){
-    console.error(e);
-    setStatus('SAVE ERROR');
-  }
+  }catch(e){console.error(e);setStatus('SAVE ERROR')}
 }
 
-function clearBoard(){
-  if(!confirm('ボードの付箋・配置・接続をすべて削除します。よろしいですか？'))return;
-  state={notes:[],positions:{},links:[],autoSlot:0};
-  saveState();
-  render();
-}
-
-document.getElementById('loadBtn').onclick=loadBoardData;
-document.getElementById('addNoteBtn').onclick=addNote;
-document.getElementById('linkModeBtn').onclick=toggleLinkMode;
-document.getElementById('exportBtn').onclick=exportBoard;
-document.getElementById('clearBtn').onclick=clearBoard;
-document.getElementById('tokenToggle').onclick=()=>{const box=document.getElementById('tokenSettings'),open=box.classList.toggle('open');document.getElementById('tokenToggle').textContent=open?'▾ 接続設定を隠す':'▸ 接続設定を表示'};
+/* ---- deck management ---- */
+document.getElementById('deckSelect').onchange=e=>{state.activeId=e.target.value;selected=null;saveState();renderAll()};
+document.getElementById('deckNew').onclick=()=>{const n=prompt('新しいデックの名前','DECK '+pad(state.decks.length+1));if(n===null)return;const d=newDeck(n.trim()||'DECK');state.decks.push(d);state.activeId=d.id;selected=null;saveState();renderAll()};
+document.getElementById('deckRename').onclick=()=>{const d=deck();const n=prompt('デック名',d.name);if(n===null)return;d.name=n.trim()||d.name;saveState();renderAll()};
+document.getElementById('deckDup').onclick=()=>{const d=deck();const c=JSON.parse(JSON.stringify(d));c.id=uid('deck');c.name=d.name+' copy';c.createdAt=new Date().toISOString();state.decks.push(c);state.activeId=c.id;saveState();renderAll()};
+document.getElementById('deckDel').onclick=()=>{if(state.decks.length<=1)return;const d=deck();if(!confirm(`デック「${d.name}」を削除します。よろしいですか？`))return;state.decks=state.decks.filter(x=>x.id!==d.id);state.activeId=state.decks[0].id;selected=null;saveState();renderAll()};
+document.getElementById('loadBtn').onclick=loadLibrary;
+document.getElementById('exportBtn').onclick=exportToNotebook;
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{tab=t.dataset.tab;renderSide()});
+document.getElementById('mkAdd').onclick=()=>{
+  const t=document.getElementById('mkTitle'),b=document.getElementById('mkBody');
+  if(!t.value.trim()){t.focus();return}
+  addToDeck({id:uid('note'),type:'note',title:t.value.trim(),summary:b.value.trim(),date:iso(jst()),source:null});
+  t.value='';b.value='';tab='tray';renderSide();
+};
+document.getElementById('tokenToggle').onclick=()=>{const box=document.getElementById('tokenSettings'),o=box.classList.toggle('open');document.getElementById('tokenToggle').textContent=o?'▾ 接続設定を隠す':'▸ 接続設定を表示'};
 document.getElementById('tokenInput').addEventListener('change',e=>{if(e.target.value)localStorage.setItem(tokenKey,e.target.value)});
-window.addEventListener('resize',drawLinks);
+document.getElementById('jsonToggle').onclick=()=>{const p=document.getElementById('jsonPanel');if(p.classList.toggle('open'))document.getElementById('jsonBox').value=JSON.stringify(deck(),null,2)};
+document.getElementById('jsonShow').onclick=()=>{document.getElementById('jsonBox').value=JSON.stringify(deck(),null,2)};
+document.getElementById('jsonImport').onclick=()=>{
+  try{
+    const d=JSON.parse(document.getElementById('jsonBox').value);
+    if(!d||typeof d!=='object'||!d.cards||!d.slots)throw new Error('deck の形ではありません');
+    d.id=uid('deck');d.name=(d.name||'IMPORTED')+' (import)';
+    d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};d.tray=d.tray||[];
+    state.decks.push(d);state.activeId=d.id;saveState();renderAll();setStatus('IMPORTED ✓');
+  }catch(e){setStatus('JSON ERROR: '+e.message)}
+};
 
 loadState();
 document.getElementById('tokenInput').value=token();
-render();
-loadBoardData();
+renderAll();
+loadLibrary();
 </script>
 </body>
 </html>
