@@ -46,6 +46,7 @@ Core interaction:
 ## Current entry points
 
 - `index.html` — GitHub Pages root / primary cockpit
+- `board.html` — Deep Dive Board / 並べて深く考えるための独立ページ (linked from the cockpit toolbar)
 - `index-00.html` — UI gallery and pattern launcher
 - `main.html` — dynamic Mission Control build
 - `pattern-01.html` — Mission Control
@@ -54,6 +55,25 @@ Core interaction:
 - `pattern-04.html` — Tactical Matrix
 - `pattern-05.html` — Hybrid Command Deck
 - `prototype-common.js` — shared GitHub API/data access and previous-day lookup
+
+## Deep Dive Board (`board.html`)
+
+The cockpit is optimized for *scanning*. The board is the opposite mode: a separate,
+self-contained page for **laying analysis items out side by side and thinking slowly**.
+`index.html` is unchanged apart from the toolbar link that opens it.
+
+- reads the same `extracted/{idea,theme,action}/YYYY-MM-DD.json` files as the cockpit,
+  over a user-chosen day window, and places each item as a draggable card
+- the user adds their own 付箋 (sticky notes) and draws connections between any two cards —
+  this is the **human** counterpart to the AI-generated `connections/semantic.json`,
+  not a replacement for it
+- layout, notes and connections live only in `localStorage` under `cockpid.board.v1`;
+  the board never writes analysis data back to `my-storage-note`
+- `⇪ mynotebookへ書き出す` posts the notes and connections as a single new memo into
+  `mynotebook/00_inbox`, so a synthesis session re-enters the pipeline as source material
+  (same write channel as ZEN V2)
+
+It shares `index.html`'s token key, so a token entered on either page works on both.
 
 ## Design direction
 
@@ -71,7 +91,7 @@ Never share a screenshot that shows the actual token value (e.g. a DevTools Netw
 
 ## Known pitfalls (learned the hard way)
 
-- **One token key, one input field.** `index.html` stores its token under the `localStorage` key `zen-note-github-token`. `main.html` (via `prototype-common.js`) uses a *different* key, `cockpid.github.token`. Because both pages share the same origin but not the same key, a token pasted into one page's dialog is invisible to the other — this caused a long, confusing debugging session where the token being edited on GitHub's settings page was not the one actually in use. If unifying the two pages' storage isn't done, always double-check which page you're testing against before assuming a token change took effect.
+- **One token key, one input field.** `index.html` stores its token under the `localStorage` key `zen-note-github-token`. `main.html` (via `prototype-common.js`) uses a *different* key, `cockpid.github.token`. Because both pages share the same origin but not the same key, a token pasted into one page's dialog is invisible to the other — this caused a long, confusing debugging session where the token being edited on GitHub's settings page was not the one actually in use. If unifying the two pages' storage isn't done, always double-check which page you're testing against before assuming a token change took effect. `board.html` deliberately reuses `index.html`'s `zen-note-github-token` key for this reason — keep it that way for any new page.
 - **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes.
 - **The GitHub Contents API can 404 on a bare/empty path with a trailing slash** (`.../contents/`) even when the token has valid read access to the repo. Always probe a real, non-empty subpath (e.g. `extracted`), never `''`.
 - **A fine-grained PAT's repository list must be re-verified after every edit.** Adding a repo to "Repository access" on GitHub's token settings page can, in practice, require re-confirming the rest of the list — a repo you thought was still selected can silently drop off. After editing a token's scope, re-check the full list, not just the repo you meant to add.

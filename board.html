@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COCKPID — Deep Dive Board</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2305090d'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle' font-family='monospace' fill='%2345e59b'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#05090d;--panel:#0a1118;--panel2:#081017;--line:#182733;--line2:#284050;--text:#dce8ef;--muted:#718492;--green:#45e59b;--cyan:#43cbe8;--amber:#e4b84f;--purple:#aa8ceb;--shadow:0 14px 40px #0008}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh;background:radial-gradient(circle at 50% -12%,#172832 0,#05090d 45%)}button,input,textarea{font:inherit}
+.wrap{max-width:1760px;margin:auto;padding:14px}
+.top{border:1px solid var(--line);background:#091119ee;box-shadow:var(--shadow);padding:13px 16px;display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}.brand{font:700 19px ui-monospace,monospace;letter-spacing:2px}.sub{font:9px ui-monospace;color:var(--muted);letter-spacing:1.5px;margin-top:4px}
+.btn{display:inline-block;text-decoration:none;border:1px solid var(--line2);background:#0b141c;color:#aebdca;padding:7px 10px;cursor:pointer;font:10px ui-monospace;transition:.18s;white-space:nowrap}.btn:hover{border-color:var(--green);color:var(--green);background:#0c1917}.btn.primary{border-color:#24664b;color:var(--green);background:#0a1712}.btn.cyan{color:var(--cyan)}.btn.active{border-color:var(--cyan);color:var(--cyan);background:#0a1a1f;box-shadow:0 0 10px #43cbe855}.btn.danger:hover{border-color:#e05a5a;color:#e05a5a;background:#1a0c0c}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin:10px 0;gap:10px;flex-wrap:wrap}.navgroup{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.field{display:flex;align-items:center;gap:5px;font:9px ui-monospace;color:var(--muted);border:1px solid var(--line2);background:#0b141c;padding:6px 8px}.field input[type=number]{width:40px;background:transparent;border:none;color:var(--text);outline:none}.field input[type=checkbox]{accent-color:var(--green)}
+.status-pill{font:9px ui-monospace;color:var(--muted);border:1px solid var(--line);padding:6px 9px;background:var(--panel2)}
+.hint-bar{font:9px ui-monospace;color:var(--muted);letter-spacing:.5px;margin:0 0 8px;padding:0 2px}
+.board-scroll{position:relative;overflow:auto;border:1px solid var(--line);background:var(--panel2);box-shadow:0 7px 24px #0005;height:calc(100vh - 190px);min-height:420px}
+.board-canvas{position:relative;width:3600px;height:2400px;background-image:radial-gradient(#182733 1px,transparent 1px);background-size:26px 26px}
+.board-canvas.linking .card{cursor:crosshair}
+#linkLayer{position:absolute;inset:0;pointer-events:none;overflow:visible}
+#linkLayer line.hit{stroke:transparent;stroke-width:14;cursor:pointer;pointer-events:stroke}
+#linkLayer line.visible{stroke:var(--cyan);stroke-width:1.4;opacity:.75;pointer-events:none}
+#linkLayer text{fill:var(--cyan);font:9px ui-monospace;pointer-events:none}
+.card{position:absolute;width:250px;border:1px solid var(--line2);background:#0a131a;box-shadow:0 6px 18px #0007;padding:0;user-select:none;touch-action:none}
+.card .card-body{user-select:text}
+.card .card-head{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);cursor:grab;font:9px ui-monospace;color:var(--muted);letter-spacing:.5px}
+.card .card-head:active{cursor:grabbing}
+.card .card-del{border:none;background:none;color:var(--muted);cursor:pointer;font:11px ui-monospace;padding:0 2px}.card .card-del:hover{color:#e05a5a}
+.card .card-body{padding:9px 10px;max-height:230px;overflow-y:auto}
+.card.source{border-left:3px solid var(--cyan)}.card.source.type-idea{border-left-color:var(--cyan)}.card.source.type-theme{border-left-color:var(--purple)}.card.source.type-action{border-left-color:var(--amber)}
+.card.source h3{margin:0 0 6px;font-size:12px;line-height:1.5}.card.source p{margin:0;font-size:10px;line-height:1.6;color:#c3d3dd}
+.card.note{border-left:3px solid var(--green);background:#0b1c17}
+.card.note textarea{width:100%;min-height:90px;resize:vertical;background:#081410;border:1px solid var(--line2);color:var(--text);padding:7px;font-size:11px;line-height:1.6;outline:none}
+.card.note textarea:focus{border-color:#2b7053}
+.card.selecting{outline:2px solid var(--cyan);outline-offset:2px}
+.card.dragging{opacity:.85;z-index:20}
+.token-box{border:1px solid var(--line);padding:10px;margin-top:10px;max-width:420px}.token-box label{display:block;font:9px ui-monospace;color:var(--muted);margin-bottom:5px}.token-box input{width:100%;background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font:10px ui-monospace}.small{font-size:9px;color:var(--muted);line-height:1.5;margin-top:6px}.token-settings{display:none}.token-settings.open{display:block}
+.footer{padding:12px 2px 2px;color:#40515e;font:8px ui-monospace;display:flex;justify-content:space-between}
+@media(max-width:700px){.wrap{padding:9px}.top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div><div class="brand">COCKPID / DEEP DIVE BOARD</div><div class="sub">MEMO ARRANGEMENT — SYNTHESIS SPACE</div></div>
+  <a class="btn" href="index.html">◂ コックピットへ戻る</a>
+</header>
+<div class="toolbar">
+  <div class="navgroup">
+    <label class="field">過去<input id="dayWindow" type="number" min="1" max="90" value="14">日</label>
+    <label class="field"><input type="checkbox" id="fIdea" checked>IDEA</label>
+    <label class="field"><input type="checkbox" id="fTheme" checked>THEME</label>
+    <label class="field"><input type="checkbox" id="fAction" checked>ACTION</label>
+    <button class="btn primary" id="loadBtn">◈ 読み込み</button>
+  </div>
+  <div class="navgroup">
+    <button class="btn" id="addNoteBtn">＋ 付箋</button>
+    <button class="btn cyan" id="linkModeBtn">🔗 接続モード</button>
+    <button class="btn" id="exportBtn">⇪ mynotebookへ書き出す</button>
+    <button class="btn danger" id="clearBtn">🗑 クリア</button>
+    <span class="status-pill" id="boardStatus">READY</span>
+  </div>
+</div>
+<div class="hint-bar">カードはドラッグで移動 / 「＋ 付箋」で自分の考えを書き足す / 接続モードでカードを2つクリックすると線を引ける（線クリックで削除）</div>
+<div class="board-scroll" id="boardScroll">
+  <div class="board-canvas" id="boardCanvas">
+    <svg id="linkLayer"></svg>
+  </div>
+</div>
+<button class="btn token-toggle" id="tokenToggle" style="margin-top:10px">▸ 接続設定を表示</button>
+<div class="token-settings" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">index.html と同じ localStorage キーを共有します。TokenはlocalStorageにのみ保存。<b>mynotebook と my-storage-note の両方</b>に Contents 権限が必要です。</div></div></div>
+<footer class="footer"><span>COCKPID // DEEP DIVE BOARD</span><span>SOURCE → ANALYSIS DATA → HUMAN SYNTHESIS</span></footer>
+</div>
+<script>
+const CFG={owner:'plzsayyes3',sourceRepo:'mynotebook',analysisRepo:'my-storage-note',inboxDir:'00_inbox'};
+const tokenKey='zen-note-github-token';
+const stateKey='cockpid.board.v1';
+function pad(n){return String(n).padStart(2,'0')}
+function iso(d){return d.toISOString().slice(0,10)}
+function addDays(d,n){const x=new Date(d);x.setUTCDate(x.getUTCDate()+n);return x}
+function jst(d=new Date()){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const y=+p.find(x=>x.type==='year').value,m=+p.find(x=>x.type==='month').value,dd=+p.find(x=>x.type==='day').value;return new Date(Date.UTC(y,m-1,dd))}
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function token(){return localStorage.getItem(tokenKey)||''}
+function headers(){const t=token();return t?{Authorization:`Bearer ${t}`,Accept:'application/vnd.github+json'}:{Accept:'application/vnd.github+json'}}
+async function repoGetSafe(repo,path){const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${path}`,{headers:headers()});if(r.status===404)return null;if(!r.ok)throw new Error(`${r.status} ${repo}/${path}`);return r.json()}
+function decode64(s){const raw=atob((s||'').replace(/\n/g,''));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
+function normalizeItems(data,type,date,path){if(!data)return[];const arr=Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.results)?data.results:[]));return arr.map((x,i)=>({id:`${path}#${i}`,type:x.type||type,title:x.title||x.name||`${type} ${i+1}`,summary:x.summary||x.description||x.content||'',date:x.date||x.source?.date||x.created_at||date})).filter(x=>x.title)}
+async function loadExtractedDay(type,date){const j=await repoGetSafe(CFG.analysisRepo,`extracted/${type}/${date}.json`);if(!j||!j.content)return[];return normalizeItems(JSON.parse(decode64(j.content)),type,date,`extracted/${type}/${date}.json`)}
+async function loadExtractedRange(type,days){const out=[];for(let i=1;i<=days;i++)out.push(...await loadExtractedDay(type,iso(addDays(jst(),-i))));return out}
+
+let sourceCards=[];
+let state={notes:[],positions:{},links:[],autoSlot:0};
+function loadState(){try{const raw=localStorage.getItem(stateKey);if(raw){const p=JSON.parse(raw);state={notes:p.notes||[],positions:p.positions||{},links:p.links||[],autoSlot:p.autoSlot||0}}}catch(e){console.error(e)}}
+let saveTimer=null;
+function saveState(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(stateKey,JSON.stringify(state));setStatus('SAVED ✓')}catch(e){console.error(e);setStatus('SAVE ERROR')}},250)}
+function setStatus(t){document.getElementById('boardStatus').textContent=t}
+
+function cardMeta(id){const s=sourceCards.find(c=>c.id===id);if(s)return{kind:'source',...s};const n=state.notes.find(x=>x.id===id);if(n)return{kind:'note',...n};return null}
+function allCardIds(){return[...sourceCards.map(c=>c.id),...state.notes.map(n=>n.id)]}
+function defaultPos(){const cols=6,cw=270,ch=190,gap=20;const col=state.autoSlot%cols,row=Math.floor(state.autoSlot/cols);state.autoSlot++;return{x:30+col*(cw+gap),y:30+row*(ch+gap)}}
+function posFor(id){if(!state.positions[id]){state.positions[id]=defaultPos()}return state.positions[id]}
+
+let linkMode=false,pendingLink=null;
+function toggleLinkMode(){linkMode=!linkMode;pendingLink=null;document.getElementById('linkModeBtn').classList.toggle('active',linkMode);document.getElementById('boardCanvas').classList.toggle('linking',linkMode);render()}
+
+function addNote(){const id='note-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);const n={id,text:''};state.notes.push(n);posFor(id);saveState();render();setTimeout(()=>{const ta=document.querySelector(`[data-id="${id}"] textarea`);if(ta)ta.focus()},30)}
+function deleteNote(id){state.notes=state.notes.filter(n=>n.id!==id);delete state.positions[id];state.links=state.links.filter(l=>l.a!==id&&l.b!==id);saveState();render()}
+function deleteLink(id){state.links=state.links.filter(l=>l.id!==id);saveState();render()}
+
+function onCardClick(id){
+  if(!linkMode)return;
+  if(!pendingLink){pendingLink=id;render();return}
+  if(pendingLink===id){pendingLink=null;render();return}
+  const a=pendingLink,b=id;pendingLink=null;
+  if(state.links.some(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a))){render();return}
+  const label=prompt('この接続のメモ（任意）','')||'';
+  state.links.push({id:'link-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),a,b,label:label.trim()});
+  saveState();render();
+}
+
+function makeCardEl(id){
+  const meta=cardMeta(id);if(!meta)return null;
+  const pos=posFor(id);
+  const el=document.createElement('div');
+  el.className='card '+(meta.kind==='source'?`source type-${meta.type}`:'note');
+  if(pendingLink===id)el.classList.add('selecting');
+  el.dataset.id=id;
+  el.style.left=pos.x+'px';el.style.top=pos.y+'px';
+  if(meta.kind==='source'){
+    el.innerHTML=`<div class="card-head"><span>${esc((meta.type||'').toUpperCase())} / ${esc(meta.date||'—')}</span><span></span></div><div class="card-body"><h3>${esc(meta.title)}</h3><p>${esc(meta.summary)||'詳細情報なし'}</p></div>`;
+  }else{
+    el.innerHTML=`<div class="card-head"><span>付箋 MEMO</span><button class="card-del" title="削除">✕</button></div><div class="card-body"><textarea placeholder="ここに考えたことを書く……"></textarea></div>`;
+    const ta=el.querySelector('textarea');ta.value=meta.text||'';
+    ta.addEventListener('input',()=>{const n=state.notes.find(x=>x.id===id);if(n){n.text=ta.value;saveState()}});
+    ta.addEventListener('pointerdown',e=>e.stopPropagation());
+    el.querySelector('.card-del').addEventListener('click',e=>{e.stopPropagation();if(confirm('この付箋を削除しますか？'))deleteNote(id)});
+  }
+  el.addEventListener('click',e=>{if(dragMoved)return;onCardClick(id)});
+  el.querySelector('.card-head').addEventListener('pointerdown',e=>startDrag(e,id,el));
+  return el;
+}
+
+let dragState=null,dragMoved=false;
+function startDrag(e,id,el){
+  if(linkMode)return; // in link mode, clicks select instead of drag
+  if(e.target.closest('.card-del')||e.target.closest('textarea'))return;
+  e.preventDefault();
+  const pos=posFor(id);
+  dragState={id,el,startX:e.clientX,startY:e.clientY,origX:pos.x,origY:pos.y};
+  dragMoved=false;
+  el.classList.add('dragging');
+  el.setPointerCapture(e.pointerId);
+  el.addEventListener('pointermove',onDragMove);
+  el.addEventListener('pointerup',onDragEnd);
+  el.addEventListener('pointercancel',onDragEnd);
+}
+function onDragMove(e){
+  if(!dragState)return;
+  const dx=e.clientX-dragState.startX,dy=e.clientY-dragState.startY;
+  if(Math.abs(dx)>4||Math.abs(dy)>4)dragMoved=true;
+  const nx=Math.max(0,dragState.origX+dx),ny=Math.max(0,dragState.origY+dy);
+  state.positions[dragState.id]={x:nx,y:ny};
+  dragState.el.style.left=nx+'px';dragState.el.style.top=ny+'px';
+  drawLinks();
+}
+function onDragEnd(e){
+  if(!dragState)return;
+  dragState.el.classList.remove('dragging');
+  dragState.el.removeEventListener('pointermove',onDragMove);
+  dragState.el.removeEventListener('pointerup',onDragEnd);
+  dragState.el.removeEventListener('pointercancel',onDragEnd);
+  dragState=null;
+  saveState();
+  setTimeout(()=>{dragMoved=false},0);
+}
+
+function cardCenter(id){
+  const el=document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  const pos=posFor(id);
+  const w=el?el.offsetWidth:250,h=el?el.offsetHeight:80;
+  return{x:pos.x+w/2,y:pos.y+h/2};
+}
+function drawLinks(){
+  const svg=document.getElementById('linkLayer');
+  svg.innerHTML='';
+  state.links.forEach(l=>{
+    if(!cardMeta(l.a)||!cardMeta(l.b))return;
+    const p1=cardCenter(l.a),p2=cardCenter(l.b);
+    const mk=(cls)=>{const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',p1.x);line.setAttribute('y1',p1.y);line.setAttribute('x2',p2.x);line.setAttribute('y2',p2.y);line.setAttribute('class',cls);return line};
+    const visible=mk('visible');svg.appendChild(visible);
+    const hit=mk('hit');hit.addEventListener('click',()=>{if(confirm('この接続を削除しますか？'))deleteLink(l.id)});svg.appendChild(hit);
+    if(l.label){const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',(p1.x+p2.x)/2);t.setAttribute('y',(p1.y+p2.y)/2-4);t.textContent=l.label;svg.appendChild(t)}
+  });
+}
+
+function render(){
+  const canvas=document.getElementById('boardCanvas');
+  canvas.querySelectorAll('.card').forEach(c=>c.remove());
+  allCardIds().forEach(id=>{const el=makeCardEl(id);if(el)canvas.appendChild(el)});
+  drawLinks();
+  saveState();
+}
+
+async function loadBoardData(){
+  setStatus('LOADING…');
+  document.getElementById('loadBtn').disabled=true;
+  try{
+    const days=Math.max(1,Math.min(90,Number(document.getElementById('dayWindow').value)||14));
+    const types=[];
+    if(document.getElementById('fIdea').checked)types.push('idea');
+    if(document.getElementById('fTheme').checked)types.push('theme');
+    if(document.getElementById('fAction').checked)types.push('action');
+    // A fine-grained PAT returns 404 (not 403) for a repo outside its access, so probe a real
+    // subpath first: without this, "access denied" is silently reported as "no data for these days".
+    const root=await repoGetSafe(CFG.analysisRepo,'extracted');
+    if(root===null){setStatus('ACCESS DENIED / my-storage-note');sourceCards=[];render();return}
+    const results=await Promise.all(types.map(t=>loadExtractedRange(t,days)));
+    sourceCards=results.flat().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    sourceCards.forEach(c=>posFor(c.id));
+    saveState();
+    render();
+    setStatus(sourceCards.length?`LOADED ${sourceCards.length} 件`:'NO DATA');
+  }catch(e){
+    console.error(e);
+    setStatus('LOAD ERROR / TOKEN確認');
+  }finally{
+    document.getElementById('loadBtn').disabled=false;
+  }
+}
+
+function stamp(){const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
+function buildExportText(){
+  const notes=state.notes.filter(n=>n.text&&n.text.trim());
+  if(!notes.length)return null;
+  const lines=[`# DEEP DIVE BOARD SYNTHESIS`,`生成日時: ${new Date().toISOString()}`,'','## 付箋 (Notes)'];
+  notes.forEach(n=>lines.push(`- ${n.text.trim().replace(/\n/g,' ')}`));
+  const linked=state.links.map(l=>{
+    const a=cardMeta(l.a),b=cardMeta(l.b);if(!a||!b)return null;
+    const fmt=m=>m.kind==='source'?`${m.title}(${m.date})`:`[付箋] ${(m.text||'').slice(0,40).replace(/\n/g,' ')}`;
+    return `- ${fmt(a)} → ${fmt(b)}${l.label?` : ${l.label}`:''}`;
+  }).filter(Boolean);
+  if(linked.length){lines.push('','## 接続 (Connections)');lines.push(...linked)}
+  return lines.join('\n')+'\n';
+}
+async function exportBoard(){
+  const text=buildExportText();
+  if(!text){setStatus('付箋がありません');return}
+  if(!token()){setStatus('TOKEN REQUIRED');return}
+  const name=`${stamp()}-board.md`,path=`${CFG.inboxDir}/${name}`;
+  setStatus('POSTING…');
+  try{
+    const payload={message:`cockpid: deep dive board export ${name}`,content:btoa(unescape(encodeURIComponent(text)))};
+    const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.sourceRepo}/contents/${path}`,{method:'PUT',headers:{...headers(),'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok)throw new Error(await r.text());
+    setStatus(`SAVED ✓ ${name}`);
+  }catch(e){
+    console.error(e);
+    setStatus('SAVE ERROR');
+  }
+}
+
+function clearBoard(){
+  if(!confirm('ボードの付箋・配置・接続をすべて削除します。よろしいですか？'))return;
+  state={notes:[],positions:{},links:[],autoSlot:0};
+  saveState();
+  render();
+}
+
+document.getElementById('loadBtn').onclick=loadBoardData;
+document.getElementById('addNoteBtn').onclick=addNote;
+document.getElementById('linkModeBtn').onclick=toggleLinkMode;
+document.getElementById('exportBtn').onclick=exportBoard;
+document.getElementById('clearBtn').onclick=clearBoard;
+document.getElementById('tokenToggle').onclick=()=>{const box=document.getElementById('tokenSettings'),open=box.classList.toggle('open');document.getElementById('tokenToggle').textContent=open?'▾ 接続設定を隠す':'▸ 接続設定を表示'};
+document.getElementById('tokenInput').addEventListener('change',e=>{if(e.target.value)localStorage.setItem(tokenKey,e.target.value)});
+window.addEventListener('resize',drawLinks);
+
+loadState();
+document.getElementById('tokenInput').value=token();
+render();
+loadBoardData();
+</script>
+</body>
+</html>
