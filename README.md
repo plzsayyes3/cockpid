@@ -20,6 +20,11 @@ DISPLAY / EXPLORATION
 ### 1. SOURCE
 `plzsayyes3/mynotebook` contains the original daily notes and personal thinking records.
 
+- `01_Daily/YYYY-MM-DD.md` — daily notes
+- `00_inbox/` — where cockpid writes (ZEN memos, deck exports)
+- `09_taskchute/YYYY-MM-DD.md` — the day's TaskChute list; cockpid reads the
+  `- [/]` (in-progress) lines from it for the header's NOW readout
+
 ### 2. ANALYSIS DATA
 `plzsayyes3/my-storage-note` contains the structured outputs produced from the source data, including:
 
@@ -42,6 +47,22 @@ Core interaction:
 - Serendipity / Connections explains why two records are related
 - source → analysis → display traceability remains visible
 - the interface is optimized for scanning first and opening details only when needed
+
+#### NOW / 着手中 (header readout)
+
+Beside the clock, `index.html` shows the task currently being worked on: the first
+`- [/]` line in `mynotebook/09_taskchute/YYYY-MM-DD.md`, with `+N` when more than one
+line is marked in progress (the full list is in the element's tooltip).
+
+This is the one place that deliberately reads **today**, not the previous day. The
+previous-day policy exists to spare the analysis pipeline repeated processing; an
+in-progress task is live state and is worthless a day late. It is a direct read of a
+source file — no analysis layer involved — polled once a minute and again whenever the
+tab regains focus.
+
+Both `.md` and an extensionless path are tried on the first fetch, and whichever
+answers is remembered, so later polls cost one request. It writes to its own element,
+never to the shared status readout (see the pitfall about status writers below).
 
 ## Current entry points
 
