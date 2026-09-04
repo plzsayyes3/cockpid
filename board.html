@@ -3,50 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>COCKPID — Deck Board 4×4</title>
+<title>COCKPID — Deck Board 16×16</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2305090d'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle' font-family='monospace' fill='%2345e59b'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
 <style>
 :root{--bg:#05090d;--panel:#0a1118;--panel2:#081017;--line:#182733;--line2:#284050;--text:#dce8ef;--muted:#718492;--green:#45e59b;--cyan:#43cbe8;--amber:#e4b84f;--purple:#aa8ceb;--shadow:0 14px 40px #0008}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh;background:radial-gradient(circle at 50% -12%,#172832 0,#05090d 45%)}button,input,textarea,select{font:inherit}
-.wrap{max-width:1600px;margin:auto;padding:14px}
+.wrap{max-width:1640px;margin:auto;padding:14px}
 .top{border:1px solid var(--line);background:#091119ee;box-shadow:var(--shadow);padding:13px 16px;display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap}.brand{font:700 19px ui-monospace,monospace;letter-spacing:2px}.sub{font:9px ui-monospace;color:var(--muted);letter-spacing:1.5px;margin-top:4px}
 .btn{display:inline-block;text-decoration:none;border:1px solid var(--line2);background:#0b141c;color:#aebdca;padding:7px 10px;cursor:pointer;font:10px ui-monospace;transition:.18s;white-space:nowrap}.btn:hover{border-color:var(--green);color:var(--green);background:#0c1917}.btn.primary{border-color:#24664b;color:var(--green);background:#0a1712}.btn.cyan{color:var(--cyan)}.btn.danger:hover{border-color:#e05a5a;color:#e05a5a;background:#1a0c0c}.btn:disabled{opacity:.45;cursor:default}
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin:10px 0;gap:10px;flex-wrap:wrap}.navgroup{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .field{display:flex;align-items:center;gap:5px;font:9px ui-monospace;color:var(--muted);border:1px solid var(--line2);background:#0b141c;padding:6px 8px}.field input[type=number]{width:38px;background:transparent;border:none;color:var(--text);outline:none}.field input[type=checkbox]{accent-color:var(--green)}
-select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--green);padding:6px 8px;font:10px ui-monospace;outline:none;max-width:220px}
+select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--green);padding:6px 8px;font:10px ui-monospace;outline:none;max-width:210px}
 .status-pill{font:9px ui-monospace;color:var(--muted);border:1px solid var(--line);padding:6px 9px;background:var(--panel2)}
 .hint-bar{font:9px ui-monospace;color:var(--muted);margin:0 0 8px;padding:0 2px;line-height:1.7}
-.layout{display:grid;grid-template-columns:1fr 322px;gap:9px;align-items:start}
+.layout{display:grid;grid-template-columns:1fr 300px;gap:9px;align-items:start}
 .panel{border:1px solid var(--line);background:linear-gradient(180deg,#0d151e,#091017);box-shadow:0 7px 24px #0005;padding:12px}
-.grid-scroll{overflow-x:auto}
-.grid{display:grid;grid-template-columns:78px repeat(4,minmax(150px,1fr));grid-template-rows:auto repeat(4,minmax(132px,1fr));gap:6px;min-width:740px}
-.corner{display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px}.corner span{font:8px ui-monospace;color:#2c3f4c;letter-spacing:1px}
-.col-head,.row-head{display:flex;align-items:center}.row-head{justify-content:flex-end;padding-right:4px}
-.axis-input{width:100%;background:transparent;border:none;border-bottom:1px dashed var(--line2);color:var(--muted);font:9px ui-monospace;padding:4px 2px;outline:none;text-align:center;letter-spacing:.5px}
-.row-head .axis-input{text-align:right;border-bottom:none;border-right:1px dashed var(--line2);padding-right:6px}
-.axis-input:focus{color:var(--green);border-color:var(--green)}
-.cell{border:1px solid var(--line);background:rgba(69,229,155,calc(var(--t,0)*.013));position:relative;padding:4px;transition:border-color .15s,box-shadow .15s}
-.cell.empty{cursor:pointer}
-.cell.empty:after{content:attr(data-key);position:absolute;left:7px;bottom:6px;font:8px ui-monospace;color:#21313c;letter-spacing:1px}
-.cell.empty:hover{border-color:var(--line2)}
-.cell.armed{border-color:var(--green);box-shadow:inset 0 0 0 1px #45e59b55}
-.cell.drop{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
-.card{border:1px solid var(--line2);background:#0a131a;padding:7px 8px 6px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;height:100%;cursor:grab;touch-action:none;user-select:none}
+.board-scroll{overflow-x:auto}
+.board{min-width:700px}
+.col-axis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-left:64px;margin-bottom:4px}
+.board-row{display:flex;gap:0}
+.row-axis{width:64px;display:grid;grid-template-rows:repeat(4,1fr);gap:0;flex:0 0 64px}
+.axis-input{width:100%;background:transparent;border:none;color:var(--muted);font:9px ui-monospace;padding:4px 5px;outline:none;letter-spacing:.5px}
+.col-axis .axis-input{text-align:center;border-bottom:1px dashed var(--line2)}
+.row-axis .axis-input{text-align:right;border-right:1px dashed var(--line2);height:100%}
+.axis-input:focus{color:var(--green)}
+/* 16x16 lattice; a card spans 4x4 of these cells */
+.lattice{position:relative;flex:1;display:grid;grid-template-columns:repeat(16,1fr);grid-template-rows:repeat(16,1fr);aspect-ratio:1;border:1px solid var(--line2);
+  background-color:#070e14;
+  background-image:
+    repeating-linear-gradient(to right,#45e59b1f 0 1px,transparent 1px 25%),
+    repeating-linear-gradient(to bottom,#45e59b1f 0 1px,transparent 1px 25%),
+    repeating-linear-gradient(to right,#16232d 0 1px,transparent 1px 6.25%),
+    repeating-linear-gradient(to bottom,#16232d 0 1px,transparent 1px 6.25%);
+}
+.lattice.live{cursor:crosshair}
+.preview{border:1px dashed var(--green);background:#45e59b12;pointer-events:none;z-index:3}
+.preview.bad{border-color:#e05a5a;background:#e05a5a12}
+.card{border:1px solid var(--line2);background:#0a131a;padding:6px 8px 5px;display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden;cursor:grab;touch-action:none;user-select:none;z-index:2}
 .card:active{cursor:grabbing}
 .card.idea{border-left:3px solid var(--cyan)}.card.theme{border-left:3px solid var(--purple)}.card.action{border-left:3px solid var(--amber)}.card.note{border-left:3px solid var(--green);background:#0b1a15}
-.card.selected{outline:2px solid var(--green);outline-offset:1px}
-.c-meta{font:8px ui-monospace;color:var(--muted);display:flex;justify-content:space-between;gap:6px;letter-spacing:.5px;padding-right:14px}
-.c-title{font-size:11px;line-height:1.45;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical}
-.c-sum{font-size:9px;line-height:1.55;color:#94a6b3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;margin:0}
-.c-btns{position:absolute;right:3px;top:3px;display:flex;gap:2px}
+.card.selected{outline:2px solid var(--green);outline-offset:-1px}
+.card.lifted{opacity:.3}
+.c-meta{font:8px ui-monospace;color:var(--muted);display:flex;justify-content:space-between;gap:6px;letter-spacing:.5px;padding-right:16px}
+.c-title{font-size:11px;line-height:1.4;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical}
+.c-sum{font-size:9px;line-height:1.5;color:#94a6b3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;line-clamp:4;-webkit-box-orient:vertical;margin:0}
+.c-btns{position:absolute;right:3px;top:2px;display:flex;gap:2px}
 .c-btns button{border:none;background:none;color:#3f5563;cursor:pointer;font:10px ui-monospace;padding:1px 2px;line-height:1}
 .c-btns button:hover{color:var(--green)}.c-btns button.x:hover{color:#e05a5a}
 .side{display:flex;flex-direction:column;gap:8px}
-.tabs{display:flex;gap:5px}.tab{flex:1;text-align:center}.tab.on{border-color:var(--green);color:var(--green);background:#0c1917}
+.tabs{display:flex;gap:5px}.tab{flex:1;text-align:center;padding:7px 4px}.tab.on{border-color:var(--green);color:var(--green);background:#0c1917}
 .side-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:calc(100vh - 300px);min-height:180px;padding-right:2px}
-.side-list .card{height:auto;cursor:pointer}
+.side-list .card{cursor:pointer;min-height:64px}
 .side-empty{border:1px dashed var(--line2);color:var(--muted);font:9px ui-monospace;padding:16px;text-align:center;line-height:1.6}
-.side-drop{border-color:var(--cyan)!important}
+.side-drop{outline:1px solid var(--cyan)}
 .mk{display:flex;flex-direction:column;gap:6px}
 .mk input,.mk textarea{background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font-size:11px;outline:none;width:100%}
 .mk textarea{min-height:88px;resize:vertical;line-height:1.6}
@@ -55,16 +64,17 @@ select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--
 .token-box{border:1px solid var(--line);padding:10px;max-width:460px}.token-box label{display:block;font:9px ui-monospace;color:var(--muted);margin-bottom:5px}.token-box input{width:100%;background:#060b10;border:1px solid var(--line2);color:var(--text);padding:7px;font:10px ui-monospace}
 .small{font-size:9px;color:var(--muted);line-height:1.6;margin-top:6px}
 #jsonBox{width:100%;min-height:170px;background:#060b10;border:1px solid var(--line2);color:#9fb0bc;padding:9px;font:10px ui-monospace;line-height:1.5;resize:vertical;outline:none}
-.ghost{position:fixed;z-index:99;width:190px;pointer-events:none;opacity:.92;transform:translate(-50%,-50%);box-shadow:0 12px 30px #000b}
+/* compact drag chip - deliberately small, the lattice preview shows the real footprint */
+.chip{position:fixed;z-index:99;pointer-events:none;max-width:170px;border:1px solid var(--green);background:#0c1917f2;color:var(--text);font:10px ui-monospace;padding:5px 8px;transform:translate(10px,10px);box-shadow:0 8px 20px #000b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .footer{padding:12px 2px 2px;color:#40515e;font:8px ui-monospace;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-@media(max-width:1080px){.layout{grid-template-columns:1fr}.side-list{max-height:320px}}
+@media(max-width:1060px){.layout{grid-template-columns:1fr}.side-list{max-height:300px}}
 @media(max-width:700px){.wrap{padding:9px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header class="top">
-  <div><div class="brand">COCKPID / DECK BOARD 4×4</div><div class="sub">JSON CARDS — POSITION IS THE MEANING</div></div>
+  <div><div class="brand">COCKPID / DECK BOARD 16×16</div><div class="sub">CARD = 4×4 CELLS — THE OFFSET IS THE MEANING</div></div>
   <a class="btn" href="index.html">◂ コックピットへ戻る</a>
 </header>
 
@@ -87,10 +97,18 @@ select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--
     <span class="status-pill" id="boardStatus">READY</span>
   </div>
 </div>
-<div class="hint-bar">カードをクリック → 空きマスをクリックで配置（ドラッグでも可）／ マスの上のカードをクリック → 別のマスで移動・入れ替え ／ 軸ラベルは直接書き換えられます</div>
+<div class="hint-bar">格子は 16×16、カード1枚は 4×4マス。太線がカード1枚ぶん、細線が 1/4 きざみのズレ ── 隣と 0〜3 段ずらして意味を作れます。カードをクリック → 盤面をクリックで配置（ドラッグでも可）。重なる位置には置けません。</div>
 
 <div class="layout">
-  <section class="panel grid-scroll"><div class="grid" id="grid"></div></section>
+  <section class="panel board-scroll">
+    <div class="board">
+      <div class="col-axis" id="colAxis"></div>
+      <div class="board-row">
+        <div class="row-axis" id="rowAxis"></div>
+        <div class="lattice" id="lattice"></div>
+      </div>
+    </div>
+  </section>
   <section class="panel side">
     <div class="tabs">
       <button class="btn tab on" data-tab="tray" id="tabTray">控え <span id="cntTray">0</span></button>
@@ -117,7 +135,9 @@ select.deck-select{background:#0b141c;border:1px solid var(--line2);color:var(--
 const CFG={owner:'plzsayyes3',sourceRepo:'mynotebook',analysisRepo:'my-storage-note',inboxDir:'00_inbox'};
 const tokenKey='zen-note-github-token';
 const stateKey='cockpid.deck.v2';
-const N=4;
+const LAT=16;   // lattice is 16x16 cells
+const SPAN=4;   // one card covers 4x4 cells -> 4 steps of offset between neighbours
+const MAXP=LAT-SPAN;
 const DEFAULT_AXES={cols:['種','育つ','形','動く'],rows:['強い引力','気になる','様子見','保留']};
 
 function pad(n){return String(n).padStart(2,'0')}
@@ -130,15 +150,17 @@ function token(){return localStorage.getItem(tokenKey)||''}
 function headers(){const t=token();return t?{Authorization:`Bearer ${t}`,Accept:'application/vnd.github+json'}:{Accept:'application/vnd.github+json'}}
 async function repoGetSafe(repo,path){const r=await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${path}`,{headers:headers()});if(r.status===404)return null;if(!r.ok)throw new Error(`${r.status} ${repo}/${path}`);return r.json()}
 function decode64(s){const raw=atob((s||'').replace(/\n/g,''));const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
-function setStatus(t){document.getElementById('boardStatus').textContent=t}
+let stickyUntil=0;
+// Independent async writers share this readout (saves, loads, placement errors).
+// A sticky message survives a routine 'SAVED' landing right behind it.
+function setStatus(t,sticky){if(!sticky&&Date.now()<stickyUntil)return;document.getElementById('boardStatus').textContent=t;if(sticky)stickyUntil=Date.now()+1600}
 
 /* ---- card JSON ---- */
 function toCards(data,type,date,path){
   if(!data)return[];
   const arr=Array.isArray(data)?data:(Array.isArray(data.items)?data.items:(Array.isArray(data.results)?data.results:[]));
   return arr.map((x,i)=>({
-    id:`${path}#${i}`,
-    type:x.type||type,
+    id:`${path}#${i}`,type:x.type||type,
     title:x.title||x.name||`${type} ${i+1}`,
     summary:x.summary||x.description||x.content||'',
     date:x.date||x.source?.date||x.created_at||date,
@@ -150,42 +172,75 @@ async function loadRange(type,days){const out=[];for(let i=1;i<=days;i++)out.pus
 
 /* ---- state ---- */
 let library=[],state=null,selected=null,tab='tray';
-function newDeck(name){return{id:uid('deck'),name:name||'DECK 01',createdAt:new Date().toISOString(),axes:{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]},cards:{},slots:{},tray:[]}}
+function newDeck(name){return{id:uid('deck'),name:name||'DECK 01',createdAt:new Date().toISOString(),axes:{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]},cards:{},pos:{},tray:[]}}
 function loadState(){
-  try{const raw=localStorage.getItem(stateKey);if(raw){const p=JSON.parse(raw);if(p&&p.decks&&p.decks.length){state=p;}}}catch(e){console.error(e)}
-  if(!state){const d=newDeck('DECK 01');state={version:2,activeId:d.id,decks:[d]}}
+  try{const raw=localStorage.getItem(stateKey);if(raw){const p=JSON.parse(raw);if(p&&p.decks&&p.decks.length)state=p}}catch(e){console.error(e)}
+  if(!state){const d=newDeck('DECK 01');state={version:3,activeId:d.id,decks:[d]}}
   if(!state.decks.some(d=>d.id===state.activeId))state.activeId=state.decks[0].id;
-  state.decks.forEach(d=>{d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};d.cards=d.cards||{};d.slots=d.slots||{};d.tray=d.tray||[]});
+  state.decks.forEach(d=>{
+    d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};
+    d.cards=d.cards||{};d.tray=d.tray||[];d.pos=d.pos||{};
+    // migrate the old 4x4 slot map (r{row}c{col}) onto the 16x16 lattice
+    if(d.slots){
+      Object.entries(d.slots).forEach(([k,id])=>{
+        const m=/^r(\d+)c(\d+)$/.exec(k);
+        if(m&&id&&!d.pos[id])d.pos[id]={x:(+m[2])*SPAN,y:(+m[1])*SPAN};
+      });
+      delete d.slots;
+    }
+  });
+  state.version=3;
 }
-let saveTimer=null;
-function saveState(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(stateKey,JSON.stringify(state));setStatus('SAVED ✓')}catch(e){console.error(e);setStatus('SAVE ERROR')}},250)}
+let saveTimer=null,lastSave=0;
+function saveState(){
+  clearTimeout(saveTimer);
+  const flush=()=>{try{localStorage.setItem(stateKey,JSON.stringify(state));lastSave=Date.now();setStatus('SAVED ✓')}catch(e){console.error(e);setStatus('SAVE ERROR')}};
+  // Debounce, but never let continuous editing defer the write indefinitely:
+  // each call resets the timer, so a steady stream of drags would otherwise never persist.
+  if(Date.now()-lastSave>2000){flush();return}
+  saveTimer=setTimeout(flush,250);
+}
 function deck(){return state.decks.find(d=>d.id===state.activeId)}
-function placedIds(){return Object.values(deck().slots).filter(Boolean)}
-function cellOf(id){return Object.keys(deck().slots).find(k=>deck().slots[k]===id)||null}
+
+/* ---- geometry ---- */
+function fits(x,y,skipId){
+  if(x<0||y<0||x>MAXP||y>MAXP)return false;
+  const d=deck();
+  for(const id of Object.keys(d.pos)){
+    if(id===skipId||!d.cards[id])continue;
+    const p=d.pos[id];
+    if(x<p.x+SPAN&&x+SPAN>p.x&&y<p.y+SPAN&&y+SPAN>p.y)return false;
+  }
+  return true;
+}
+function freeSpot(){for(let y=0;y<=MAXP;y+=SPAN)for(let x=0;x<=MAXP;x+=SPAN)if(fits(x,y,null))return{x,y};
+  for(let y=0;y<=MAXP;y++)for(let x=0;x<=MAXP;x++)if(fits(x,y,null))return{x,y};return null}
+function cellAt(px,py,offX,offY,center){
+  const r=document.getElementById('lattice').getBoundingClientRect();
+  const cw=r.width/LAT,ch=r.height/LAT;
+  // center: put the 4x4 footprint under the cursor; otherwise keep the grab point
+  const ox=center?SPAN/2*cw:offX, oy=center?SPAN/2*ch:offY;
+  let x=Math.round((px-r.left-ox)/cw),y=Math.round((py-r.top-oy)/ch);
+  return{x:Math.max(0,Math.min(MAXP,x)),y:Math.max(0,Math.min(MAXP,y))};
+}
 
 /* ---- deck ops ---- */
 function addToDeck(card){const d=deck();if(d.cards[card.id])return;d.cards[card.id]=JSON.parse(JSON.stringify(card));d.tray.push(card.id);saveState();renderAll()}
-function dropFromDeck(id){const d=deck();delete d.cards[id];d.tray=d.tray.filter(x=>x!==id);const k=cellOf(id);if(k)delete d.slots[k];if(selected===id)selected=null;saveState();renderAll()}
-function toTray(id){const d=deck();const k=cellOf(id);if(k)delete d.slots[k];if(!d.tray.includes(id))d.tray.push(id);saveState();renderAll()}
-function place(id,key){
-  const d=deck();const from=cellOf(id),occupant=d.slots[key];
-  if(from===key)return;
-  if(occupant&&occupant!==id){
-    if(from)d.slots[from]=occupant;              // swap between cells
-    else{d.tray=d.tray.filter(x=>x!==occupant);d.tray.push(occupant)} // bumped card goes to tray
-  }else if(from)delete d.slots[from];
-  d.slots[key]=id;
-  d.tray=d.tray.filter(x=>x!==id);
-  selected=null;saveState();renderAll();
+function dropFromDeck(id){const d=deck();delete d.cards[id];delete d.pos[id];d.tray=d.tray.filter(x=>x!==id);if(selected===id)selected=null;saveState();renderAll()}
+function toTray(id){const d=deck();delete d.pos[id];if(!d.tray.includes(id))d.tray.push(id);saveState();renderAll()}
+function place(id,x,y){
+  if(!fits(x,y,id)){setStatus('置けません（重なり）',true);return false}
+  const d=deck();d.pos[id]={x,y};d.tray=d.tray.filter(v=>v!==id);
+  selected=null;saveState();renderAll();return true;
 }
 
 /* ---- rendering ---- */
-function makeCard(card,where,key){
+function makeCard(card,where){
   const el=document.createElement('article');
   el.className='card '+(card.type||'note');
   if(selected===card.id)el.classList.add('selected');
   el.dataset.id=card.id;el.dataset.where=where;
-  const btns=where==='cell'?'<button class="back" title="控えに戻す">▾</button><button class="x" title="デックから外す">✕</button>'
+  const btns=where==='board'?'<button class="back" title="控えに戻す">▾</button><button class="x" title="デックから外す">✕</button>'
            :where==='tray'?'<button class="x" title="デックから外す">✕</button>':'';
   el.innerHTML=`<div class="c-meta"><span>${esc((card.type||'note').toUpperCase())}</span><span>${esc(card.date||'—')}</span></div>`
     +`<div class="c-title">${esc(card.title)}</div>`
@@ -193,32 +248,29 @@ function makeCard(card,where,key){
     +(btns?`<div class="c-btns">${btns}</div>`:'');
   const x=el.querySelector('.x');if(x)x.addEventListener('click',e=>{e.stopPropagation();dropFromDeck(card.id)});
   const b=el.querySelector('.back');if(b)b.addEventListener('click',e=>{e.stopPropagation();toTray(card.id)});
-  el.addEventListener('pointerdown',e=>startDrag(e,card,where));
+  el.addEventListener('pointerdown',e=>startDrag(e,card,where,el));
   return el;
 }
-function renderGrid(){
-  const d=deck(),g=document.getElementById('grid');
-  g.innerHTML='';
-  const corner=document.createElement('div');corner.className='corner';corner.innerHTML='<span>▚ 4×4</span>';g.appendChild(corner);
-  for(let c=0;c<N;c++){
-    const h=document.createElement('div');h.className='col-head';
-    const i=document.createElement('input');i.className='axis-input';i.maxLength=12;i.dataset.axis='cols';i.dataset.i=c;i.value=d.axes.cols[c]||'';
-    h.appendChild(i);g.appendChild(h);
+function renderAxes(){
+  const d=deck();
+  const ca=document.getElementById('colAxis'),ra=document.getElementById('rowAxis');
+  ca.innerHTML='';ra.innerHTML='';
+  for(let i=0;i<4;i++){
+    const ci=document.createElement('input');ci.className='axis-input';ci.maxLength=12;ci.dataset.axis='cols';ci.dataset.i=i;ci.value=d.axes.cols[i]||'';ca.appendChild(ci);
+    const ri=document.createElement('input');ri.className='axis-input';ri.maxLength=12;ri.dataset.axis='rows';ri.dataset.i=i;ri.value=d.axes.rows[i]||'';ra.appendChild(ri);
   }
-  for(let r=0;r<N;r++){
-    const rh=document.createElement('div');rh.className='row-head';
-    const ri=document.createElement('input');ri.className='axis-input';ri.maxLength=12;ri.dataset.axis='rows';ri.dataset.i=r;ri.value=d.axes.rows[r]||'';
-    rh.appendChild(ri);g.appendChild(rh);
-    for(let c=0;c<N;c++){
-      const key=`r${r}c${c}`,cell=document.createElement('div');
-      cell.className='cell';cell.dataset.cell=key;cell.dataset.key=key.toUpperCase();
-      cell.style.setProperty('--t',String((N-1-r)+c));
-      const cid=d.slots[key];
-      if(cid&&d.cards[cid])cell.appendChild(makeCard(d.cards[cid],'cell',key));
-      else{cell.classList.add('empty');if(selected)cell.classList.add('armed')}
-      g.appendChild(cell);
-    }
-  }
+}
+function renderBoard(){
+  const d=deck(),lat=document.getElementById('lattice');
+  lat.innerHTML='';
+  Object.keys(d.pos).forEach(id=>{
+    const card=d.cards[id];if(!card)return;
+    const p=d.pos[id],el=makeCard(card,'board');
+    el.style.gridColumn=`${p.x+1} / span ${SPAN}`;
+    el.style.gridRow=`${p.y+1} / span ${SPAN}`;
+    lat.appendChild(el);
+  });
+  lat.classList.toggle('live',!!selected);
 }
 function renderSide(){
   const d=deck(),list=document.getElementById('sideList'),form=document.getElementById('mkForm');
@@ -243,70 +295,96 @@ function renderDeckBar(){
   sel.innerHTML=state.decks.map(d=>`<option value="${esc(d.id)}"${d.id===state.activeId?' selected':''}>${esc(d.name)} (${Object.keys(d.cards).length})</option>`).join('');
   document.getElementById('deckDel').disabled=state.decks.length<=1;
 }
-function renderAll(){renderDeckBar();renderGrid();renderSide()}
+function renderAll(){renderDeckBar();renderAxes();renderBoard();renderSide()}
 
-/* ---- click / drag ---- */
+/* ---- preview ---- */
+let preview=null;
+function showPreview(x,y,ok){
+  const lat=document.getElementById('lattice');
+  if(!preview){preview=document.createElement('div');preview.className='preview'}
+  preview.style.gridColumn=`${x+1} / span ${SPAN}`;
+  preview.style.gridRow=`${y+1} / span ${SPAN}`;
+  preview.classList.toggle('bad',!ok);
+  if(preview.parentNode!==lat)lat.appendChild(preview);
+}
+function hidePreview(){if(preview&&preview.parentNode)preview.parentNode.removeChild(preview)}
+
+/* ---- click + drag ---- */
 function onCardClick(card,where){
   if(where==='lib'){addToDeck(card);return}
   selected=(selected===card.id)?null:card.id;
   renderAll();
 }
-function onCellClick(key){
-  const d=deck();
-  if(selected){place(selected,key);return}
-  const cid=d.slots[key];
-  if(cid){selected=cid;renderAll()}
-}
 let drag=null;
-function startDrag(e,card,where){
+function startDrag(e,card,where,el){
   if(e.button!==undefined&&e.button!==0)return;
   if(e.target.closest('.c-btns'))return;
-  drag={card,where,x0:e.clientX,y0:e.clientY,moved:false,ghost:null,target:null};
+  const r=el.getBoundingClientRect();
+  drag={card,where,el,x0:e.clientX,y0:e.clientY,offX:e.clientX-r.left,offY:e.clientY-r.top,moved:false,chip:null,target:null,overSide:false};
 }
-function clearDrop(){document.querySelectorAll('.cell.drop,.side-drop').forEach(el=>el.classList.remove('drop','side-drop'))}
 document.addEventListener('pointermove',e=>{
-  if(!drag)return;
-  if(!drag.moved){
-    if(Math.abs(e.clientX-drag.x0)<5&&Math.abs(e.clientY-drag.y0)<5)return;
-    drag.moved=true;
-    const g=makeCard(drag.card,'ghost');g.classList.add('ghost');document.body.appendChild(g);drag.ghost=g;
+  if(drag){
+    if(!drag.moved){
+      if(Math.abs(e.clientX-drag.x0)<5&&Math.abs(e.clientY-drag.y0)<5)return;
+      drag.moved=true;
+      const chip=document.createElement('div');chip.className='chip';chip.textContent=drag.card.title;
+      document.body.appendChild(chip);drag.chip=chip;
+      if(drag.where==='board')drag.el.classList.add('lifted');
+    }
+    drag.chip.style.left=e.clientX+'px';drag.chip.style.top=e.clientY+'px';
+    const under=document.elementFromPoint(e.clientX,e.clientY);
+    const lat=document.getElementById('lattice');
+    const onLat=under&&(under===lat||lat.contains(under));
+    const onSide=under&&under.closest('#sideList');
+    document.getElementById('sideList').classList.toggle('side-drop',!!onSide&&drag.where==='board');
+    if(onLat){
+      const onBoard=drag.where==='board';
+      const c=cellAt(e.clientX,e.clientY,drag.offX,drag.offY,!onBoard);
+      const ok=fits(c.x,c.y,onBoard?drag.card.id:null);
+      showPreview(c.x,c.y,ok);
+      drag.target={kind:'lat',x:c.x,y:c.y,ok};
+    }else{hidePreview();drag.target=onSide?{kind:'side'}:null}
+    return;
   }
-  drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
-  clearDrop();
-  const under=document.elementFromPoint(e.clientX,e.clientY);
-  const cell=under&&under.closest('.cell'),side=under&&under.closest('#sideList');
-  drag.target=cell?{kind:'cell',key:cell.dataset.cell}:(side?{kind:'side'}:null);
-  if(cell)cell.classList.add('drop');else if(side)side.classList.add('side-drop');
+  // click-to-place: preview follows the cursor while a card is selected
+  if(selected){
+    const lat=document.getElementById('lattice');
+    const under=document.elementFromPoint(e.clientX,e.clientY);
+    if(under&&(under===lat||lat.contains(under))){
+      const c=cellAt(e.clientX,e.clientY,0,0,true);
+      showPreview(c.x,c.y,fits(c.x,c.y,selected));
+    }else hidePreview();
+  }
 });
 document.addEventListener('pointerup',e=>{
   if(!drag)return;
   const d=drag;drag=null;
-  if(d.ghost)d.ghost.remove();
-  clearDrop();
-  if(!d.moved){
-    const cellEl=e.target.closest?e.target.closest('.cell'):null;
-    if(d.where==='cell'&&cellEl&&deck().slots[cellEl.dataset.cell]===d.card.id&&selected&&selected!==d.card.id){onCellClick(cellEl.dataset.cell);return}
-    onCardClick(d.card,d.where);return;
-  }
+  if(d.chip)d.chip.remove();
+  hidePreview();
+  document.getElementById('sideList').classList.remove('side-drop');
+  if(d.where==='board')d.el.classList.remove('lifted');
+  if(!d.moved){onCardClick(d.card,d.where);return}
   if(!d.target)return;
-  if(d.target.kind==='cell'){
+  if(d.target.kind==='lat'){
     if(d.where==='lib')addToDeck(d.card);
-    place(d.card.id,d.target.key);
+    place(d.card.id,d.target.x,d.target.y);
   }else if(d.target.kind==='side'){
     if(d.where==='lib')addToDeck(d.card);else toTray(d.card.id);
   }
 });
-document.getElementById('grid').addEventListener('click',e=>{
+document.getElementById('lattice').addEventListener('click',e=>{
   if(e.target.closest('.card'))return;
-  const cell=e.target.closest('.cell');
-  if(cell)onCellClick(cell.dataset.cell);
+  if(!selected)return;
+  const c=cellAt(e.clientX,e.clientY,0,0,true);
+  place(selected,c.x,c.y);
+  hidePreview();
 });
-document.getElementById('grid').addEventListener('input',e=>{
-  const i=e.target.closest('.axis-input');if(!i)return;
+document.addEventListener('input',e=>{
+  const i=e.target.closest&&e.target.closest('.axis-input');if(!i)return;
   deck().axes[i.dataset.axis][+i.dataset.i]=i.value;saveState();
 });
 
-/* ---- library load ---- */
+/* ---- library ---- */
 async function loadLibrary(){
   setStatus('LOADING…');
   const btn=document.getElementById('loadBtn');btn.disabled=true;
@@ -333,14 +411,18 @@ function stamp(){const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()
 function buildExport(){
   const d=deck();
   if(!Object.keys(d.cards).length)return null;
-  const L=[`# DECK: ${d.name}`,`生成日時: ${new Date().toISOString()}`,'','## 配置 (4×4)',''];
-  L.push('| |'+d.axes.cols.map(c=>` ${c||'—'} |`).join(''));
-  L.push('| --- |'+d.axes.cols.map(()=>' --- |').join(''));
-  for(let r=0;r<N;r++){
-    const row=[`| ${d.axes.rows[r]||'—'} |`];
-    for(let c=0;c<N;c++){const id=d.slots[`r${r}c${c}`];row.push(` ${id&&d.cards[id]?d.cards[id].title.replace(/\|/g,'/'):''} |`)}
-    L.push(row.join(''));
-  }
+  const L=[`# DECK: ${d.name}`,`生成日時: ${new Date().toISOString()}`,'',`## 配置 (16×16 格子 / カード ${SPAN}×${SPAN})`,''];
+  const placed=Object.keys(d.pos).filter(id=>d.cards[id])
+    .map(id=>({c:d.cards[id],p:d.pos[id]}))
+    .sort((a,b)=>a.p.y-b.p.y||a.p.x-b.p.x);
+  if(placed.length){
+    L.push('| x | y | 列 | 行 | ズレ | カード |','| --- | --- | --- | --- | --- | --- |');
+    placed.forEach(({c,p})=>{
+      const col=d.axes.cols[Math.floor(p.x/SPAN)]||'—',row=d.axes.rows[Math.floor(p.y/SPAN)]||'—';
+      const off=`${p.x%SPAN}/${p.y%SPAN}`;
+      L.push(`| ${p.x} | ${p.y} | ${col} | ${row} | ${off} | ${c.title.replace(/\|/g,'/')} |`);
+    });
+  }else L.push('（盤面は空）');
   const tray=d.tray.map(id=>d.cards[id]).filter(Boolean);
   if(tray.length){L.push('','## 控え','');tray.forEach(c=>L.push(`- ${c.title}`))}
   L.push('','## カード出典','');
@@ -383,9 +465,9 @@ document.getElementById('jsonShow').onclick=()=>{document.getElementById('jsonBo
 document.getElementById('jsonImport').onclick=()=>{
   try{
     const d=JSON.parse(document.getElementById('jsonBox').value);
-    if(!d||typeof d!=='object'||!d.cards||!d.slots)throw new Error('deck の形ではありません');
+    if(!d||typeof d!=='object'||!d.cards)throw new Error('deck の形ではありません');
     d.id=uid('deck');d.name=(d.name||'IMPORTED')+' (import)';
-    d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};d.tray=d.tray||[];
+    d.axes=d.axes||{cols:[...DEFAULT_AXES.cols],rows:[...DEFAULT_AXES.rows]};d.tray=d.tray||[];d.pos=d.pos||{};
     state.decks.push(d);state.activeId=d.id;saveState();renderAll();setStatus('IMPORTED ✓');
   }catch(e){setStatus('JSON ERROR: '+e.message)}
 };

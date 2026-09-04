@@ -46,7 +46,7 @@ Core interaction:
 ## Current entry points
 
 - `index.html` — GitHub Pages root / primary cockpit
-- `board.html` — Deck Board 4×4 / カードを並べて深く考える独立ページ (linked from the cockpit toolbar)
+- `board.html` — Deck Board 16×16 / カードを並べて深く考える独立ページ (linked from the cockpit toolbar)
 - `index-00.html` — UI gallery and pattern launcher
 - `main.html` — dynamic Mission Control build
 - `pattern-01.html` — Mission Control
@@ -56,7 +56,7 @@ Core interaction:
 - `pattern-05.html` — Hybrid Command Deck
 - `prototype-common.js` — shared GitHub API/data access and previous-day lookup
 
-## Deck Board 4×4 (`board.html`)
+## Deck Board 16×16 (`board.html`)
 
 The cockpit is optimized for *scanning*. The board is the opposite mode: a separate,
 self-contained page for **placing a small number of cards deliberately and thinking slowly**.
@@ -65,37 +65,42 @@ self-contained page for **placing a small number of cards deliberately and think
 ### Model
 
 ```text
-LIBRARY            DECK                     GRID 4×4
-extracted/*.json → JSON cards (snapshot) → 16 slots, 1 card per slot
-(fetched)          localStorage             position = meaning
+LIBRARY            DECK                     LATTICE 16×16
+extracted/*.json → JSON cards (snapshot) → cards are 4×4 cells
+(fetched)          localStorage             the offset is the meaning
 ```
 
 - **Card** — an idea/theme/action normalized into a JSON object
   (`id`, `type`, `title`, `summary`, `date`, `source`). `source` keeps the
-  `repo / path / index` of the extracted record, so a card on the grid is still traceable
+  `repo / path / index` of the extracted record, so a card on the board is still traceable
   back to the analysis layer. 自作カード (`type: note`) use the same shape with `source: null`.
-- **Deck** — a named set of cards plus their arrangement. Adding a card to a deck
-  **snapshots its JSON into the deck**, so a deck stays readable without re-fetching.
-  Multiple decks can be created, renamed, duplicated, deleted and switched.
-- **Grid** — 4×4, one card per cell. The 16-slot ceiling is the point: it forces selection
-  rather than accumulation. Cards not placed sit in 控え (the deck's bench).
+- **Deck** — a named set of cards plus their arrangement (`pos: {cardId: {x, y}}`).
+  Adding a card **snapshots its JSON into the deck**, so a deck stays readable without
+  re-fetching. Decks can be created, renamed, duplicated, deleted and switched.
+- **Lattice** — 16×16 cells. A card occupies **4×4** of them, so four cards fit across,
+  but a card can sit at any cell: two neighbours can be staggered by **0, 1, 2 or 3 cells**
+  — a quarter of a card at a time. That stagger is the expressive dimension.
+  Cards may not overlap; a drop that would overlap previews red and is refused.
 
-### Why a grid instead of free placement
+### Why a lattice instead of free placement
 
-Free placement made tidying the board the work, not thinking. The grid removes that cost.
-The cells are differentiated only just enough to carry meaning — editable labels on both
-axes (default: 種 / 育つ / 形 / 動く × 強い引力 / 気になる / 様子見 / 保留) and a very faint
-tint that deepens toward the "動く × 強い引力" corner. Nothing else. Where a card sits
-*is* the interpretation, so the axes are meant to be rewritten as the thinking changes.
+Free placement made tidying the board the work, not thinking. Snapping removes that cost
+without flattening it into fixed slots. The bold gridlines mark whole-card boundaries and
+the faint ones mark the quarter-card offsets, so the drawing itself states what is
+adjustable. The four axis labels per side (default: 種 / 育つ / 形 / 動く ×
+強い引力 / 気になる / 様子見 / 保留) are editable and deliberately soft — where a card sits
+relative to its neighbours carries more than the label does.
 
 ### State and I/O
 
 - decks live only in `localStorage` under `cockpid.deck.v2`; the board never writes
-  analysis data back to `my-storage-note`
+  analysis data back to `my-storage-note`. Old 4×4-slot decks are migrated on load
+  (`r{row}c{col}` → `x = col*4, y = row*4`)
 - `JSON` panel shows the active deck as JSON and can import one back — the backup/restore path
-- `⇪ 書き出す` posts the deck as one memo into `mynotebook/00_inbox`: the 4×4 layout as a
-  markdown table, the bench, and a card-provenance list. A synthesis session therefore
-  re-enters the pipeline as source material (same write channel as ZEN V2)
+- `⇪ 書き出す` posts the deck as one memo into `mynotebook/00_inbox`: every placed card with
+  its `x/y`, its axis labels and its offset within the card grid, plus the bench and a
+  card-provenance list. A synthesis session therefore re-enters the pipeline as source
+  material (same write channel as ZEN V2)
 
 It shares `index.html`'s token key, so a token entered on either page works on both.
 
@@ -121,3 +126,5 @@ Never share a screenshot that shows the actual token value (e.g. a DevTools Netw
 - **A fine-grained PAT's repository list must be re-verified after every edit.** Adding a repo to "Repository access" on GitHub's token settings page can, in practice, require re-confirming the rest of the list — a repo you thought was still selected can silently drop off. After editing a token's scope, re-check the full list, not just the repo you meant to add.
 - **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token.** `mynotebook` (SOURCE) needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` (ANALYSIS DATA) was Read-only at first, but now also needs Write because marking an action complete writes to `state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature (ZEN save, or action completion) while everything else keeps working.
 - **Don't let independent async status writers share the same DOM element.** An earlier bug had `loadDay()` and `loadAnalysis()` both write to the same header status text without coordination; whichever finished last silently overwrote the other's (possibly more important) error message. If you add another concurrent status source, route it through a single combining function (see `refreshStatus()` in `index.html`) rather than writing directly.
+- **A debounce that resets on every action can defer a save indefinitely.** `board.html` saves deck state on a 250ms debounce; because every drag and placement reset the timer, continuous editing never actually reached the write. It now force-flushes when more than 2s has passed since the last real write — keep that guarantee if the save path changes.
+- **The board's status readout has several independent async writers** (library load, deck save, placement refusal). A "placement refused" message was being overwritten by the `SAVED` that landed just behind it, so the refusal looked like a success. `setStatus(text, sticky)` now protects an explicit message for 1.6s. This is the same class of bug as the `refreshStatus()` note above — check it whenever a new status source is added.
