@@ -60,7 +60,6 @@ async function loadCurrentTask(){
   const date=iso(jst());
   let file=null;
   try{
-    // 09_taskchute/YYYY-MM-DD の拡張子は .md と拡張子なしの両方を試し、当たったほうを覚えて以降は1リクエストにする
     for(const ext of(taskExt!==null?[taskExt]:['.md',''])){
       const j=await repoGetSafe(CFG.sourceRepo,`${CFG.taskDir}/${date}${ext}`);
       if(j&&j.content){file=j;taskExt=ext;break}
@@ -79,5 +78,6 @@ document.getElementById('prevDay').onclick=()=>{cursorDate=addDays(cursorDate,-1
 loadCurrentTask();setInterval(loadCurrentTask,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadCurrentTask()});
 loadDay();loadAnalysis();
 </script>
+<script src="ai-message.js"></script>
 </body>
 </html>
