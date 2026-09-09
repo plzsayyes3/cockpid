@@ -49,6 +49,19 @@
     document.head.appendChild(style);
   }
 
+  function installCalendarLink() {
+    if (document.getElementById('calendarLink')) return;
+    const toolbar = document.querySelector('.toolbar');
+    const nav = toolbar?.querySelector('.navgroup:last-child');
+    if (!nav) return;
+    const link = document.createElement('a');
+    link.className = 'btn cyan';
+    link.id = 'calendarLink';
+    link.href = 'calendar.html';
+    link.textContent = '▦ 手帳カレンダー';
+    nav.insertBefore(link, nav.firstChild);
+  }
+
   function installPanel() {
     if (document.getElementById(PANEL_ID)) return;
     const toolbar = document.querySelector('.toolbar');
@@ -202,6 +215,7 @@
   }
 
   installStyle();
+  installCalendarLink();
   installPanel();
   loadAdviceMessage();
 
