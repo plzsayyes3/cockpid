@@ -75,6 +75,7 @@ function parseItem(raw) {
 function parseTechoMarkdown(markdown, year, month) {
   const days = new Map();
   const monthUndated = [];
+  const weekUndated = new Map();
   let currentDay = null;
   let currentWeek = null;
   let section = 'none';
@@ -111,6 +112,7 @@ function parseTechoMarkdown(markdown, year, month) {
     if (/^###\s+日付未定\s*$/.test(line)) {
       currentDay = null;
       section = currentWeek == null ? 'month-undated' : 'week-undated';
+      if (section === 'week-undated' && !weekUndated.has(currentWeek)) weekUndated.set(currentWeek, []);
       continue;
     }
 
@@ -127,10 +129,12 @@ function parseTechoMarkdown(markdown, year, month) {
       days.get(currentDay).push(parseItem(listMatch[1]));
     } else if (section === 'month-undated') {
       monthUndated.push(parseItem(listMatch[1]));
+    } else if (section === 'week-undated' && currentWeek != null) {
+      weekUndated.get(currentWeek).push(parseItem(listMatch[1]));
     }
   }
 
-  return { year, month, days, monthUndated };
+  return { year, month, days, monthUndated, weekUndated };
 }
 
 async function fetchMonthMarkdown(year, month) {
@@ -158,42 +162,76 @@ function renderMonthHeader() {
   byId('sourceLink').href = `https://github.com/${OWNER}/${CALENDAR_CFG.repo}/blob/${CALENDAR_CFG.ref}/${path}`;
 }
 
+function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function itemAttrs(item) {
+  if (!item.time) return '';
+  return ` data-time="${escapeHtml(item.time)}" title="${escapeHtml(item.time)}" tabindex="0"`;
+}
+
+function renderEvent(item, className = 'event') {
+  return `
+    <div class="${className}${item.checked ? ' checked' : ''}${item.task ? ' task' : ''}"${itemAttrs(item)}>
+      <span class="event-title">${escapeHtml(item.title)}</span>
+    </div>`;
+}
+
+function renderWeekUndated(items, week) {
+  const content = items.length ? items.map((item) => renderEvent(item, 'week-undated-item')).join('') : '';
+  return `
+    <aside class="week-undated-cell${items.length ? ' has-items' : ''}" aria-label="week${week} 日付未定">
+      <div class="week-undated-label">week${week}<span>日付未定</span></div>
+      <div class="week-undated-items">${content}</div>
+    </aside>`;
+}
+
 function renderCalendar(data) {
   renderMonthHeader();
+  renderUndated(data.monthUndated);
+
   const grid = byId('calendarGrid');
   const today = jstParts();
   const firstDow = new Date(Date.UTC(state.year, state.month - 1, 1)).getUTCDay();
   const offset = (firstDow + 6) % 7;
   const daysInMonth = new Date(Date.UTC(state.year, state.month, 0)).getUTCDate();
-  const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+  const totalDayCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+  const rows = totalDayCells / 7;
+  const gridStart = new Date(Date.UTC(state.year, state.month - 1, 1 - offset));
   const cells = [];
 
-  for (let index = 0; index < totalCells; index += 1) {
-    const day = index - offset + 1;
-    if (day < 1 || day > daysInMonth) {
-      cells.push('<div class="day-cell empty" aria-hidden="true"></div>');
-      continue;
+  for (let row = 0; row < rows; row += 1) {
+    const monday = new Date(gridStart);
+    monday.setUTCDate(gridStart.getUTCDate() + row * 7);
+    const week = isoWeek(monday);
+    cells.push(renderWeekUndated(data.weekUndated.get(week) || [], week));
+
+    for (let col = 0; col < 7; col += 1) {
+      const index = row * 7 + col;
+      const day = index - offset + 1;
+      if (day < 1 || day > daysInMonth) {
+        cells.push('<div class="day-cell empty" aria-hidden="true"></div>');
+        continue;
+      }
+
+      const items = data.days.get(day) || [];
+      const isToday = today.year === state.year && today.month === state.month && today.day === day;
+      const events = items.length ? items.map((item) => renderEvent(item)).join('') : '';
+
+      cells.push(`
+        <section class="day-cell${isToday ? ' today' : ''}" aria-label="${state.month}月${day}日">
+          <div class="day-number">${day}${isToday ? '<span class="today-label">TODAY</span>' : ''}</div>
+          <div class="events">${events}</div>
+        </section>`);
     }
-
-    const items = data.days.get(day) || [];
-    const isToday = today.year === state.year && today.month === state.month && today.day === day;
-    const events = items.length
-      ? items.map((item) => `
-        <div class="event${item.checked ? ' checked' : ''}${item.task ? ' task' : ''}">
-          ${item.time ? `<span class="event-time">${escapeHtml(item.time)}</span>` : ''}
-          <span class="event-title">${escapeHtml(item.title)}</span>
-        </div>`).join('')
-      : '';
-
-    cells.push(`
-      <section class="day-cell${isToday ? ' today' : ''}" aria-label="${state.month}月${day}日">
-        <div class="day-number">${day}${isToday ? '<span class="today-label">TODAY</span>' : ''}</div>
-        <div class="events">${events}</div>
-      </section>`);
   }
 
   grid.innerHTML = cells.join('');
-  renderUndated(data.monthUndated);
 }
 
 function renderUndated(items) {
@@ -206,11 +244,7 @@ function renderUndated(items) {
   }
 
   section.hidden = false;
-  list.innerHTML = items.map((item) => `
-    <li class="undated-item${item.checked ? ' checked' : ''}">
-      ${item.time ? `<span class="event-time">${escapeHtml(item.time)}</span>` : ''}
-      <span>${escapeHtml(item.title)}</span>
-    </li>`).join('');
+  list.innerHTML = items.map((item) => renderEvent(item, 'undated-item')).join('');
 }
 
 function renderEmpty(message) {
@@ -236,8 +270,9 @@ async function loadMonth() {
     const markdown = await fetchMonthMarkdown(state.year, state.month);
     const parsed = parseTechoMarkdown(markdown, state.year, state.month);
     renderCalendar(parsed);
-    const count = [...parsed.days.values()].reduce((sum, items) => sum + items.length, 0);
-    setStatus('ok', 'SOURCE LIVE', `${sourcePath()} · ${count} items`);
+    const dayCount = [...parsed.days.values()].reduce((sum, items) => sum + items.length, 0);
+    const weekUndatedCount = [...parsed.weekUndated.values()].reduce((sum, items) => sum + items.length, 0);
+    setStatus('ok', 'SOURCE LIVE', `${sourcePath()} · ${dayCount + parsed.monthUndated.length + weekUndatedCount} items`);
   } catch (error) {
     console.error(error);
     const message = String(error?.message || error);
