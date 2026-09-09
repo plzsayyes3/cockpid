@@ -1,4 +1,4 @@
-const OWNER='plzsayyes3',REPO='my-storage-note',NOTE_OWNER='plzsayyes3',NOTE_REPO='mynotebook',STORAGE_KEY='cockpid.github.token';
+const OWNER='plzsayyes3',REPO='my-storage-note',NOTE_OWNER='plzsayyes3',NOTE_REPO='mynotebook',STORAGE_KEY='zen-note-github-token';
 const $=id=>document.getElementById(id);
 const token=()=>localStorage.getItem(STORAGE_KEY)||'';
 function jst(d=new Date()){const s=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);return new Date(`${s.find(x=>x.type==='year').value}-${s.find(x=>x.type==='month').value}-${s.find(x=>x.type==='day').value}T00:00:00+09:00`)}
