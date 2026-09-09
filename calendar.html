@@ -24,9 +24,9 @@
     <div class="navgroup">
       <a class="btn" href="index.html">← COCKPIT</a>
       <a class="btn" href="board.html">⇗ BOARD</a>
-      <a class="btn cyan" href="https://plzsayyes3.github.io/zen-note/">◈ ZEN NOTE</a>
     </div>
     <div class="navgroup">
+      <button class="btn primary" id="memoOpen">＋ MEMO / ZEN V2</button>
       <button class="btn primary" id="todayBtn">今日</button>
     </div>
   </div>
@@ -59,7 +59,33 @@
     <span>TECHO MARKDOWN REMAINS SOURCE OF TRUTH</span>
   </footer>
 </div>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer" aria-label="Zen Memo">
+  <div class="drawer-head">
+    <strong>ZEN V2 / QUICK MEMO</strong>
+    <button class="btn" id="memoClose">CLOSE</button>
+  </div>
+  <div class="small">mynotebook の <b>00_inbox</b> に新規メモとして保存します。</div>
+  <textarea id="memoText" placeholder="ここにメモを書く……"></textarea>
+  <div class="drawer-foot">
+    <span class="drawer-status" id="memoStatus">READY</span>
+    <button class="btn primary" id="memoSave">POST / CTRL+ENTER</button>
+  </div>
+  <div class="zen-hint">Ctrl + Enter で投稿。ファイル名: YYYYMMDDHHMMSS.md</div>
+  <button class="btn token-toggle" id="tokenToggle">▸ 接続設定を表示</button>
+  <div class="token-settings" id="tokenSettings">
+    <div class="token-box">
+      <label>GITHUB FINE-GRAINED TOKEN</label>
+      <input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…">
+      <div class="small">COCKPID本体と同じ <b>zen-note-github-token</b> を使います。mynotebook の Contents: Read and write 権限が必要です。</div>
+      <button class="btn token-save" id="tokenSave">TOKENを保存</button>
+    </div>
+  </div>
+</aside>
+
 <script src="prototype-common.js"></script>
+<script src="zen-memo.js"></script>
 <script src="calendar.js"></script>
 </body>
 </html>
