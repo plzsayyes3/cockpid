@@ -21,6 +21,7 @@ DISPLAY / EXPLORATION
 `plzsayyes3/mynotebook` contains the original daily notes and personal thinking records.
 
 - `01_Daily/YYYY-MM-DD.md` — daily notes
+- `02_techo/YYYY-MM.md` — My System Techo monthly Markdown; the source of truth for `calendar.html`
 - `00_inbox/` — where cockpid writes (ZEN memos, deck exports)
 - `09_taskchute/YYYY-MM-DD.md` — the day's TaskChute list; cockpid reads the
   `- [/]` (in-progress) lines from it for the header's NOW readout
@@ -67,6 +68,7 @@ never to the shared status readout (see the pitfall about status writers below).
 ## Current entry points
 
 - `index.html` — GitHub Pages root / primary cockpit
+- `calendar.html` — My System Techo month calendar; reads `mynotebook/02_techo/YYYY-MM.md` directly through the GitHub Contents API
 - `board.html` — Deck Board 16×16 / カードを並べて深く考える独立ページ (linked from the cockpit toolbar)
 - `index-00.html` — UI gallery and pattern launcher
 - `main.html` — dynamic Mission Control build
@@ -75,7 +77,42 @@ never to the shared status readout (see the pitfall about status writers below).
 - `pattern-03.html` — Neural Network
 - `pattern-04.html` — Tactical Matrix
 - `pattern-05.html` — Hybrid Command Deck
-- `prototype-common.js` — shared GitHub API/data access and previous-day lookup
+- `prototype-common.js` — shared GitHub API/data access and the shared `zen-note-github-token` localStorage key
+
+## My System Techo Calendar (`calendar.html`)
+
+The calendar is deliberately a **display / exploration layer only**. It does not copy,
+materialize, or regenerate Techo event data inside `cockpid`.
+
+```text
+mynotebook/02_techo/YYYY-MM.md
+        ↓ GitHub Contents API
+calendar.js
+        ↓
+browser month calendar
+```
+
+The Markdown file remains the source of truth. Every month change fetches that month's
+file from `plzsayyes3/mynotebook` and parses it in the browser.
+
+Initial scope:
+
+- Monday-first month grid
+- previous month / next month / today navigation
+- `## M月D日(...)` day headings and their `- ` items
+- optional leading times such as `15:00` and `19:30-20:30`
+- task syntax (`- [ ]`, `- [x]`, `- [/]`) without editing it
+- month-level `### 日付未定`
+- Obsidian wikilinks rendered as readable text
+- no week view, day view, or editing yet
+
+`calendar.html` reuses `prototype-common.js` for GitHub access and therefore uses the
+same browser token as the rest of the cockpit: `localStorage['zen-note-github-token']`.
+No token is written into this repository.
+
+A GitHub `404` is intentionally reported as either “month file missing” or “token does
+not have access to `mynotebook`”, because fine-grained PAT access failures can also appear
+as `404`.
 
 ## Deck Board 16×16 (`board.html`)
 
@@ -141,11 +178,11 @@ Never share a screenshot that shows the actual token value (e.g. a DevTools Netw
 
 ## Known pitfalls (learned the hard way)
 
-- **One token key, one input field.** `index.html` stores its token under the `localStorage` key `zen-note-github-token`. `main.html` (via `prototype-common.js`) uses a *different* key, `cockpid.github.token`. Because both pages share the same origin but not the same key, a token pasted into one page's dialog is invisible to the other — this caused a long, confusing debugging session where the token being edited on GitHub's settings page was not the one actually in use. If unifying the two pages' storage isn't done, always double-check which page you're testing against before assuming a token change took effect. `board.html` deliberately reuses `index.html`'s `zen-note-github-token` key for this reason — keep it that way for any new page.
-- **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes.
+- **One token key, one input field.** Current cockpit pages and `prototype-common.js` use the same `localStorage` key: `zen-note-github-token`. Do not reintroduce a second token key. `board.html`, `calendar.html`, `index.html`, and pages using `prototype-common.js` are expected to see the same token on the same GitHub Pages origin.
+- **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes. The Techo calendar reports both possibilities because the target month itself may legitimately not exist.
 - **The GitHub Contents API can 404 on a bare/empty path with a trailing slash** (`.../contents/`) even when the token has valid read access to the repo. Always probe a real, non-empty subpath (e.g. `extracted`), never `''`.
 - **A fine-grained PAT's repository list must be re-verified after every edit.** Adding a repo to "Repository access" on GitHub's token settings page can, in practice, require re-confirming the rest of the list — a repo you thought was still selected can silently drop off. After editing a token's scope, re-check the full list, not just the repo you meant to add.
-- **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token.** `mynotebook` (SOURCE) needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` (ANALYSIS DATA) was Read-only at first, but now also needs Write because marking an action complete writes to `state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature (ZEN save, or action completion) while everything else keeps working.
+- **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token for the full cockpit.** The calendar itself only reads `mynotebook`, but `mynotebook` also needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` needs Write because marking an action complete writes to `state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature while read-only surfaces may continue to work.
 - **Don't let independent async status writers share the same DOM element.** An earlier bug had `loadDay()` and `loadAnalysis()` both write to the same header status text without coordination; whichever finished last silently overwrote the other's (possibly more important) error message. If you add another concurrent status source, route it through a single combining function (see `refreshStatus()` in `index.html`) rather than writing directly.
 - **A debounce that resets on every action can defer a save indefinitely.** `board.html` saves deck state on a 250ms debounce; because every drag and placement reset the timer, continuous editing never actually reached the write. It now force-flushes when more than 2s has passed since the last real write — keep that guarantee if the save path changes.
 - **The board's status readout has several independent async writers** (library load, deck save, placement refusal). A "placement refused" message was being overwritten by the `SAVED` that landed just behind it, so the refusal looked like a success. `setStatus(text, sticky)` now protects an explicit message for 1.6s. This is the same class of bug as the `refreshStatus()` note above — check it whenever a new status source is added.
