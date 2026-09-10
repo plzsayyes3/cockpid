@@ -1,0 +1,18 @@
+.calendar-news-grid{grid-template-columns:minmax(0,1.08fr) minmax(260px,.92fr)}
+.dock{display:grid;grid-template-columns:repeat(4,80px);grid-template-rows:repeat(2,36px);gap:8px}
+.app-btn{width:80px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:flex-start;gap:9px;padding:0 11px;text-align:left}
+.app-btn b{display:block;flex:0 0 auto;font-size:13px}
+.app-btn span{display:block;margin:0;font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-btn.app-slot{opacity:.28;box-shadow:0 6px 18px rgba(37,34,29,.04);cursor:default}
+.app-btn.app-slot:hover{transform:none;box-shadow:0 6px 18px rgba(37,34,29,.04)}
+.shell{padding-bottom:128px}
+.pet{bottom:122px}
+@media(max-width:720px){
+  .calendar-news-grid{grid-template-columns:1fr}
+  .dock{left:50%;right:auto;bottom:8px;transform:translateX(-50%);grid-template-columns:repeat(4,72px);grid-template-rows:repeat(2,32px);gap:8px;overflow:visible;padding:0}
+  .app-btn{width:72px;height:32px;flex:initial;border-radius:6px;padding:0 9px;gap:7px}
+  .app-btn b{font-size:12px}.app-btn span{font-size:6.5px}
+  .shell{padding-bottom:116px}
+  .pet{bottom:106px}
+}
+@media(max-width:340px){.dock{grid-template-columns:repeat(4,66px)}.app-btn{width:66px;padding:0 7px;gap:5px}}
