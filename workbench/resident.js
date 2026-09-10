@@ -8,7 +8,7 @@
   const HOME_FRAME = 7;
   const TYPE_FRAMES = [7, 8, 9, 8];
   const FRAME_SRC = {
-    3: 'resident-frame3.png',
+    3: 'resident-frame3-full.svg?v=20260911',
     6: 'resident-frame6.png',
     7: 'resident-frame7.png',
     8: 'resident-frame8.png',
