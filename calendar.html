@@ -18,7 +18,7 @@
 <div class="calendar-app">
   <header class="calendar-top">
     <div class="calendar-brand"><b>CALENDAR</b><span>TODAY + VIEW</span></div>
-    <div class="calendar-tools"><span class="source-status" id="sourceStatus">BOOTING</span><button class="memo-btn" id="memoOpen">＋ MEMO</button></div>
+    <div class="calendar-tools"><span class="source-status" id="sourceStatus">BOOTING</span><button class="memo-btn" id="fullMonthOpen">FULL MONTH</button><button class="memo-btn" id="memoOpen">＋ MEMO</button></div>
   </header>
 
   <main class="book">
@@ -63,5 +63,12 @@
 <script src="zen-memo.js"></script>
 <script src="calendar-daybook.js"></script>
 <script src="calendar-view-state.js"></script>
+<script>
+document.getElementById('fullMonthOpen')?.addEventListener('click',()=>{
+  const value=document.getElementById('anchorDate')?.value||'';
+  const month=/^\d{4}-\d{2}/.exec(value)?.[0]||'';
+  window.open(`calendar-full.html${month?`?month=${month}`:''}`,'_blank','noopener');
+});
+</script>
 </body>
 </html>
