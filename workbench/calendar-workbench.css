@@ -1,0 +1,9 @@
+/* Workbench-only calendar presentation layer. Root calendar remains stable. */
+.event-title{
+  font-variant-emoji:text;
+}
+.event-title,
+.undated-item,
+.week-undated-item{
+  filter:grayscale(1) saturate(0);
+}
