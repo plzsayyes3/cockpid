@@ -5,7 +5,7 @@
   const REPO = 'my-storage-note';
   const TOKEN_KEY = 'zen-note-github-token';
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
-  const AUDIT_PATH = 'indexes/movement/2026-06-10_2026-09-10-work-home-task-audit.json';
+  const AUDIT_NAME = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})-work-home-task-audit\.json$/;
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
   const MODES = new Set(['do', 'check', 'keep']);
   const buckets = ['do', 'check', 'keep'];
@@ -90,8 +90,7 @@
   }
 
   function itemId(item) {
-    if (item?._isRecurring) return legacyItemId(item);
-    return hashId(`v2|${item._type}|${titleKey(item)}`);
+    return item?._isRecurring ? legacyItemId(item) : hashId(`v2|${item._type}|${titleKey(item)}`);
   }
 
   function migrateHistoryForItems(items) {
@@ -100,11 +99,7 @@
       const nextId = itemId(item);
       const oldId = legacyItemId(item);
       if (nextId === oldId || history[nextId] || !history[oldId]) return;
-      history[nextId] = {
-        ...history[oldId],
-        title_key: titleKey(item),
-        recurring: Boolean(item._isRecurring)
-      };
+      history[nextId] = { ...history[oldId], title_key:titleKey(item), recurring:Boolean(item._isRecurring) };
       delete history[oldId];
       changed = true;
     });
@@ -116,10 +111,7 @@
     const text = `${item?.title || ''} ${item?.summary || ''}`;
     if (type === 'question') return 'check';
     if (type === 'idea' || type === 'theme') return 'keep';
-    if (type === 'hypothesis') {
-      if (/(考え|検討|整理|構想|方針|設計|判断|振り返)/.test(text)) return 'keep';
-      return 'check';
-    }
+    if (type === 'hypothesis') return /(考え|検討|整理|構想|方針|設計|判断|振り返)/.test(text) ? 'keep' : 'check';
     if (/(確認|状況|対象|進捗|チェック|把握|照合|レビュー|聞く|調べる|見直す)/.test(text)) return 'check';
     if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'keep';
     return 'do';
@@ -137,21 +129,17 @@
     return merged;
   }
 
-  function unique(items) { return mergeByPriority(items); }
-  function statusOf(item) { return history[itemId(item)]?.status || 'open'; }
-  function matchFilter(item) { return filter === 'all' || statusOf(item) === filter; }
+  const unique = (items) => mergeByPriority(items);
+  const statusOf = (item) => history[itemId(item)]?.status || 'open';
+  const matchFilter = (item) => filter === 'all' || statusOf(item) === filter;
+
   function timeOf(v) {
     try { return v ? new Date(v).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : ''; }
     catch (_) { return ''; }
   }
 
-  function itemById(bucket, id) {
-    return pools[bucket].find((item) => itemId(item) === id) || null;
-  }
-
-  function bucketForId(id) {
-    return buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
-  }
+  const itemById = (bucket, id) => pools[bucket].find((item) => itemId(item) === id) || null;
+  const bucketForId = (id) => buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
 
   function row(bucket, item) {
     const id = itemId(item);
@@ -174,17 +162,12 @@
     targets[bucket].list.innerHTML = shown.length ? shown.map((item) => row(bucket, item)).join('') : '<div class="empty">該当する項目はありません。</div>';
   }
 
-  function renderAll() { buckets.forEach(renderBucket); }
+  const renderAll = () => buckets.forEach(renderBucket);
 
   function setStatus(bucket, id, status) {
     const item = itemById(bucket, id);
     if (status === 'done' || status === 'skip') {
-      history[id] = {
-        status,
-        at:new Date().toISOString(),
-        title_key:item ? titleKey(item) : undefined,
-        recurring:Boolean(item?._isRecurring)
-      };
+      history[id] = { status, at:new Date().toISOString(), title_key:item ? titleKey(item) : undefined, recurring:Boolean(item?._isRecurring) };
     } else delete history[id];
     writeHistory();
     renderBucket(bucket);
@@ -213,15 +196,12 @@
         return { type, entries:[] };
       }
     }));
-
     const files = [];
     directories.forEach(({ type, entries }) => entries.forEach((entry) => {
       if (entry?.type !== 'file' || !/^\d{4}-\d{2}-\d{2}\.json$/.test(entry.name)) return;
       const date = entry.name.slice(0, 10);
-      if (date < start || date > today) return;
-      files.push({ type, date, path:`extracted/${type}/${entry.name}` });
+      if (date >= start && date <= today) files.push({ type, date, path:`extracted/${type}/${entry.name}` });
     }));
-
     const groups = await Promise.all(files.map(async (file) => {
       try {
         const p = await gh(file.path);
@@ -238,25 +218,43 @@
 
   async function loadSevenDays() {
     const curated = await loadCurated();
-    if (curated?.length) return { items:curated, curated:true };
-    return { items:await loadLegacy(), curated:false };
+    return curated?.length ? { items:curated, curated:true } : { items:await loadLegacy(), curated:false };
+  }
+
+  async function latestAuditPath() {
+    try {
+      const entries = await gh('indexes/movement');
+      if (!Array.isArray(entries)) return null;
+      const matches = entries.filter((entry) => entry?.type === 'file' && AUDIT_NAME.test(entry.name));
+      matches.sort((a, b) => {
+        const am = a.name.match(AUDIT_NAME);
+        const bm = b.name.match(AUDIT_NAME);
+        return (bm?.[2] || '').localeCompare(am?.[2] || '') || (bm?.[1] || '').localeCompare(am?.[1] || '');
+      });
+      return matches[0]?.path || null;
+    } catch (error) {
+      console.error('ON HAND audit index load failed', error);
+      return null;
+    }
   }
 
   async function loadAudit() {
     try {
-      const p = await gh(AUDIT_PATH);
-      if (!p?.content) return { items:[], recurringTitles:new Set(), loaded:false };
+      const path = await latestAuditPath();
+      if (!path) return { items:[], recurringTitles:new Set(), loaded:false, path:null };
+      const p = await gh(path);
+      if (!p?.content) return { items:[], recurringTitles:new Set(), loaded:false, path };
       const data = JSON.parse(decode(p.content));
-      if (!Array.isArray(data?.items)) return { items:[], recurringTitles:new Set(), loaded:false };
+      if (!Array.isArray(data?.items)) return { items:[], recurringTitles:new Set(), loaded:false, path };
       const recurringTitles = new Set((Array.isArray(data?.recurring_work) ? data.recurring_work : []).map(titleKey).filter(Boolean));
       const items = data.items
         .filter((item) => String(item?.state_at_last_source || '').toLowerCase() !== 'completed')
         .filter((item) => MODES.has(item?.mode))
         .map((item) => ({ ...item, _type:item.type || 'action', _date:item.last_seen || item.first_seen || today, _source:'audit' }));
-      return { items, recurringTitles, loaded:true };
+      return { items, recurringTitles, loaded:true, path };
     } catch (error) {
       console.error('ON HAND audit load failed', error);
-      return { items:[], recurringTitles:new Set(), loaded:false };
+      return { items:[], recurringTitles:new Set(), loaded:false, path:null };
     }
   }
 
@@ -269,7 +267,6 @@
       });
       return;
     }
-
     const [week, audit] = await Promise.all([loadSevenDays(), loadAudit()]);
     const items = mergeByPriority(week.items, audit.items).map((item) => ({
       ...item,
@@ -289,21 +286,15 @@
     document.querySelectorAll('[data-filter]').forEach((x) => x.classList.toggle('is-active', x === button));
     renderAll();
   });
-
   document.querySelector('.onhand-grid')?.addEventListener('change', (event) => {
     const input = event.target.closest('.done-box[data-id]');
-    if (!input) return;
-    setStatus(input.dataset.bucket, input.dataset.id, input.checked ? 'done' : null);
+    if (input) setStatus(input.dataset.bucket, input.dataset.id, input.checked ? 'done' : null);
   });
-
   document.querySelector('.onhand-grid')?.addEventListener('click', (event) => {
     const button = event.target.closest('.skip-btn[data-id]');
     if (!button) return;
-    const id = button.dataset.id;
-    const bucket = button.dataset.bucket;
-    setStatus(bucket, id, history[id]?.status === 'skip' ? null : 'skip');
+    setStatus(button.dataset.bucket, button.dataset.id, history[button.dataset.id]?.status === 'skip' ? null : 'skip');
   });
-
   window.addEventListener('storage', (event) => {
     if (event.key !== HISTORY_KEY) return;
     const previous = historyFromText(event.oldValue);
