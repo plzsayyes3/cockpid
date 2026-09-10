@@ -2,19 +2,20 @@
   'use strict';
 
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
+  const MODES = new Set(['do', 'check', 'keep']);
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
   const DISPLAY_LIMIT = 2;
   const targets = {
     do: { count: document.getElementById('moveDoCount'), list: document.getElementById('moveDoItems') },
     check: { count: document.getElementById('moveCheckCount'), list: document.getElementById('moveCheckItems') },
-    action: { count: document.getElementById('moveThinkCount'), list: document.getElementById('moveThinkItems') }
+    keep: { count: document.getElementById('moveThinkCount'), list: document.getElementById('moveThinkItems') }
   };
   const source = document.getElementById('movementDate');
   const randomButton = document.getElementById('movementRandom');
-  if (!targets.do.list || !targets.check.list || !targets.action.list) return;
+  if (!targets.do.list || !targets.check.list || !targets.keep.list) return;
 
   const dateName = /^\d{4}-\d{2}-\d{2}\.json$/;
-  const pools = { do: [], check: [], action: [] };
+  const pools = { do: [], check: [], keep: [] };
   let checked = readChecked();
 
   function jstDateParts(date = new Date()) {
@@ -61,11 +62,15 @@
   }
 
   function classify(type, item) {
+    // New storage schema (v1.1+): mode is the source of truth.
+    if (MODES.has(item?.mode)) return item.mode;
+
+    // Legacy compatibility for records created before mode existed.
     const text = `${item?.title || ''} ${item?.summary || ''}`;
-    if (type === 'question') return 'check';
-    if (type === 'idea' || type === 'theme' || type === 'hypothesis') return 'action';
+    if (type === 'question' || type === 'hypothesis') return 'check';
+    if (type === 'idea' || type === 'theme') return 'keep';
     if (/(確認|状況|対象|進捗|チェック|把握|照合|レビュー|聞く|調べる|見直す)/.test(text)) return 'check';
-    if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'action';
+    if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'keep';
     return 'do';
   }
 
@@ -126,7 +131,7 @@
   function renderAll() {
     render('do');
     render('check');
-    render('action');
+    render('keep');
   }
 
   async function loadSevenDays() {
@@ -178,7 +183,7 @@
 
     source.textContent = '7 DAYS · LOADING';
     const items = await loadSevenDays();
-    pools.do.length = pools.check.length = pools.action.length = 0;
+    pools.do.length = pools.check.length = pools.keep.length = 0;
     items.forEach((item) => pools[classify(item._type, item)].push(item));
     renderAll();
     source.textContent = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
