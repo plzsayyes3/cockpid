@@ -19,12 +19,32 @@
       <textarea id="captureText" placeholder="まだ分類しない。思いついたまま置く……"></textarea>
       <div class="capture-actions"><span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span><button class="action-btn" id="captureBtn">机に置く</button></div>
     </section>
-    <div class="side-stack">
-      <section class="object today-object"><div class="object-head"><span class="object-label">TODAY</span><span class="object-no">01</span></div><div class="list" id="todayList"><div class="empty">Techoを読んでいます…</div></div></section>
-      <div class="mini-grid">
-        <section class="object mini-object"><div class="object-head"><span class="object-label">NEWS</span><span class="object-no">04</span></div><p>外の世界は、必要な量だけ。</p><span class="state">BUILDING</span></section>
-        <section class="object mini-object workshop-object"><div class="object-head"><span class="object-label">WORKSHOP</span><span class="object-no">SYS</span></div><div class="workshop-state"><span>Techo</span><b>LIVE</b></div><div class="workshop-state"><span>Analysis</span><b>ON</b></div><button class="ghost-btn" id="systemOpen">旧SYSTEM</button></section>
-      </div>
+
+    <section class="object workshop-object">
+      <div class="object-head"><span class="object-label">WORKSHOP</span><span class="object-no">SYS</span></div>
+      <div class="workshop-state"><span>Techo</span><b>LIVE</b></div>
+      <div class="workshop-state"><span>Analysis</span><b>ON</b></div>
+      <button class="ghost-btn" id="systemOpen">旧SYSTEM</button>
+    </section>
+
+    <div class="calendar-news-grid">
+      <section class="object today-object">
+        <div class="object-head calendar-head">
+          <span class="object-label">CALENDAR / TODAY</span>
+          <div class="date-nav" aria-label="日付移動">
+            <button class="date-btn" id="prevDate" title="前日">‹</button>
+            <button class="date-btn date-label" id="todayDateBtn" title="今日に戻る">--/--</button>
+            <button class="date-btn" id="nextDate" title="翌日">›</button>
+          </div>
+        </div>
+        <div class="list" id="todayList"><div class="empty">Techoを読んでいます…</div></div>
+      </section>
+
+      <section class="object news-object">
+        <div class="object-head"><span class="object-label">NEWS</span><span class="object-no">04</span></div>
+        <p>外の世界は、必要な量だけ。</p>
+        <span class="state">BUILDING</span>
+      </section>
     </div>
   </main>
 </div>
