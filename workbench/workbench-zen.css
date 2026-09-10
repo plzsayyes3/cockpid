@@ -1,0 +1,20 @@
+.drawer{
+  --line:#26323d;
+  --line-2:#41515f;
+  --text:#eef4f6;
+  --muted:#8fa0ab;
+  --green:#45e59b;
+}
+.drawer .btn{
+  display:inline-block;
+  border:1px solid var(--line-2);
+  background:#0b141c;
+  color:#b8c6cf;
+  padding:7px 10px;
+  cursor:pointer;
+  font:10px ui-monospace,monospace;
+}
+.drawer .btn:hover{border-color:var(--green);color:var(--green)}
+.drawer .btn.primary{border-color:#24664b;color:var(--green);background:#0a1712}
+.drawer .small,.drawer .zen-hint,.drawer-status{color:var(--muted)}
+.drawer .token-box{border-color:var(--line)}
