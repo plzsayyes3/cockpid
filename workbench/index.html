@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="drawer.css">
 <link rel="stylesheet" href="home-final.css">
 <link rel="stylesheet" href="today-movement.css">
+<link rel="stylesheet" href="resident.css">
 <style>.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}</style>
 </head>
 <body>
@@ -94,7 +95,20 @@
   <button class="app-btn secret" data-app="secret"><b>9</b><span>???</span></button>
 </nav>
 <section class="app-window" id="appWindow" aria-hidden="true"><div class="app-frame"><div class="app-frame-head"><span class="app-title" id="appTitle">APP</span><button class="ghost-btn" id="appClose">CLOSE / ESC</button></div><div class="app-content" id="appContent"></div></div></section>
-<div class="pet" id="pet" title="Resident"><div class="pet-say" id="petSay"></div><div class="pet-face"></div><div class="pet-shadow"></div></div>
-<script src="../prototype-common.js"></script><script src="workbench.js"></script><script src="navigation.js"></script><script src="calendar-route.js"></script><script src="tasks-route.js"></script><script src="today-movement.js"></script>
+<div class="pet" id="pet" title="Resident">
+  <div class="pet-say" id="petSay"></div>
+  <div class="pet-avatar" aria-hidden="true">
+    <div class="pet-state pet-state-carry"></div>
+    <div class="pet-state pet-state-work">
+      <div class="pet-work-bunny"></div>
+      <div class="pet-monitor"></div>
+      <div class="pet-monitor-stand"></div>
+      <div class="pet-cup"></div>
+      <div class="pet-desk"></div>
+    </div>
+  </div>
+  <div class="pet-shadow"></div>
+</div>
+<script src="../prototype-common.js"></script><script src="workbench.js"></script><script src="resident.js"></script><script src="navigation.js"></script><script src="calendar-route.js"></script><script src="tasks-route.js"></script><script src="today-movement.js"></script>
 </body>
 </html>
