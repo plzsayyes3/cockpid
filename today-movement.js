@@ -166,6 +166,10 @@
     return `<div class="movement-item movement-item-empty"><input type="checkbox" disabled><span class="movement-item-body"><span class="movement-item-title">${esc(label)}</span></span></div>`;
   }
 
+  function clearRow() {
+    return '<div class="movement-item movement-item-empty"><input type="checkbox" checked disabled><span class="movement-item-body"><span class="movement-item-title">CLEAR</span><span class="movement-item-meta"><span>すべて処理済み</span></span></span></div>';
+  }
+
   function formatTime(value) {
     if (!value) return '';
     try { return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); }
@@ -188,12 +192,6 @@
     </div>`;
   }
 
-  function recentProcessed(bucket) {
-    return poolItems(bucket).filter((item) => history[itemId(item)])
-      .sort((a, b) => String(history[itemId(b)]?.at || '').localeCompare(String(history[itemId(a)]?.at || '')))
-      .slice(0, DISPLAY_LIMIT);
-  }
-
   function renderBucket(bucket) {
     const target = targets[bucket];
     target.list.classList.remove('movement-loading');
@@ -204,8 +202,7 @@
       target.list.innerHTML = visible.map((item) => rowHtml(bucket, item)).join('');
       return;
     }
-    const processed = recentProcessed(bucket);
-    target.list.innerHTML = processed.length ? processed.map((item) => rowHtml(bucket, item, true)).join('') : emptyRow();
+    target.list.innerHTML = poolItems(bucket).length ? clearRow() : emptyRow();
   }
 
   function renderAll({ randomize = false } = {}) {
@@ -323,6 +320,7 @@
       });
       return;
     }
+
     source.textContent = 'ON HAND · LOADING';
     const [week, audit] = await Promise.all([loadSevenDays(), loadAudit()]);
     const items = mergeByPriority(week.items, audit.items).map((item) => ({
@@ -334,20 +332,27 @@
     items.forEach((item) => pools[classify(item._type, item)].push(item));
     renderAll({ randomize: true });
     const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
-    source.textContent = `${range}${audit.loaded ? ' + 3M' : ''}${week.curated ? ' · CURATED' : ''}`;
+    const auditLabel = audit.loaded ? ' + 3M' : '';
+    source.textContent = `${range}${auditLabel}${week.curated ? ' · CURATED' : ''}`;
   }
 
   randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
+
   root.addEventListener('change', (event) => {
     const input = event.target.closest?.('.movement-done[data-movement-id]');
-    if (input) setStatus(input.dataset.bucket, input.dataset.movementId, input.checked ? 'done' : null);
+    if (!input) return;
+    setStatus(input.dataset.bucket, input.dataset.movementId, input.checked ? 'done' : null);
   });
+
   root.addEventListener('click', (event) => {
     const button = event.target.closest?.('.movement-skip[data-skip-id]');
     if (!button) return;
     event.preventDefault();
-    setStatus(button.dataset.bucket, button.dataset.skipId, history[button.dataset.skipId]?.status === 'skip' ? null : 'skip');
+    const id = button.dataset.skipId;
+    const bucket = button.dataset.bucket;
+    setStatus(bucket, id, history[id]?.status === 'skip' ? null : 'skip');
   });
+
   window.addEventListener('storage', (event) => {
     if (event.key !== HISTORY_KEY) return;
     const previous = historyFromText(event.oldValue);
