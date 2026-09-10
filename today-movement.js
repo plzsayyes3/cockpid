@@ -4,6 +4,7 @@
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
   const MODES = new Set(['do', 'check', 'keep']);
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
+  const AUDIT_PATH = 'indexes/movement/2026-06-10_2026-09-10-work-home-task-audit.json';
   const DISPLAY_LIMIT = 2;
   const targets = {
     do: { count: document.getElementById('moveDoCount'), list: document.getElementById('moveDoItems') },
@@ -16,6 +17,7 @@
   if (!targets.do.list || !targets.check.list || !targets.keep.list || !root) return;
 
   const dateName = /^\d{4}-\d{2}-\d{2}\.json$/;
+  const buckets = ['do', 'check', 'keep'];
   const pools = { do: [], check: [], keep: [] };
   const queues = { do: [], check: [], keep: [] };
   let history = readHistory();
@@ -40,22 +42,24 @@
   const todayKey = dateKey(jstDateParts());
   const weekStartKey = dateKey(shiftDays(jstDateParts(), -6));
 
+  function normalizeHistory(raw) {
+    const migrated = {};
+    if (!raw || typeof raw !== 'object') return migrated;
+    Object.entries(raw).forEach(([id, value]) => {
+      if (value?.status === 'done' || value?.status === 'skip') migrated[id] = value;
+      else if (value?.checked_at) migrated[id] = { status: 'done', at: value.checked_at };
+    });
+    return migrated;
+  }
+
   function readHistory() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
-      if (!raw || typeof raw !== 'object') return {};
-      const migrated = {};
-      Object.entries(raw).forEach(([id, value]) => {
-        if (value?.status === 'done' || value?.status === 'skip') {
-          migrated[id] = value;
-        } else if (value?.checked_at) {
-          migrated[id] = { status: 'done', at: value.checked_at };
-        }
-      });
-      return migrated;
-    } catch (_) {
-      return {};
-    }
+    try { return normalizeHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}')); }
+    catch (_) { return {}; }
+  }
+
+  function historyFromText(text) {
+    try { return normalizeHistory(JSON.parse(text || '{}')); }
+    catch (_) { return {}; }
   }
 
   function writeHistory() {
@@ -72,24 +76,38 @@
     return `m${(hash >>> 0).toString(36)}`;
   }
 
+  function titleKey(item) {
+    return String(item?.title || item?.summary || '').trim().replace(/\s+/g, ' ');
+  }
+
   function classify(type, item) {
     if (MODES.has(item?.mode)) return item.mode;
     const text = `${item?.title || ''} ${item?.summary || ''}`;
-    if (type === 'question' || type === 'hypothesis') return 'check';
+    if (type === 'question') return 'check';
     if (type === 'idea' || type === 'theme') return 'keep';
+    if (type === 'hypothesis') {
+      if (/(考え|検討|整理|構想|方針|設計|判断|振り返)/.test(text)) return 'keep';
+      return 'check';
+    }
     if (/(確認|状況|対象|進捗|チェック|把握|照合|レビュー|聞く|調べる|見直す)/.test(text)) return 'check';
     if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'keep';
     return 'do';
   }
 
-  function unique(items) {
+  function mergeByPriority(...groups) {
     const seen = new Set();
-    return items.filter((item) => {
-      const key = String(item.title || item.summary || '').trim().replace(/\s+/g, ' ');
-      if (!key || seen.has(key)) return false;
+    const merged = [];
+    groups.flat().forEach((item) => {
+      const key = titleKey(item);
+      if (!key || seen.has(key)) return;
       seen.add(key);
-      return true;
+      merged.push(item);
     });
+    return merged;
+  }
+
+  function unique(items) {
+    return mergeByPriority(items);
   }
 
   function shuffle(items) {
@@ -113,6 +131,10 @@
     return poolItems(bucket).find((item) => itemId(item) === id) || null;
   }
 
+  function bucketForId(id) {
+    return buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
+  }
+
   function rebuildQueue(bucket) {
     queues[bucket] = shuffle(openItems(bucket)).map(itemId);
   }
@@ -133,11 +155,8 @@
 
   function formatTime(value) {
     if (!value) return '';
-    try {
-      return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    } catch (_) {
-      return '';
-    }
+    try { return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }); }
+    catch (_) { return ''; }
   }
 
   function rowHtml(bucket, item, processed = false) {
@@ -154,7 +173,7 @@
       <input class="movement-done" type="checkbox" data-movement-id="${id}" data-bucket="${bucket}" aria-label="Done" ${isDone ? 'checked' : ''} ${isSkip ? 'disabled' : ''}>
       <span class="movement-item-body">
         <span class="movement-item-title">${esc(title)}</span>
-        <span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(item._date.slice(5).replace('-', '.'))}${statusText ? ` · ${statusText}` : ''}${time ? ` ${esc(time)}` : ''}</span></span>
+        <span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(String(item._date || '').slice(5).replace('-', '.'))}${statusText ? ` · ${statusText}` : ''}${time ? ` ${esc(time)}` : ''}</span></span>
       </span>
       <button class="movement-skip" type="button" data-skip-id="${id}" data-bucket="${bucket}" ${isDone ? 'disabled' : ''}>${skipLabel}</button>
     </div>`;
@@ -191,7 +210,7 @@
   }
 
   function renderAll({ randomize = false } = {}) {
-    ['do', 'check', 'keep'].forEach((bucket) => {
+    buckets.forEach((bucket) => {
       if (randomize || !queues[bucket].length) rebuildQueue(bucket);
       renderBucket(bucket);
     });
@@ -216,12 +235,9 @@
       if (!payload?.content) return null;
       const data = JSON.parse(decode(payload.content));
       if (!Array.isArray(data?.items)) return null;
-      return data.items.map((item) => ({
-        ...item,
-        _type: item.type || 'idea',
-        _date: item.date || todayKey
-      }));
-    } catch (_) {
+      return data.items.map((item) => ({ ...item, _type: item.type || 'idea', _date: item.date || todayKey, _source: 'week' }));
+    } catch (error) {
+      console.error('ON HAND curated load failed', error);
       return null;
     }
   }
@@ -252,7 +268,7 @@
         const payload = await gh(file.path, 'my-storage-note');
         if (!payload?.content) return [];
         const data = JSON.parse(decode(payload.content));
-        return (Array.isArray(data?.items) ? data.items : []).map((item) => ({ ...item, _type: file.type, _date: file.date }));
+        return (Array.isArray(data?.items) ? data.items : []).map((item) => ({ ...item, _type: file.type, _date: file.date, _source: 'legacy' }));
       } catch (error) {
         console.error(error);
         return [];
@@ -268,6 +284,28 @@
     return { items: await loadLegacySevenDays(), curated: false };
   }
 
+  async function loadAudit() {
+    try {
+      const payload = await gh(AUDIT_PATH, 'my-storage-note');
+      if (!payload?.content) return { items: [], loaded: false };
+      const data = JSON.parse(decode(payload.content));
+      if (!Array.isArray(data?.items)) return { items: [], loaded: false };
+      const items = data.items
+        .filter((item) => String(item?.state_at_last_source || '').toLowerCase() !== 'completed')
+        .filter((item) => MODES.has(item?.mode))
+        .map((item) => ({
+          ...item,
+          _type: item.type || 'action',
+          _date: item.last_seen || item.first_seen || todayKey,
+          _source: 'audit'
+        }));
+      return { items, loaded: true };
+    } catch (error) {
+      console.error('ON HAND audit load failed', error);
+      return { items: [], loaded: false };
+    }
+  }
+
   async function boot() {
     if (!token()) {
       source.textContent = '7 DAYS · ANALYSIS OFF';
@@ -279,13 +317,15 @@
       return;
     }
 
-    source.textContent = '7 DAYS · LOADING';
-    const result = await loadSevenDays();
-    pools.do.length = pools.check.length = pools.keep.length = 0;
-    result.items.forEach((item) => pools[classify(item._type, item)].push(item));
+    source.textContent = 'ON HAND · LOADING';
+    const [week, audit] = await Promise.all([loadSevenDays(), loadAudit()]);
+    const items = mergeByPriority(week.items, audit.items);
+    buckets.forEach((bucket) => { pools[bucket].length = 0; queues[bucket].length = 0; });
+    items.forEach((item) => pools[classify(item._type, item)].push(item));
     renderAll({ randomize: true });
     const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
-    source.textContent = result.curated ? `${range} · CURATED` : range;
+    const auditLabel = audit.loaded ? ' + 3M' : '';
+    source.textContent = `${range}${auditLabel}${week.curated ? ' · CURATED' : ''}`;
   }
 
   randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
@@ -305,8 +345,17 @@
     setStatus(bucket, id, history[id]?.status === 'skip' ? null : 'skip');
   });
 
+  window.addEventListener('storage', (event) => {
+    if (event.key !== HISTORY_KEY) return;
+    const previous = historyFromText(event.oldValue);
+    history = historyFromText(event.newValue);
+    const changed = new Set([...Object.keys(previous), ...Object.keys(history)].filter((id) => JSON.stringify(previous[id] || null) !== JSON.stringify(history[id] || null)));
+    const affected = new Set([...changed].map(bucketForId).filter(Boolean));
+    affected.forEach(renderBucket);
+  });
+
   boot().catch((error) => {
     console.error(error);
-    source.textContent = '7 DAYS · ERROR';
+    source.textContent = 'ON HAND · ERROR';
   });
 })();
