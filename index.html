@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="workbench.css">
 <link rel="stylesheet" href="drawer.css">
 <link rel="stylesheet" href="home-final.css">
+<link rel="stylesheet" href="today-movement.css">
 <style>.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}</style>
 </head>
 <body>
@@ -38,6 +39,27 @@
       <div class="capture-actions">
         <span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span>
         <button class="action-btn" id="captureBtn">机に置く</button>
+      </div>
+    </section>
+
+    <section class="object movement-object" aria-label="今日の動き">
+      <div class="movement-head">
+        <span class="movement-title">今日の動き</span>
+        <span class="movement-source" id="movementDate">ANALYSIS …</span>
+      </div>
+      <div class="movement-grid">
+        <article class="movement-col">
+          <div class="movement-col-head"><span>する</span><b id="moveDoCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveDoItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+        </article>
+        <article class="movement-col">
+          <div class="movement-col-head"><span>確認する</span><b id="moveCheckCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveCheckItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+        </article>
+        <article class="movement-col">
+          <div class="movement-col-head"><span>考える</span><b id="moveThinkCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveThinkItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+        </article>
       </div>
     </section>
 
@@ -94,5 +116,6 @@
 <script src="workbench.js"></script>
 <script src="navigation.js"></script>
 <script src="tasks-route.js"></script>
+<script src="today-movement.js"></script>
 </body>
 </html>
