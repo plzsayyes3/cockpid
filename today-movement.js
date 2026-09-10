@@ -135,18 +135,44 @@
     return buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
   }
 
+  function splitOpenBySource(bucket) {
+    const primary = [];
+    const audit = [];
+    openItems(bucket).forEach((item) => {
+      if (item._source === 'audit') audit.push(item);
+      else primary.push(item);
+    });
+    return { primary, audit };
+  }
+
   function rebuildQueue(bucket) {
-    queues[bucket] = shuffle(openItems(bucket)).map(itemId);
+    const { primary, audit } = splitOpenBySource(bucket);
+    queues[bucket] = [...shuffle(primary), ...shuffle(audit)].map(itemId);
   }
 
   function syncQueue(bucket) {
-    const open = openItems(bucket);
-    const openIds = new Set(open.map(itemId));
-    queues[bucket] = queues[bucket].filter((id) => openIds.has(id));
-    open.forEach((item) => {
+    const { primary, audit } = splitOpenBySource(bucket);
+    const openIds = new Set([...primary, ...audit].map(itemId));
+    const primaryIds = new Set(primary.map(itemId));
+    const auditIds = new Set(audit.map(itemId));
+    const existingPrimary = queues[bucket].filter((id) => openIds.has(id) && primaryIds.has(id));
+    const existingAudit = queues[bucket].filter((id) => openIds.has(id) && auditIds.has(id));
+    const queued = new Set([...existingPrimary, ...existingAudit]);
+    primary.forEach((item) => {
       const id = itemId(item);
-      if (!queues[bucket].includes(id)) queues[bucket].push(id);
+      if (!queued.has(id)) {
+        existingPrimary.push(id);
+        queued.add(id);
+      }
     });
+    audit.forEach((item) => {
+      const id = itemId(item);
+      if (!queued.has(id)) {
+        existingAudit.push(id);
+        queued.add(id);
+      }
+    });
+    queues[bucket] = [...existingPrimary, ...existingAudit];
   }
 
   function emptyRow(label = '候補なし') {
