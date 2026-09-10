@@ -238,7 +238,15 @@
   }
 
   function restorePetPosition() {
+    const zone = document.querySelector('.pet-zone')?.getBoundingClientRect();
     if (petSay.parentElement !== pet) pet.insertBefore(petSay, pet.firstChild);
+    if (pet.parentElement !== document.body) document.body.appendChild(pet);
+    Object.assign(pet.style, {
+      position: 'fixed',
+      zIndex: '45',
+      touchAction: 'none',
+      cursor: 'grab'
+    });
     try {
       const saved = JSON.parse(localStorage.getItem(PET_POSITION_KEY) || 'null');
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
@@ -246,7 +254,6 @@
         return;
       }
     } catch (_) {}
-    const zone = document.querySelector('.pet-zone')?.getBoundingClientRect();
     if (zone) setPetPosition(zone.right - (pet.offsetWidth || 80) - 20, zone.bottom - (pet.offsetHeight || 90) - 18);
   }
 
@@ -255,6 +262,7 @@
     const moved = petDrag.moved;
     try { pet.releasePointerCapture(event.pointerId); } catch (_) {}
     pet.classList.remove('dragging');
+    pet.style.cursor = 'grab';
     const rect = pet.getBoundingClientRect();
     if (moved) setPetPosition(rect.left, rect.top, true);
     else petMessage();
@@ -274,6 +282,7 @@
     };
     pet.setPointerCapture(event.pointerId);
     pet.classList.add('dragging');
+    pet.style.cursor = 'grabbing';
     event.preventDefault();
   });
 
