@@ -108,6 +108,7 @@
 
   function render(bucket) {
     const target = targets[bucket];
+    target.list.classList.remove('movement-loading');
     const cleaned = unique(pools[bucket]);
     const open = cleaned.filter((item) => !checked[itemId(item)]);
     const done = cleaned.filter((item) => checked[itemId(item)]);
@@ -168,6 +169,7 @@
     if (!token()) {
       source.textContent = '7 DAYS · ANALYSIS OFF';
       Object.values(targets).forEach((target) => {
+        target.list.classList.remove('movement-loading');
         target.count.textContent = '—';
         target.list.innerHTML = emptyRow('token required');
       });
