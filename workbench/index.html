@@ -10,7 +10,17 @@
 <body>
 <div class="shell">
   <header class="topbar">
-    <div class="brand">COCKPID<small>WORKBENCH / UNDER CONSTRUCTION</small></div>
+    <div class="brand-wrap">
+      <div class="brand-row">
+        <div class="brand">COCKPID</div>
+        <div class="system-status" aria-label="Workbench status">
+          <span class="status-icon status-techo" title="Techo · LIVE" aria-label="Techo live"><span></span><span></span><span></span></span>
+          <span class="status-icon status-analysis" title="Analysis · ON" aria-label="Analysis on"><span></span></span>
+          <button class="status-icon status-system" id="systemOpen" title="System" aria-label="System"><span></span></button>
+        </div>
+      </div>
+      <small class="brand-sub">WORKBENCH / UNDER CONSTRUCTION</small>
+    </div>
     <div class="now">
       <div id="todayDate">----年--月--日</div>
       <small id="todayTime">--:--</small>
@@ -21,13 +31,6 @@
       <div class="object-label">PUT ANYTHING HERE</div>
       <textarea id="captureText" placeholder="まだ分類しない。思いついたまま置く……"></textarea>
       <div class="capture-actions"><span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span><button class="action-btn" id="captureBtn">机に置く</button></div>
-    </section>
-
-    <section class="object workshop-object">
-      <div class="object-head"><span class="object-label">WORKSHOP</span><span class="object-no">SYS</span></div>
-      <div class="workshop-state"><span>Techo</span><b>LIVE</b></div>
-      <div class="workshop-state"><span>Analysis</span><b>ON</b></div>
-      <button class="ghost-btn" id="systemOpen">旧SYSTEM</button>
     </section>
 
     <div class="calendar-news-grid">
