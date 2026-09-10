@@ -7,21 +7,37 @@
 
   const HOME_FRAME = 7;
   const TYPE_FRAMES = [7, 8, 9, 8];
+  const FRAME_SRC = {
+    3: 'resident-frame3.png',
+    6: 'resident-frame6.png',
+    7: 'resident-frame7.png',
+    8: 'resident-frame8.png',
+    9: 'resident-frame9.png'
+  };
+
   let currentFrame = HOME_FRAME;
-  let idleTimer = null;
-  let sequenceTimer = null;
   let typingTimer = null;
   let typingUntil = 0;
   let typingIndex = 0;
 
+  avatar.innerHTML = '';
+  const image = document.createElement('img');
+  image.id = 'residentImage';
+  image.className = 'resident-image';
+  image.alt = '';
+  image.draggable = false;
+  avatar.appendChild(image);
+
+  Object.values(FRAME_SRC).forEach((src) => {
+    const preload = new Image();
+    preload.src = src;
+  });
+
   function setFrame(frame) {
-    const safe = Math.min(9, Math.max(1, Number(frame) || HOME_FRAME));
-    const index = safe - 1;
-    const col = index % 3;
-    const row = Math.floor(index / 3);
-    avatar.style.setProperty('--sprite-x', `${-col * 60}px`);
-    avatar.style.setProperty('--sprite-y', `${-row * 81}px`);
-    avatar.dataset.frame = String(safe);
+    const safe = FRAME_SRC[frame] ? Number(frame) : HOME_FRAME;
+    const nextSrc = FRAME_SRC[safe];
+    if (image.getAttribute('src') !== nextSrc) image.src = nextSrc;
+    image.dataset.frame = String(safe);
     currentFrame = safe;
   }
 
@@ -37,53 +53,20 @@
     return Date.now() < typingUntil;
   }
 
-  function clearSequence() {
-    clearTimeout(sequenceTimer);
-    sequenceTimer = null;
-  }
-
   function applyPriorityState() {
     const speaking = isSpeaking();
     const dragging = isDragging();
     pet.classList.toggle('is-speaking', speaking);
 
     if (dragging) {
-      clearSequence();
       setFrame(6);
       return true;
     }
     if (speaking) {
-      clearSequence();
       setFrame(3);
       return true;
     }
     return false;
-  }
-
-  function scheduleIdle() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(runIdleGesture, 12000 + Math.random() * 8000);
-  }
-
-  function runIdleGesture() {
-    if (applyPriorityState() || isTyping()) {
-      scheduleIdle();
-      return;
-    }
-
-    const sequence = [1, 2, 1, HOME_FRAME];
-    let step = 0;
-    const next = () => {
-      if (applyPriorityState() || isTyping()) {
-        scheduleIdle();
-        return;
-      }
-      setFrame(sequence[step]);
-      step += 1;
-      if (step < sequence.length) sequenceTimer = setTimeout(next, 260);
-      else scheduleIdle();
-    };
-    next();
   }
 
   function stopTypingLoop() {
@@ -91,13 +74,10 @@
     typingTimer = null;
     typingIndex = 0;
     if (!applyPriorityState()) setFrame(HOME_FRAME);
-    scheduleIdle();
   }
 
   function startTypingPulse() {
     typingUntil = Date.now() + 900;
-    clearSequence();
-    clearTimeout(idleTimer);
     if (typingTimer) return;
 
     typingTimer = setInterval(() => {
@@ -114,17 +94,17 @@
   function syncState() {
     if (applyPriorityState()) return;
     if (isTyping()) return;
-    if (currentFrame === 3 || currentFrame === 6) setFrame(HOME_FRAME);
+    if (currentFrame !== HOME_FRAME) setFrame(HOME_FRAME);
   }
+
+  image.addEventListener('error', () => {
+    if (currentFrame !== HOME_FRAME) setFrame(HOME_FRAME);
+  });
 
   new MutationObserver(syncState).observe(say, { attributes: true, attributeFilter: ['class'] });
   new MutationObserver(syncState).observe(pet, { attributes: true, attributeFilter: ['class'] });
   capture?.addEventListener('input', startTypingPulse);
-  capture?.addEventListener('focus', () => {
-    if (!applyPriorityState() && !isTyping()) setFrame(HOME_FRAME);
-  });
 
   setFrame(HOME_FRAME);
-  scheduleIdle();
   syncState();
 })();
