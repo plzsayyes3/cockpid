@@ -7,16 +7,22 @@
   const hintText = $w('hintText');
   const hintSource = $w('hintSource');
   const captureText = $w('captureText');
+  const captureBtn = $w('captureBtn');
+  const captureHint = document.querySelector('.capture-actions .quiet');
+  const pet = $w('pet');
   const petSay = $w('petSay');
+  const previewMode = location.pathname.includes('/workbench/');
+  const PET_POSITION_KEY = 'cockpid.workbench.pet.position.v1';
   let petTimer = null;
+  let petDrag = null;
   let latestHint = '';
 
   const apps = {
-    calendar: { title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
+    calendar: { title: '1 / CALENDAR', type: 'iframe', src: previewMode ? '../calendar.html' : 'calendar.html' },
     tasks: { title: '2 / TASKS', type: 'placeholder', text: 'Task workspace is under construction. ここは Techo / TaskChute へ入る作業台になります。' },
     zen: { title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
     news: { title: '4 / NEWS', type: 'placeholder', text: 'News room is under construction. 朝・昼・夜のニュースと、雑多なザッピングをここへ集めます。' },
-    system: { title: 'SYSTEM / LEGACY COCKPIT', type: 'iframe', src: 'system.html' },
+    system: { title: 'SYSTEM / LEGACY COCKPIT', type: 'iframe', src: previewMode ? '../index.html' : 'system.html' },
     secret: { title: '9 / ???', type: 'game' }
   };
 
@@ -37,6 +43,19 @@
     }).formatToParts(new Date());
     const get = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
     return { year: get('year'), month: get('month'), day: get('day') };
+  }
+
+  function inboxStamp() {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const get = (type) => parts.find((part) => part.type === type)?.value || '00';
+    return `${get('year')}${get('month')}${get('day')}${get('hour')}${get('minute')}${get('second')}`;
+  }
+
+  function encodeUtf8(value) {
+    return btoa(unescape(encodeURIComponent(value)));
   }
 
   function cleanItem(text) {
@@ -146,25 +165,134 @@
     speakPet(candidates[Math.floor(Math.random() * candidates.length)]);
   }
 
-  function stageCapture() {
+  function captureStatus(message, reset = true) {
+    if (!captureHint) return;
+    captureHint.textContent = message;
+    if (reset) setTimeout(() => { captureHint.textContent = 'Ctrl / ⌘ + Enter で 00_inbox へ直接保存'; }, 2200);
+  }
+
+  async function saveCaptureDirect() {
     const text = captureText.value.trim();
     if (!text) {
       captureText.focus();
       return;
     }
-    $w('memoText').value = text;
-    $w('memoOpen').click();
+    const currentToken = token();
+    if (!currentToken) {
+      captureStatus('GitHub token が必要です');
+      return;
+    }
+
+    const name = `${inboxStamp()}.md`;
+    const path = `00_inbox/${name}`;
+    const originalLabel = captureBtn.textContent;
+    captureBtn.disabled = true;
+    captureBtn.textContent = '保存中…';
+    captureStatus('00_inbox へ保存しています…', false);
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/mynotebook/contents/${path}`, {
+        method: 'PUT',
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${currentToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `cockpid workbench: capture ${name}`,
+          content: encodeUtf8(`${text}\n`)
+        })
+      });
+      if (!response.ok) throw new Error(`mynotebook write ${response.status}`);
+      captureText.value = '';
+      captureStatus(`保存しました · ${name}`);
+      captureBtn.textContent = '保存済み ✓';
+      setTimeout(() => { captureBtn.textContent = originalLabel; }, 1400);
+    } catch (error) {
+      console.error(error);
+      captureStatus(String(error?.message || error));
+      captureBtn.textContent = '保存失敗';
+      setTimeout(() => { captureBtn.textContent = originalLabel; }, 1800);
+    } finally {
+      captureBtn.disabled = false;
+    }
   }
+
+  function clampPetPosition(x, y) {
+    const margin = 8;
+    const width = pet.offsetWidth || 80;
+    const height = pet.offsetHeight || 90;
+    return {
+      x: Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - width - margin)),
+      y: Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - height - margin))
+    };
+  }
+
+  function setPetPosition(x, y, remember = false) {
+    const pos = clampPetPosition(x, y);
+    pet.style.left = `${pos.x}px`;
+    pet.style.top = `${pos.y}px`;
+    pet.style.right = 'auto';
+    pet.style.bottom = 'auto';
+    if (remember) localStorage.setItem(PET_POSITION_KEY, JSON.stringify(pos));
+  }
+
+  function restorePetPosition() {
+    if (petSay.parentElement !== pet) pet.insertBefore(petSay, pet.firstChild);
+    try {
+      const saved = JSON.parse(localStorage.getItem(PET_POSITION_KEY) || 'null');
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        setPetPosition(saved.x, saved.y);
+        return;
+      }
+    } catch (_) {}
+    const zone = document.querySelector('.pet-zone')?.getBoundingClientRect();
+    if (zone) setPetPosition(zone.right - (pet.offsetWidth || 80) - 20, zone.bottom - (pet.offsetHeight || 90) - 18);
+  }
+
+  function endPetDrag(event) {
+    if (!petDrag || event.pointerId !== petDrag.id) return;
+    const moved = petDrag.moved;
+    try { pet.releasePointerCapture(event.pointerId); } catch (_) {}
+    pet.classList.remove('dragging');
+    const rect = pet.getBoundingClientRect();
+    if (moved) setPetPosition(rect.left, rect.top, true);
+    else petMessage();
+    petDrag = null;
+  }
+
+  pet.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const rect = pet.getBoundingClientRect();
+    petDrag = {
+      id: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false
+    };
+    pet.setPointerCapture(event.pointerId);
+    pet.classList.add('dragging');
+    event.preventDefault();
+  });
+
+  pet.addEventListener('pointermove', (event) => {
+    if (!petDrag || event.pointerId !== petDrag.id) return;
+    if (Math.hypot(event.clientX - petDrag.startX, event.clientY - petDrag.startY) > 4) petDrag.moved = true;
+    setPetPosition(event.clientX - petDrag.offsetX, event.clientY - petDrag.offsetY);
+  });
+  pet.addEventListener('pointerup', endPetDrag);
+  pet.addEventListener('pointercancel', endPetDrag);
 
   document.querySelectorAll('[data-app]').forEach((button) => button.addEventListener('click', () => openApp(button.dataset.app)));
   $w('appClose').addEventListener('click', closeApp);
-  $w('captureBtn').addEventListener('click', stageCapture);
-  $w('pet').addEventListener('click', petMessage);
+  captureBtn.addEventListener('click', saveCaptureDirect);
   $w('systemOpen').addEventListener('click', () => openApp('system'));
   captureText.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
-      stageCapture();
+      saveCaptureDirect();
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -173,10 +301,16 @@
     const map = { '1': 'calendar', '2': 'tasks', '3': 'zen', '4': 'news', '9': 'secret' };
     if (map[event.key]) openApp(map[event.key]);
   });
+  window.addEventListener('resize', () => {
+    const rect = pet.getBoundingClientRect();
+    setPetPosition(rect.left, rect.top, true);
+  });
 
+  if (captureHint) captureHint.textContent = 'Ctrl / ⌘ + Enter で 00_inbox へ直接保存';
   nowParts();
   setInterval(nowParts, 1000);
   loadToday();
   loadHint();
-  setTimeout(() => speakPet('工事中。とりあえず机として使えます。'), 900);
+  requestAnimationFrame(restorePetPosition);
+  setTimeout(() => speakPet('好きな場所に動かせます。'), 900);
 })();
