@@ -72,8 +72,7 @@
 
   function writeHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
 
-  function itemId(item) {
-    const seed = `${item._date}|${item._type}|${item.title || item.summary || ''}`;
+  function hashId(seed) {
     let hash = 2166136261;
     for (let i = 0; i < seed.length; i += 1) {
       hash ^= seed.charCodeAt(i);
@@ -84,6 +83,32 @@
 
   function titleKey(item) {
     return String(item?.title || item?.summary || '').trim().replace(/\s+/g, ' ');
+  }
+
+  function legacyItemId(item) {
+    return hashId(`${item._date}|${item._type}|${item.title || item.summary || ''}`);
+  }
+
+  function itemId(item) {
+    if (item?._isRecurring) return legacyItemId(item);
+    return hashId(`v2|${item._type}|${titleKey(item)}`);
+  }
+
+  function migrateHistoryForItems(items) {
+    let changed = false;
+    items.forEach((item) => {
+      const nextId = itemId(item);
+      const oldId = legacyItemId(item);
+      if (nextId === oldId || history[nextId] || !history[oldId]) return;
+      history[nextId] = {
+        ...history[oldId],
+        title_key: titleKey(item),
+        recurring: Boolean(item._isRecurring)
+      };
+      delete history[oldId];
+      changed = true;
+    });
+    if (changed) writeHistory();
   }
 
   function classify(type, item) {
@@ -120,8 +145,12 @@
     catch (_) { return ''; }
   }
 
+  function itemById(bucket, id) {
+    return pools[bucket].find((item) => itemId(item) === id) || null;
+  }
+
   function bucketForId(id) {
-    return buckets.find((bucket) => pools[bucket].some((item) => itemId(item) === id)) || null;
+    return buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
   }
 
   function row(bucket, item) {
@@ -148,8 +177,15 @@
   function renderAll() { buckets.forEach(renderBucket); }
 
   function setStatus(bucket, id, status) {
-    if (status === 'done' || status === 'skip') history[id] = { status, at:new Date().toISOString() };
-    else delete history[id];
+    const item = itemById(bucket, id);
+    if (status === 'done' || status === 'skip') {
+      history[id] = {
+        status,
+        at:new Date().toISOString(),
+        title_key:item ? titleKey(item) : undefined,
+        recurring:Boolean(item?._isRecurring)
+      };
+    } else delete history[id];
     writeHistory();
     renderBucket(bucket);
   }
@@ -209,17 +245,18 @@
   async function loadAudit() {
     try {
       const p = await gh(AUDIT_PATH);
-      if (!p?.content) return { items:[], loaded:false };
+      if (!p?.content) return { items:[], recurringTitles:new Set(), loaded:false };
       const data = JSON.parse(decode(p.content));
-      if (!Array.isArray(data?.items)) return { items:[], loaded:false };
+      if (!Array.isArray(data?.items)) return { items:[], recurringTitles:new Set(), loaded:false };
+      const recurringTitles = new Set((Array.isArray(data?.recurring_work) ? data.recurring_work : []).map(titleKey).filter(Boolean));
       const items = data.items
         .filter((item) => String(item?.state_at_last_source || '').toLowerCase() !== 'completed')
         .filter((item) => MODES.has(item?.mode))
         .map((item) => ({ ...item, _type:item.type || 'action', _date:item.last_seen || item.first_seen || today, _source:'audit' }));
-      return { items, loaded:true };
+      return { items, recurringTitles, loaded:true };
     } catch (error) {
       console.error('ON HAND audit load failed', error);
-      return { items:[], loaded:false };
+      return { items:[], recurringTitles:new Set(), loaded:false };
     }
   }
 
@@ -234,7 +271,11 @@
     }
 
     const [week, audit] = await Promise.all([loadSevenDays(), loadAudit()]);
-    const items = mergeByPriority(week.items, audit.items);
+    const items = mergeByPriority(week.items, audit.items).map((item) => ({
+      ...item,
+      _isRecurring:Boolean(item.recurring || item.cadence || audit.recurringTitles.has(titleKey(item)))
+    }));
+    migrateHistoryForItems(items);
     buckets.forEach((bucket) => { pools[bucket].length = 0; });
     items.forEach((item) => pools[classify(item._type, item)].push(item));
     sourceRange.textContent = `${start} – ${today}${audit.loaded ? ' + 3 MONTH AUDIT' : ''}${week.curated ? ' · CURATED' : ''}`;
