@@ -2,93 +2,60 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>COCKPID — Techo Calendar</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f1f0eb">
+<title>COCKPID — Calendar / Workbench</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23f1f0eb'/%3E%3Cpath d='M42 21a16 16 0 1 0 0 22' fill='none' stroke='%23292924' stroke-width='6' stroke-linecap='square'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="calendar.css">
-<link rel="stylesheet" href="calendar-workbench.css">
+<link rel="stylesheet" href="calendar-daybook.css">
 <link rel="stylesheet" href="zen-memo.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div>
-      <div class="brand">COCKPID / TECHO CALENDAR</div>
-      <div class="sub">MY SYSTEM TECHO MARKDOWN → GITHUB API → BROWSER DISPLAY</div>
-    </div>
-    <div class="status">
-      <span class="led loading" id="statusLed"></span>
-      <span><b id="statusTitle">BOOTING</b><br><span id="statusDetail">READING SOURCE</span></span>
-    </div>
+<div class="calendar-app">
+  <header class="calendar-top">
+    <div class="calendar-brand"><b>CALENDAR</b><span>TODAY + VIEW</span></div>
+    <div class="calendar-tools"><span class="source-status" id="sourceStatus">BOOTING</span><button class="memo-btn" id="memoOpen">＋ MEMO</button></div>
   </header>
 
-  <div class="toolbar">
-    <div class="navgroup">
-      <a class="btn" href="index.html">← COCKPIT</a>
-      <a class="btn" href="board.html">⇗ BOARD</a>
-    </div>
-    <div class="navgroup">
-      <button class="btn primary" id="memoOpen">＋ MEMO / ZEN V2</button>
-      <button class="btn primary" id="todayBtn">今日</button>
-    </div>
-  </div>
+  <main class="book">
+    <section class="pane today-pane" aria-label="今日の予定">
+      <header class="pane-head">
+        <div><span class="pane-kicker">TODAY</span><div class="pane-date" id="todayDateLabel">----</div></div>
+      </header>
+      <div class="pane-content" id="todayContent"><div class="message">READING TODAY…</div></div>
+    </section>
 
-  <section class="month-nav" aria-label="月移動">
-    <button class="btn prev" id="prevMonth" aria-label="前の月">‹</button>
-    <h1 class="month-title" id="monthTitle">----</h1>
-    <button class="btn next" id="nextMonth" aria-label="次の月">›</button>
-  </section>
-  <div class="source-line">
-    <span>SOURCE</span>
-    <a id="sourceLink" href="#" target="_blank" rel="noopener"><span id="sourcePath">mynotebook/02_techo/----.md</span></a>
-    <span>· READ ONLY · TOKEN: zen-note-github-token</span>
-  </div>
-
-  <section class="undated" id="undatedSection" hidden>
-    <h2>MONTH / 日付未定</h2>
-    <div id="undatedList" class="undated-list"></div>
-  </section>
-
-  <main class="calendar-shell">
-    <div class="weekdays" aria-hidden="true">
-      <div class="undated-head">未定</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div><div>日</div>
-    </div>
-    <div class="calendar-grid" id="calendarGrid" aria-live="polite"></div>
+    <section class="pane view-pane" aria-label="選択ビュー">
+      <header class="view-head">
+        <nav class="view-tabs" aria-label="カレンダービュー">
+          <button class="view-tab active" data-view="day">DAY</button>
+          <button class="view-tab" data-view="week">WEEK</button>
+          <button class="view-tab" data-view="month">MONTH</button>
+        </nav>
+        <div class="view-nav">
+          <button class="nav-btn" id="prevView" aria-label="前へ">‹</button>
+          <span class="right-date" id="rightDateLabel">----</span>
+          <input class="anchor-date" id="anchorDate" type="date" aria-label="基準日を選ぶ">
+          <button class="nav-btn" id="nextView" aria-label="次へ">›</button>
+        </div>
+      </header>
+      <div class="pane-content" id="viewContent"><div class="message">READING VIEW…</div></div>
+    </section>
   </main>
-
-  <footer class="footer">
-    <span>DISPLAY / EXPLORATION ONLY</span>
-    <span>TECHO MARKDOWN REMAINS SOURCE OF TRUTH</span>
-  </footer>
 </div>
 
 <div class="drawer-backdrop" id="drawerBackdrop"></div>
 <aside class="drawer" id="drawer" aria-label="Zen Memo">
-  <div class="drawer-head">
-    <strong>ZEN V2 / QUICK MEMO</strong>
-    <button class="btn" id="memoClose">CLOSE</button>
-  </div>
+  <div class="drawer-head"><strong>ZEN V2 / QUICK MEMO</strong><button class="btn" id="memoClose">CLOSE</button></div>
   <div class="small">mynotebook の <b>00_inbox</b> に新規メモとして保存します。</div>
   <textarea id="memoText" placeholder="ここにメモを書く……"></textarea>
-  <div class="drawer-foot">
-    <span class="drawer-status" id="memoStatus">READY</span>
-    <button class="btn primary" id="memoSave">POST / CTRL+ENTER</button>
-  </div>
+  <div class="drawer-foot"><span class="drawer-status" id="memoStatus">READY</span><button class="btn primary" id="memoSave">POST / CTRL+ENTER</button></div>
   <div class="zen-hint">Ctrl + Enter で投稿。ファイル名: YYYYMMDDHHMMSS.md</div>
   <button class="btn token-toggle" id="tokenToggle">▸ 接続設定を表示</button>
-  <div class="token-settings" id="tokenSettings">
-    <div class="token-box">
-      <label>GITHUB FINE-GRAINED TOKEN</label>
-      <input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…">
-      <div class="small">COCKPID本体と同じ <b>zen-note-github-token</b> を使います。mynotebook の Contents: Read and write 権限が必要です。</div>
-      <button class="btn token-save" id="tokenSave">TOKENを保存</button>
-    </div>
-  </div>
+  <div class="token-settings" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">COCKPID本体と同じ <b>zen-note-github-token</b> を使います。</div><button class="btn token-save" id="tokenSave">TOKENを保存</button></div></div>
 </aside>
 
 <script src="prototype-common.js"></script>
 <script src="zen-memo.js"></script>
-<script src="calendar.js"></script>
-<script src="calendar-monochrome.js"></script>
+<script src="calendar-daybook.js"></script>
 </body>
 </html>
