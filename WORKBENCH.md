@@ -10,88 +10,47 @@
 
 COCKPIDは全データや全機能を抱え込まない。既存リポジトリ・データソース・自動処理を呼び出す Shell / Workbench として振る舞う。
 
-## 構造
+## HOME
 
-- `index.html` — 新しい HOME / WORKBENCH
-- `system.html` — 再設計前のCOCKPID。SYSTEM / WORKSHOPとして保存
-- `calendar.html` — My System Techo を読む既存カレンダー
-- `workbench.css` — ライトモード、紙・手帳・Notion系の新デザイン
-- `workbench.js` — HOMEウィジェット、アプリランチャー、キーボード操作
-- `zen-memo.js` / `zen-memo.css` — 既存Quick Memoを再利用
+HOMEは巨大ダッシュボードにしない。
+
+現在の中心要素:
+- 分類前Quick Capture → `mynotebook/00_inbox/` へ直接保存
+- 今日のTecho
+- News / Workshop の最小状態表示
+- Resident
+- 1 / 2 / 3 / 4 / 5 / 9 のアプリDock
+
+`A hint from myself` の常設表示は廃止し、過去のIdeaはResidentをタップしたときだけ出す。
+Residentは画面内をドラッグ / タッチで自由移動でき、位置をlocalStorageに保存する。
 
 ## Apps
 
 ### 1 Calendar
-
-既存 `calendar.html` をアプリウィンドウ内で開く。
-
-SOURCE: `mynotebook/02_techo/YYYY-MM.md`
+既存 `calendar.html` を利用。SOURCE: `mynotebook/02_techo/YYYY-MM.md`
 
 ### 2 Tasks
-
-工事中。
-
-Techo / TaskChuteなど既存のタスク管理をCOCKPIDへ複製せず、今日の実行へ入る作業台にする。
+工事中。Techo / TaskChuteなど既存のタスク管理を複製せず、今日の実行へ入る作業台にする。
 
 ### 3 Zen
-
-既存リポジトリをそのまま使う。
-
-- repo: `plzsayyes3/zen-note`
-- app: `https://plzsayyes3.github.io/zen-note/`
-
-Workbenchではiframeアプリとして起動する。
-
-Quick CaptureだけはHOMEにも置き、既存 ZEN V2 Quick Memo を利用して `mynotebook/00_inbox/YYYYMMDDHHMMSS.md` へ保存する。
+既存 `plzsayyes3/zen-note` を利用。
 
 ### 4 News
+工事中。朝・昼・夜のニュース、雑多なザッピングをまとめる。
 
-工事中。
-
-朝の興味関心ニュース、昼の保育ニュース、夜の軽い提案、雑多なザッピングをまとめる部屋にする。
+### 5 AI Advice
+`my-storage-note/advice/YYYY-MM-DD.md` を直接読む独立ページ `advice.html`。
+メールボックス型UIで、PCは左に受信一覧・右に本文、スマホは一覧→本文の1画面遷移。
+既読状態はlocalStorageに保持する。
 
 ### 9 ???
-
 説明しすぎない遊びの部屋。
-
-初期版では小さな「今日の謎」を実装。
-
-## HOME widgets
-
-初期実装:
-
-- 現在日時
-- 今日のTecho予定
-- 最新のIdea 1件を「思考のヒント」として表示
-- 分類前Quick Capture
-- Workshop状態
-- Resident / デスクトップペット
-- 1 / 2 / 3 / 4 / 9 のアプリDock
-
-## 入力思想
-
-HOME中央のQuick Captureでは、入力時に「タスク」「予定」「メモ」「アイデア」を決めない。
-
-まず `00_inbox` に置き、整理・昇格・日付決定は後段で行う。
 
 ## PC / Mobile
 
-PCは机全体を3カラムで見る。
-
-スマホは同じ情報を1カラムへ落とし、画面下部Dockを常時表示する。
-
-機能構造はPC/スマホで共通にする。
-
-## Keyboard
-
-入力欄にフォーカスしていないとき:
-
-- `1` Calendar
-- `2` Tasks
-- `3` Zen
-- `4` News
-- `9` ???
-- `Esc` アプリを閉じる
+アプリ本体は独立URLを持たせる。
+Workbenchからの起動UIは今後、PCでは右側のApp Drawer、スマホではフルスクリーンへ適応させる方向を検討する。
+同じアプリ内容をPC / Mobileで二重実装しない。
 
 ## 原則
 
