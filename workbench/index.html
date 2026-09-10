@@ -8,6 +8,7 @@
 <title>COCKPID — Workbench Preview</title>
 <link rel="stylesheet" href="workbench.css">
 <link rel="stylesheet" href="drawer.css">
+<link rel="stylesheet" href="home-final.css">
 <style>.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}</style>
 </head>
 <body>
@@ -61,7 +62,14 @@
   </main>
 </div>
 <nav class="dock" aria-label="Workbench apps">
-  <button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button><button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button><button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button><button class="app-btn" data-app="news"><b>4</b><span>News</span></button><button class="app-btn" data-app="advice"><b>5</b><span>Advice</span></button><button class="app-btn secret" data-app="secret"><b>9</b><span>???</span></button>
+  <button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button>
+  <button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button>
+  <button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button>
+  <button class="app-btn" data-app="news"><b>4</b><span>News</span></button>
+  <button class="app-btn" data-app="advice"><b>5</b><span>Advice</span></button>
+  <button class="app-btn app-slot" disabled aria-label="App slot 6"><b>6</b><span>—</span></button>
+  <button class="app-btn app-slot" disabled aria-label="App slot 7"><b>7</b><span>—</span></button>
+  <button class="app-btn secret" data-app="secret"><b>9</b><span>???</span></button>
 </nav>
 <section class="app-window" id="appWindow" aria-hidden="true"><div class="app-frame"><div class="app-frame-head"><span class="app-title" id="appTitle">APP</span><button class="ghost-btn" id="appClose">CLOSE / ESC</button></div><div class="app-content" id="appContent"></div></div></section>
 <div class="pet" id="pet" title="Resident"><div class="pet-say" id="petSay"></div><div class="pet-face"></div><div class="pet-shadow"></div></div>
