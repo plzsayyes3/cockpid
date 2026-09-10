@@ -42,6 +42,14 @@
     return { year: get('year'), month: get('month'), day: get('day') };
   }
 
+  function jstClockMinutes() {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const get = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
+    return get('hour') * 60 + get('minute');
+  }
+
   function inboxStamp() {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -52,12 +60,75 @@
   }
 
   const encodeUtf8 = (value) => btoa(unescape(encodeURIComponent(value)));
+  const timeToMinutes = (value) => {
+    const [hour, minute] = String(value || '').split(':').map(Number);
+    return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
+  };
+  const padHour = (hour) => `${String(hour).padStart(2, '0')}:00`;
 
   function cleanItem(text) {
     const value = text.trim().replace(/^\[([ xX/])\]\s*/, '');
     const match = /^(\d{1,2}:\d{2})(?:\s*(?:-|–|—|〜|~)\s*(\d{1,2}:\d{2}))?\s+(.*)$/.exec(value);
-    if (!match) return { time: '', title: value };
-    return { time: match[2] ? `${match[1]}–${match[2]}` : match[1], title: match[3].trim() };
+    if (!match) return { time: '', title: value, start: null, end: null };
+    const start = timeToMinutes(match[1]);
+    let end = match[2] ? timeToMinutes(match[2]) : start + 45;
+    if (end == null || end <= start) end = Math.min(start + 45, 24 * 60);
+    return {
+      time: match[2] ? `${match[1]}–${match[2]}` : match[1],
+      title: match[3].trim(),
+      start,
+      end
+    };
+  }
+
+  function renderTodayTimeline(items) {
+    const timed = items.filter((item) => Number.isFinite(item.start)).sort((a, b) => a.start - b.start);
+    const anytime = items.filter((item) => !Number.isFinite(item.start));
+    const anytimeHtml = anytime.length ? `
+      <div class="anytime">
+        <span class="anytime-label">ANYTIME</span>
+        <div class="anytime-items">${anytime.map((item) => `<span class="anytime-item">${esc(item.title)}</span>`).join('')}</div>
+      </div>` : '';
+
+    if (!timed.length) {
+      todayList.innerHTML = anytimeHtml || '<div class="empty">今日の予定はまだありません。</div>';
+      return;
+    }
+
+    let startHour = Math.max(0, Math.floor(timed[0].start / 60) - 1);
+    let endHour = Math.min(24, Math.ceil(Math.max(...timed.map((item) => item.end)) / 60) + 1);
+    if (endHour - startHour < 6) {
+      const missing = 6 - (endHour - startHour);
+      startHour = Math.max(0, startHour - Math.ceil(missing / 2));
+      endHour = Math.min(24, Math.max(endHour, startHour + 6));
+      if (endHour - startHour < 6) startHour = Math.max(0, endHour - 6);
+    }
+
+    const startMinutes = startHour * 60;
+    const endMinutes = endHour * 60;
+    const pxPerMinute = 0.58;
+    const height = Math.max(220, Math.round((endMinutes - startMinutes) * pxPerMinute));
+    const hours = [];
+    for (let hour = startHour; hour <= endHour; hour += 1) {
+      const top = Math.min(height, Math.max(0, Math.round((hour * 60 - startMinutes) * pxPerMinute)));
+      hours.push(`<div class="timeline-hour" style="top:${top}px"><span>${padHour(hour)}</span></div>`);
+    }
+
+    const events = timed.map((item) => {
+      const top = Math.round((item.start - startMinutes) * pxPerMinute);
+      const eventHeight = Math.max(28, Math.round((item.end - item.start) * pxPerMinute));
+      return `<div class="timeline-event" style="top:${top}px;height:${eventHeight}px" title="${esc(item.time)}">
+        <span class="timeline-event-time">${esc(item.time)}</span>
+        <span class="timeline-event-title">${esc(item.title)}</span>
+      </div>`;
+    }).join('');
+
+    const now = jstClockMinutes();
+    const nowHtml = now >= startMinutes && now <= endMinutes
+      ? `<div class="timeline-now" style="top:${Math.round((now - startMinutes) * pxPerMinute)}px"><span>NOW</span></div>`
+      : '';
+
+    todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${hours.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
   }
 
   async function loadToday() {
@@ -81,12 +152,7 @@
         const match = /^\s*-\s+(.*)$/.exec(raw);
         if (match?.[1]?.trim()) items.push(cleanItem(match[1]));
       }
-      if (!items.length) {
-        todayList.innerHTML = '<div class="empty">今日の予定はまだありません。</div>';
-        return;
-      }
-      todayList.innerHTML = items.slice(0, 6).map((item) => `<div class="list-item">${item.time ? `<span class="time">${esc(item.time)}</span>` : ''}${esc(item.title)}</div>`).join('');
-      if (items.length > 6) todayList.insertAdjacentHTML('beforeend', `<div class="empty">ほか ${items.length - 6} 件 → Calendar</div>`);
+      renderTodayTimeline(items);
     } catch (error) {
       console.error(error);
       todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
