@@ -4,8 +4,9 @@
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
   const MODES = new Set(['do', 'check', 'keep']);
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
-  const AUDIT_PATH = 'indexes/movement/2026-06-10_2026-09-10-work-home-task-audit.json';
+  const AUDIT_NAME = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})-work-home-task-audit\.json$/;
   const DISPLAY_LIMIT = 2;
+  const buckets = ['do', 'check', 'keep'];
   const targets = {
     do: { count: document.getElementById('moveDoCount'), list: document.getElementById('moveDoItems') },
     check: { count: document.getElementById('moveCheckCount'), list: document.getElementById('moveCheckItems') },
@@ -17,7 +18,6 @@
   if (!targets.do.list || !targets.check.list || !targets.keep.list || !root) return;
 
   const dateName = /^\d{4}-\d{2}-\d{2}\.json$/;
-  const buckets = ['do', 'check', 'keep'];
   const pools = { do: [], check: [], keep: [] };
   const queues = { do: [], check: [], keep: [] };
   let history = readHistory();
@@ -43,13 +43,13 @@
   const weekStartKey = dateKey(shiftDays(jstDateParts(), -6));
 
   function normalizeHistory(raw) {
-    const migrated = {};
-    if (!raw || typeof raw !== 'object') return migrated;
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
     Object.entries(raw).forEach(([id, value]) => {
-      if (value?.status === 'done' || value?.status === 'skip') migrated[id] = value;
-      else if (value?.checked_at) migrated[id] = { status: 'done', at: value.checked_at };
+      if (value?.status === 'done' || value?.status === 'skip') out[id] = value;
+      else if (value?.checked_at) out[id] = { status: 'done', at: value.checked_at };
     });
-    return migrated;
+    return out;
   }
 
   function readHistory() {
@@ -62,9 +62,7 @@
     catch (_) { return {}; }
   }
 
-  function writeHistory() {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  }
+  function writeHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
 
   function hashId(seed) {
     let hash = 2166136261;
@@ -84,8 +82,7 @@
   }
 
   function itemId(item) {
-    if (item?._isRecurring) return legacyItemId(item);
-    return hashId(`v2|${item._type}|${titleKey(item)}`);
+    return item?._isRecurring ? legacyItemId(item) : hashId(`v2|${item._type}|${titleKey(item)}`);
   }
 
   function migrateHistoryForItems(items) {
@@ -94,11 +91,7 @@
       const nextId = itemId(item);
       const oldId = legacyItemId(item);
       if (nextId === oldId || history[nextId] || !history[oldId]) return;
-      history[nextId] = {
-        ...history[oldId],
-        title_key: titleKey(item),
-        recurring: Boolean(item._isRecurring)
-      };
+      history[nextId] = { ...history[oldId], title_key: titleKey(item), recurring: Boolean(item._isRecurring) };
       delete history[oldId];
       changed = true;
     });
@@ -110,10 +103,7 @@
     const text = `${item?.title || ''} ${item?.summary || ''}`;
     if (type === 'question') return 'check';
     if (type === 'idea' || type === 'theme') return 'keep';
-    if (type === 'hypothesis') {
-      if (/(考え|検討|整理|構想|方針|設計|判断|振り返)/.test(text)) return 'keep';
-      return 'check';
-    }
+    if (type === 'hypothesis') return /(考え|検討|整理|構想|方針|設計|判断|振り返)/.test(text) ? 'keep' : 'check';
     if (/(確認|状況|対象|進捗|チェック|把握|照合|レビュー|聞く|調べる|見直す)/.test(text)) return 'check';
     if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'keep';
     return 'do';
@@ -131,9 +121,7 @@
     return merged;
   }
 
-  function unique(items) {
-    return mergeByPriority(items);
-  }
+  const unique = (items) => mergeByPriority(items);
 
   function shuffle(items) {
     const copy = [...items];
@@ -144,29 +132,15 @@
     return copy;
   }
 
-  function poolItems(bucket) {
-    return unique(pools[bucket]);
-  }
-
-  function openItems(bucket) {
-    return poolItems(bucket).filter((item) => !history[itemId(item)]);
-  }
-
-  function itemById(bucket, id) {
-    return poolItems(bucket).find((item) => itemId(item) === id) || null;
-  }
-
-  function bucketForId(id) {
-    return buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
-  }
+  const poolItems = (bucket) => unique(pools[bucket]);
+  const openItems = (bucket) => poolItems(bucket).filter((item) => !history[itemId(item)]);
+  const itemById = (bucket, id) => poolItems(bucket).find((item) => itemId(item) === id) || null;
+  const bucketForId = (id) => buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
 
   function splitOpenBySource(bucket) {
     const primary = [];
     const audit = [];
-    openItems(bucket).forEach((item) => {
-      if (item._source === 'audit') audit.push(item);
-      else primary.push(item);
-    });
+    openItems(bucket).forEach((item) => (item._source === 'audit' ? audit : primary).push(item));
     return { primary, audit };
   }
 
@@ -183,20 +157,8 @@
     const existingPrimary = queues[bucket].filter((id) => openIds.has(id) && primaryIds.has(id));
     const existingAudit = queues[bucket].filter((id) => openIds.has(id) && auditIds.has(id));
     const queued = new Set([...existingPrimary, ...existingAudit]);
-    primary.forEach((item) => {
-      const id = itemId(item);
-      if (!queued.has(id)) {
-        existingPrimary.push(id);
-        queued.add(id);
-      }
-    });
-    audit.forEach((item) => {
-      const id = itemId(item);
-      if (!queued.has(id)) {
-        existingAudit.push(id);
-        queued.add(id);
-      }
-    });
+    primary.forEach((item) => { const id = itemId(item); if (!queued.has(id)) { existingPrimary.push(id); queued.add(id); } });
+    audit.forEach((item) => { const id = itemId(item); if (!queued.has(id)) { existingAudit.push(id); queued.add(id); } });
     queues[bucket] = [...existingPrimary, ...existingAudit];
   }
 
@@ -219,20 +181,15 @@
     const isDone = status === 'done';
     const isSkip = status === 'skip';
     const statusText = isDone ? 'DONE' : isSkip ? 'SKIP' : '';
-    const skipLabel = isSkip ? 'UNDO' : 'SKIP';
     return `<div class="movement-item${processed ? ' is-processed' : ''}${isDone ? ' is-done' : ''}${isSkip ? ' is-skip' : ''}" data-movement-row="${id}" title="${esc(title)}">
       <input class="movement-done" type="checkbox" data-movement-id="${id}" data-bucket="${bucket}" aria-label="Done" ${isDone ? 'checked' : ''} ${isSkip ? 'disabled' : ''}>
-      <span class="movement-item-body">
-        <span class="movement-item-title">${esc(title)}</span>
-        <span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(String(item._date || '').slice(5).replace('-', '.'))}${statusText ? ` · ${statusText}` : ''}${time ? ` ${esc(time)}` : ''}</span></span>
-      </span>
-      <button class="movement-skip" type="button" data-skip-id="${id}" data-bucket="${bucket}" ${isDone ? 'disabled' : ''}>${skipLabel}</button>
+      <span class="movement-item-body"><span class="movement-item-title">${esc(title)}</span><span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(String(item._date || '').slice(5).replace('-', '.'))}${statusText ? ` · ${statusText}` : ''}${time ? ` ${esc(time)}` : ''}</span></span></span>
+      <button class="movement-skip" type="button" data-skip-id="${id}" data-bucket="${bucket}" ${isDone ? 'disabled' : ''}>${isSkip ? 'UNDO' : 'SKIP'}</button>
     </div>`;
   }
 
   function recentProcessed(bucket) {
-    return poolItems(bucket)
-      .filter((item) => history[itemId(item)])
+    return poolItems(bucket).filter((item) => history[itemId(item)])
       .sort((a, b) => String(history[itemId(b)]?.at || '').localeCompare(String(history[itemId(a)]?.at || '')))
       .slice(0, DISPLAY_LIMIT);
   }
@@ -241,23 +198,14 @@
     const target = targets[bucket];
     target.list.classList.remove('movement-loading');
     syncQueue(bucket);
-    const open = openItems(bucket);
-    target.count.textContent = String(open.length);
-
-    const visible = queues[bucket]
-      .slice(0, DISPLAY_LIMIT)
-      .map((id) => itemById(bucket, id))
-      .filter(Boolean);
-
+    target.count.textContent = String(openItems(bucket).length);
+    const visible = queues[bucket].slice(0, DISPLAY_LIMIT).map((id) => itemById(bucket, id)).filter(Boolean);
     if (visible.length) {
       target.list.innerHTML = visible.map((item) => rowHtml(bucket, item)).join('');
       return;
     }
-
     const processed = recentProcessed(bucket);
-    target.list.innerHTML = processed.length
-      ? processed.map((item) => rowHtml(bucket, item, true)).join('')
-      : emptyRow();
+    target.list.innerHTML = processed.length ? processed.map((item) => rowHtml(bucket, item, true)).join('') : emptyRow();
   }
 
   function renderAll({ randomize = false } = {}) {
@@ -270,12 +218,7 @@
   function setStatus(bucket, id, status) {
     const item = itemById(bucket, id);
     if (status === 'done' || status === 'skip') {
-      history[id] = {
-        status,
-        at: new Date().toISOString(),
-        title_key: item ? titleKey(item) : undefined,
-        recurring: Boolean(item?._isRecurring)
-      };
+      history[id] = { status, at: new Date().toISOString(), title_key: item ? titleKey(item) : undefined, recurring: Boolean(item?._isRecurring) };
       queues[bucket] = queues[bucket].filter((queuedId) => queuedId !== id);
     } else {
       delete history[id];
@@ -286,9 +229,8 @@
   }
 
   async function loadCuratedWeek() {
-    const path = `indexes/movement/${weekStartKey}_${todayKey}.json`;
     try {
-      const payload = await gh(path, 'my-storage-note');
+      const payload = await gh(`indexes/movement/${weekStartKey}_${todayKey}.json`, 'my-storage-note');
       if (!payload?.content) return null;
       const data = JSON.parse(decode(payload.content));
       if (!Array.isArray(data?.items)) return null;
@@ -309,17 +251,12 @@
         return { type, entries: [] };
       }
     }));
-
     const files = [];
-    directories.forEach(({ type, entries }) => {
-      entries.forEach((entry) => {
-        if (entry?.type !== 'file' || !dateName.test(entry.name)) return;
-        const date = entry.name.slice(0, 10);
-        if (date < weekStartKey || date > todayKey) return;
-        files.push({ type, date, path: `extracted/${type}/${entry.name}` });
-      });
-    });
-
+    directories.forEach(({ type, entries }) => entries.forEach((entry) => {
+      if (entry?.type !== 'file' || !dateName.test(entry.name)) return;
+      const date = entry.name.slice(0, 10);
+      if (date >= weekStartKey && date <= todayKey) files.push({ type, date, path: `extracted/${type}/${entry.name}` });
+    }));
     const payloads = await Promise.all(files.map(async (file) => {
       try {
         const payload = await gh(file.path, 'my-storage-note');
@@ -331,36 +268,48 @@
         return [];
       }
     }));
-
     return payloads.flat();
   }
 
   async function loadSevenDays() {
     const curated = await loadCuratedWeek();
-    if (curated?.length) return { items: curated, curated: true };
-    return { items: await loadLegacySevenDays(), curated: false };
+    return curated?.length ? { items: curated, curated: true } : { items: await loadLegacySevenDays(), curated: false };
+  }
+
+  async function latestAuditPath() {
+    try {
+      const entries = await gh('indexes/movement', 'my-storage-note');
+      if (!Array.isArray(entries)) return null;
+      const matches = entries.filter((entry) => entry?.type === 'file' && AUDIT_NAME.test(entry.name));
+      matches.sort((a, b) => {
+        const am = a.name.match(AUDIT_NAME);
+        const bm = b.name.match(AUDIT_NAME);
+        return (bm?.[2] || '').localeCompare(am?.[2] || '') || (bm?.[1] || '').localeCompare(am?.[1] || '');
+      });
+      return matches[0]?.path || null;
+    } catch (error) {
+      console.error('ON HAND audit index load failed', error);
+      return null;
+    }
   }
 
   async function loadAudit() {
     try {
-      const payload = await gh(AUDIT_PATH, 'my-storage-note');
-      if (!payload?.content) return { items: [], recurringTitles: new Set(), loaded: false };
+      const path = await latestAuditPath();
+      if (!path) return { items: [], recurringTitles: new Set(), loaded: false, path: null };
+      const payload = await gh(path, 'my-storage-note');
+      if (!payload?.content) return { items: [], recurringTitles: new Set(), loaded: false, path };
       const data = JSON.parse(decode(payload.content));
-      if (!Array.isArray(data?.items)) return { items: [], recurringTitles: new Set(), loaded: false };
+      if (!Array.isArray(data?.items)) return { items: [], recurringTitles: new Set(), loaded: false, path };
       const recurringTitles = new Set((Array.isArray(data?.recurring_work) ? data.recurring_work : []).map(titleKey).filter(Boolean));
       const items = data.items
         .filter((item) => String(item?.state_at_last_source || '').toLowerCase() !== 'completed')
         .filter((item) => MODES.has(item?.mode))
-        .map((item) => ({
-          ...item,
-          _type: item.type || 'action',
-          _date: item.last_seen || item.first_seen || todayKey,
-          _source: 'audit'
-        }));
-      return { items, recurringTitles, loaded: true };
+        .map((item) => ({ ...item, _type: item.type || 'action', _date: item.last_seen || item.first_seen || todayKey, _source: 'audit' }));
+      return { items, recurringTitles, loaded: true, path };
     } catch (error) {
       console.error('ON HAND audit load failed', error);
-      return { items: [], recurringTitles: new Set(), loaded: false };
+      return { items: [], recurringTitles: new Set(), loaded: false, path: null };
     }
   }
 
@@ -374,7 +323,6 @@
       });
       return;
     }
-
     source.textContent = 'ON HAND · LOADING';
     const [week, audit] = await Promise.all([loadSevenDays(), loadAudit()]);
     const items = mergeByPriority(week.items, audit.items).map((item) => ({
@@ -386,27 +334,20 @@
     items.forEach((item) => pools[classify(item._type, item)].push(item));
     renderAll({ randomize: true });
     const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
-    const auditLabel = audit.loaded ? ' + 3M' : '';
-    source.textContent = `${range}${auditLabel}${week.curated ? ' · CURATED' : ''}`;
+    source.textContent = `${range}${audit.loaded ? ' + 3M' : ''}${week.curated ? ' · CURATED' : ''}`;
   }
 
   randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
-
   root.addEventListener('change', (event) => {
     const input = event.target.closest?.('.movement-done[data-movement-id]');
-    if (!input) return;
-    setStatus(input.dataset.bucket, input.dataset.movementId, input.checked ? 'done' : null);
+    if (input) setStatus(input.dataset.bucket, input.dataset.movementId, input.checked ? 'done' : null);
   });
-
   root.addEventListener('click', (event) => {
     const button = event.target.closest?.('.movement-skip[data-skip-id]');
     if (!button) return;
     event.preventDefault();
-    const id = button.dataset.skipId;
-    const bucket = button.dataset.bucket;
-    setStatus(bucket, id, history[id]?.status === 'skip' ? null : 'skip');
+    setStatus(button.dataset.bucket, button.dataset.skipId, history[button.dataset.skipId]?.status === 'skip' ? null : 'skip');
   });
-
   window.addEventListener('storage', (event) => {
     if (event.key !== HISTORY_KEY) return;
     const previous = historyFromText(event.oldValue);
