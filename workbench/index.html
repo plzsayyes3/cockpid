@@ -14,7 +14,6 @@
     <div class="now">
       <div id="todayDate">----年--月--日</div>
       <small id="todayTime">--:--</small>
-      <a href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:8px;color:inherit;text-decoration:none;font:600 8px/1.4 ui-monospace,monospace;letter-spacing:.06em;opacity:.58">GOOGLE CALENDAR ↗</a>
     </div>
   </header>
   <main class="desk">
@@ -34,7 +33,10 @@
     <div class="calendar-news-grid">
       <section class="object today-object">
         <div class="object-head calendar-head">
-          <span class="object-label">CALENDAR / TODAY</span>
+          <div class="calendar-title">
+            <span class="object-label">CALENDAR / TODAY</span>
+            <a class="calendar-external" href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" aria-label="Google カレンダーを開く" title="Google Calendar"><span aria-hidden="true">↗</span></a>
+          </div>
           <div class="date-nav" aria-label="日付移動">
             <button class="date-btn" id="prevDate" title="前日">‹</button>
             <button class="date-btn date-label" id="todayDateBtn" title="今日に戻る">--/--</button>
