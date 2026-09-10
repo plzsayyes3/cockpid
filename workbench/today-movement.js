@@ -62,10 +62,8 @@
   }
 
   function classify(type, item) {
-    // New storage schema (v1.1+): mode is the source of truth.
     if (MODES.has(item?.mode)) return item.mode;
 
-    // Legacy compatibility for records created before mode existed.
     const text = `${item?.title || ''} ${item?.summary || ''}`;
     if (type === 'question' || type === 'hypothesis') return 'check';
     if (type === 'idea' || type === 'theme') return 'keep';
@@ -134,7 +132,24 @@
     render('keep');
   }
 
-  async function loadSevenDays() {
+  async function loadCuratedWeek() {
+    const path = `indexes/movement/${weekStartKey}_${todayKey}.json`;
+    try {
+      const payload = await gh(path, 'my-storage-note');
+      if (!payload?.content) return null;
+      const data = JSON.parse(decode(payload.content));
+      if (!Array.isArray(data?.items)) return null;
+      return data.items.map((item) => ({
+        ...item,
+        _type: item.type || 'idea',
+        _date: item.date || todayKey
+      }));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function loadLegacySevenDays() {
     const directories = await Promise.all(TYPES.map(async (type) => {
       try {
         const entries = await gh(`extracted/${type}`, 'my-storage-note');
@@ -170,6 +185,12 @@
     return payloads.flat();
   }
 
+  async function loadSevenDays() {
+    const curated = await loadCuratedWeek();
+    if (curated?.length) return { items: curated, curated: true };
+    return { items: await loadLegacySevenDays(), curated: false };
+  }
+
   async function boot() {
     if (!token()) {
       source.textContent = '7 DAYS · ANALYSIS OFF';
@@ -182,11 +203,12 @@
     }
 
     source.textContent = '7 DAYS · LOADING';
-    const items = await loadSevenDays();
+    const result = await loadSevenDays();
     pools.do.length = pools.check.length = pools.keep.length = 0;
-    items.forEach((item) => pools[classify(item._type, item)].push(item));
+    result.items.forEach((item) => pools[classify(item._type, item)].push(item));
     renderAll();
-    source.textContent = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
+    const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
+    source.textContent = result.curated ? `${range} · CURATED` : range;
   }
 
   randomButton?.addEventListener('click', () => renderAll());
