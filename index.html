@@ -11,12 +11,13 @@
 <link rel="stylesheet" href="home-final.css">
 <link rel="stylesheet" href="today-movement.css">
 <link rel="stylesheet" href="resident.css">
+<link rel="stylesheet" href="token-settings.css">
 <style>.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}</style>
 </head>
 <body>
 <div class="shell">
   <header class="topbar">
-    <div class="brand-wrap"><div class="brand-row"><div class="brand">COCKPID</div><div class="system-status" aria-label="Workbench status"><span class="status-icon status-techo" title="Techo · LIVE" aria-label="Techo live"><span></span><span></span><span></span></span><span class="status-icon status-analysis" title="Analysis · ON" aria-label="Analysis on"><span></span></span><button class="status-icon status-system" id="systemOpen" title="System" aria-label="System"><span></span></button></div></div><small class="brand-sub">WORKBENCH / UNDER CONSTRUCTION</small></div>
+    <div class="brand-wrap"><div class="brand-row"><div class="brand">COCKPID</div><div class="system-status" aria-label="Workbench status"><span class="status-icon status-techo" title="Techo · LIVE" aria-label="Techo live"><span></span><span></span><span></span></span><span class="status-icon status-analysis" title="Analysis · ON" aria-label="Analysis on"><span></span></span><button class="status-icon status-system" id="systemOpen" title="Connection settings" aria-label="Connection settings"><span></span></button></div></div><small class="brand-sub">WORKBENCH / UNDER CONSTRUCTION</small></div>
     <div class="now"><div id="todayDate">----年--月--日</div><small id="todayTime">--:--</small></div>
   </header>
   <main class="desk">
@@ -28,9 +29,21 @@
 <nav class="dock" aria-label="Workbench apps"><button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button><button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button><button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button><button class="app-btn" data-app="news"><b>4</b><span>News</span></button><button class="app-btn" data-app="advice"><b>5</b><span>Advice</span></button><button class="app-btn" data-app="onhand"><b>6</b><span>On Hand</span></button><button class="app-btn app-slot" disabled aria-label="App slot 7"><b>7</b><span>—</span></button><button class="app-btn secret" data-app="secret"><b>9</b><span>???</span></button></nav>
 <section class="app-window" id="appWindow" aria-hidden="true"><div class="app-frame"><div class="app-frame-head"><span class="app-title" id="appTitle">APP</span><button class="ghost-btn" id="appClose">CLOSE / ESC</button></div><div class="app-content" id="appContent"></div></div></section>
 <div class="pet" id="pet" title="Resident"><div class="pet-say" id="petSay"></div><div class="pet-avatar" aria-hidden="true"><div class="pet-state pet-state-carry"></div><div class="pet-state pet-state-work"><div class="pet-work-bunny"></div><div class="pet-monitor"></div><div class="pet-monitor-stand"></div><div class="pet-cup"></div><div class="pet-desk"></div></div></div><div class="pet-shadow"></div></div>
+
+<section class="token-modal" id="tokenModal" aria-hidden="true" aria-label="GitHub connection settings">
+  <div class="token-panel" role="dialog" aria-modal="true" aria-labelledby="tokenPanelTitle">
+    <div class="token-panel-head"><div><div class="token-kicker">COCKPID / CONNECTION</div><h2 id="tokenPanelTitle">GitHub token</h2></div><button class="token-close" id="tokenClose" type="button">CLOSE</button></div>
+    <p class="token-copy">Workbenchが <b>my-storage-note</b> と <b>mynotebook</b> を読む・書くためのFine-grained tokenです。この端末のlocalStorageだけに保存します。</p>
+    <div class="token-field"><label for="workbenchTokenInput">GITHUB FINE-GRAINED TOKEN</label><div class="token-input-wrap"><input id="workbenchTokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button class="token-eye" id="tokenReveal" type="button">SHOW</button></div></div>
+    <div class="token-status" id="tokenStatus">TOKEN REQUIRED</div>
+    <div class="token-actions"><button class="token-btn danger" id="tokenClearWorkbench" type="button">REMOVE</button><button class="token-btn" id="tokenTest" type="button">TEST</button><button class="token-btn primary" id="tokenSaveWorkbench" type="button">SAVE &amp; RELOAD</button></div>
+  </div>
+</section>
+
 <script src="prototype-common.js"></script>
 <script src="calendar-refresh-policy.js"></script>
 <script src="workbench.js"></script>
+<script src="token-settings.js"></script>
 <script src="calendar-refresh-ui.js"></script>
 <script src="resident.js"></script>
 <script src="navigation.js"></script>
