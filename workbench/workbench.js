@@ -14,6 +14,8 @@
   let latestHint = '';
   let petTimer = null;
   let petDrag = null;
+  let selectedDate = null;
+  let calendarLoadSeq = 0;
 
   const apps = {
     calendar: { title: '1 / CALENDAR', type: 'iframe', src: previewMode ? '../calendar.html' : 'calendar.html' },
@@ -42,9 +44,30 @@
     return { year: get('year'), month: get('month'), day: get('day') };
   }
 
+  function dateKey(parts) {
+    return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+  }
+
   function jstDateKey() {
-    const t = jstDateParts();
-    return `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
+    return dateKey(jstDateParts());
+  }
+
+  function shiftDate(parts, amount) {
+    const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + amount));
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+  }
+
+  function dateRelation(parts) {
+    return dateKey(parts).localeCompare(jstDateKey());
+  }
+
+  function updateSelectedDateLabel() {
+    const button = $w('todayDateBtn');
+    if (!button || !selectedDate) return;
+    const d = new Date(Date.UTC(selectedDate.year, selectedDate.month - 1, selectedDate.day));
+    const weekday = new Intl.DateTimeFormat('ja-JP', { timeZone: 'UTC', weekday: 'short' }).format(d);
+    button.textContent = `${selectedDate.month}/${selectedDate.day}(${weekday})`;
+    button.classList.toggle('is-today', dateRelation(selectedDate) === 0);
   }
 
   function jstClockMinutes() {
@@ -86,17 +109,21 @@
     };
   }
 
-  function renderTodayTimeline(items) {
+  function renderTodayTimeline(items, day) {
+    const relation = dateRelation(day);
+    const isToday = relation === 0;
+    const isPastDay = relation < 0;
+    const now = jstClockMinutes();
     const timed = items.filter((item) => Number.isFinite(item.start)).sort((a, b) => a.start - b.start);
     const anytime = items.filter((item) => !Number.isFinite(item.start));
     const anytimeHtml = anytime.length ? `
-      <div class="anytime">
+      <div class="anytime${isPastDay ? ' past' : ''}">
         <span class="anytime-label">ANYTIME</span>
         <div class="anytime-items">${anytime.map((item) => `<span class="anytime-item">${esc(item.title)}</span>`).join('')}</div>
       </div>` : '';
 
     if (!timed.length) {
-      todayList.innerHTML = anytimeHtml || '<div class="empty">今日の予定はまだありません。</div>';
+      todayList.innerHTML = anytimeHtml || '<div class="empty">この日の予定はまだありません。</div>';
       return;
     }
 
@@ -126,28 +153,38 @@
     const events = timed.map((item) => {
       const top = Math.round((item.start - startMinutes) * pxPerMinute);
       const eventHeight = Math.max(28, Math.round((item.end - item.start) * pxPerMinute));
-      return `<div class="timeline-event" style="top:${top}px;height:${eventHeight}px" title="${esc(item.time)}">
+      const past = isPastDay || (isToday && item.end <= now);
+      return `<div class="timeline-event${past ? ' past' : ''}" style="top:${top}px;height:${eventHeight}px" title="${esc(item.time)}">
         <span class="timeline-event-time">${esc(item.time)}</span>
         <span class="timeline-event-title">${esc(item.title)}</span>
       </div>`;
     }).join('');
 
-    const now = jstClockMinutes();
-    const nowHtml = now >= startMinutes && now <= endMinutes
+    let pastHeight = 0;
+    if (isPastDay) pastHeight = height;
+    else if (isToday) pastHeight = Math.min(height, Math.max(0, Math.round((now - startMinutes) * pxPerMinute)));
+    const pastHtml = pastHeight > 0 ? `<div class="timeline-past" style="height:${pastHeight}px"></div>` : '';
+
+    const nowHtml = isToday && now >= startMinutes && now <= endMinutes
       ? `<div class="timeline-now" style="top:${Math.round((now - startMinutes) * pxPerMinute)}px"><span>NOW</span></div>`
       : '';
 
-    todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${marks.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
+    todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${pastHtml}${marks.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
   }
 
   async function loadToday() {
+    if (!selectedDate) selectedDate = jstDateParts();
+    updateSelectedDateLabel();
+    const seq = ++calendarLoadSeq;
     if (!token()) {
       todayList.innerHTML = '<div class="empty">GitHub token が必要です。</div>';
       return;
     }
-    const t = jstDateParts();
+    const t = selectedDate;
+    todayList.innerHTML = '<div class="empty">Techoを読んでいます…</div>';
     try {
       const payload = await gh(`02_techo/${t.year}-${String(t.month).padStart(2, '0')}.md`, 'mynotebook');
+      if (seq !== calendarLoadSeq) return;
       if (!payload?.content) throw new Error('no source');
       const lines = decode(payload.content).split(/\r?\n/);
       const heading = new RegExp(`^##\\s+${t.month}月${t.day}日(?:\\([^)]*\\))?\\s*$`);
@@ -161,11 +198,22 @@
         const match = /^\s*-\s+(.*)$/.exec(raw);
         if (match?.[1]?.trim()) items.push(cleanItem(match[1]));
       }
-      renderTodayTimeline(items);
+      renderTodayTimeline(items, t);
     } catch (error) {
+      if (seq !== calendarLoadSeq) return;
       console.error(error);
       todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
     }
+  }
+
+  function moveCalendar(amount) {
+    selectedDate = shiftDate(selectedDate || jstDateParts(), amount);
+    loadToday();
+  }
+
+  function resetCalendarToday() {
+    selectedDate = jstDateParts();
+    loadToday();
   }
 
   async function loadPetHint() {
@@ -331,6 +379,9 @@
   $w('appClose').addEventListener('click', closeApp);
   captureBtn.addEventListener('click', saveCaptureDirect);
   $w('systemOpen').addEventListener('click', () => openApp('system'));
+  $w('prevDate').addEventListener('click', () => moveCalendar(-1));
+  $w('nextDate').addEventListener('click', () => moveCalendar(1));
+  $w('todayDateBtn').addEventListener('click', resetCalendarToday);
   captureText.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); saveCaptureDirect(); }
   });
@@ -347,8 +398,12 @@
     }
   });
 
+  selectedDate = jstDateParts();
   nowParts();
-  setInterval(nowParts, 30000);
+  setInterval(() => {
+    nowParts();
+    if (selectedDate && dateRelation(selectedDate) === 0) loadToday();
+  }, 30000);
   loadToday();
   loadPetHint();
   restorePetPosition();
