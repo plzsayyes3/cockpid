@@ -2,20 +2,23 @@
   'use strict';
 
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
+  const MODES = new Set(['do', 'check', 'keep']);
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
   const DISPLAY_LIMIT = 2;
   const targets = {
     do: { count: document.getElementById('moveDoCount'), list: document.getElementById('moveDoItems') },
     check: { count: document.getElementById('moveCheckCount'), list: document.getElementById('moveCheckItems') },
-    action: { count: document.getElementById('moveThinkCount'), list: document.getElementById('moveThinkItems') }
+    keep: { count: document.getElementById('moveThinkCount'), list: document.getElementById('moveThinkItems') }
   };
   const source = document.getElementById('movementDate');
   const randomButton = document.getElementById('movementRandom');
-  if (!targets.do.list || !targets.check.list || !targets.action.list) return;
+  const root = document.querySelector('.movement-object');
+  if (!targets.do.list || !targets.check.list || !targets.keep.list || !root) return;
 
   const dateName = /^\d{4}-\d{2}-\d{2}\.json$/;
-  const pools = { do: [], check: [], action: [] };
-  let checked = readChecked();
+  const pools = { do: [], check: [], keep: [] };
+  const queues = { do: [], check: [], keep: [] };
+  let history = readHistory();
 
   function jstDateParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -37,17 +40,26 @@
   const todayKey = dateKey(jstDateParts());
   const weekStartKey = dateKey(shiftDays(jstDateParts(), -6));
 
-  function readChecked() {
+  function readHistory() {
     try {
-      const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
-      return value && typeof value === 'object' ? value : {};
+      const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+      if (!raw || typeof raw !== 'object') return {};
+      const migrated = {};
+      Object.entries(raw).forEach(([id, value]) => {
+        if (value?.status === 'done' || value?.status === 'skip') {
+          migrated[id] = value;
+        } else if (value?.checked_at) {
+          migrated[id] = { status: 'done', at: value.checked_at };
+        }
+      });
+      return migrated;
     } catch (_) {
       return {};
     }
   }
 
-  function writeChecked() {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(checked));
+  function writeHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }
 
   function itemId(item) {
@@ -61,11 +73,12 @@
   }
 
   function classify(type, item) {
+    if (MODES.has(item?.mode)) return item.mode;
     const text = `${item?.title || ''} ${item?.summary || ''}`;
-    if (type === 'question') return 'check';
-    if (type === 'idea' || type === 'theme' || type === 'hypothesis') return 'action';
+    if (type === 'question' || type === 'hypothesis') return 'check';
+    if (type === 'idea' || type === 'theme') return 'keep';
     if (/(確認|状況|対象|進捗|チェック|把握|照合|レビュー|聞く|調べる|見直す)/.test(text)) return 'check';
-    if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'action';
+    if (/(考え|検討|整理|構想|方針|目的|設計|見極め|判断|振り返)/.test(text)) return 'keep';
     return 'do';
   }
 
@@ -88,48 +101,132 @@
     return copy;
   }
 
-  function emptyRow(label = '候補なし') {
-    return `<label class="movement-item movement-item-empty"><input type="checkbox" disabled><span class="movement-item-body"><span class="movement-item-title">${esc(label)}</span></span></label>`;
+  function poolItems(bucket) {
+    return unique(pools[bucket]);
   }
 
-  function rowHtml(item) {
+  function openItems(bucket) {
+    return poolItems(bucket).filter((item) => !history[itemId(item)]);
+  }
+
+  function itemById(bucket, id) {
+    return poolItems(bucket).find((item) => itemId(item) === id) || null;
+  }
+
+  function rebuildQueue(bucket) {
+    queues[bucket] = shuffle(openItems(bucket)).map(itemId);
+  }
+
+  function syncQueue(bucket) {
+    const open = openItems(bucket);
+    const openIds = new Set(open.map(itemId));
+    queues[bucket] = queues[bucket].filter((id) => openIds.has(id));
+    open.forEach((item) => {
+      const id = itemId(item);
+      if (!queues[bucket].includes(id)) queues[bucket].push(id);
+    });
+  }
+
+  function emptyRow(label = '候補なし') {
+    return `<div class="movement-item movement-item-empty"><input type="checkbox" disabled><span class="movement-item-body"><span class="movement-item-title">${esc(label)}</span></span></div>`;
+  }
+
+  function formatTime(value) {
+    if (!value) return '';
+    try {
+      return new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function rowHtml(bucket, item, processed = false) {
     const id = itemId(item);
-    const isChecked = Boolean(checked[id]);
+    const state = history[id] || null;
     const title = item.title || item.summary || 'Untitled';
-    const time = checked[id]?.checked_at ? new Date(checked[id].checked_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
-    return `<label class="movement-item${isChecked ? ' is-checked' : ''}" title="${esc(title)}">
-      <input class="movement-check" type="checkbox" data-movement-id="${id}" ${isChecked ? 'checked' : ''}>
+    const status = state?.status || '';
+    const time = formatTime(state?.at);
+    const isDone = status === 'done';
+    const isSkip = status === 'skip';
+    const statusText = isDone ? 'DONE' : isSkip ? 'SKIP' : '';
+    const skipLabel = isSkip ? 'UNDO' : 'SKIP';
+    return `<div class="movement-item${processed ? ' is-processed' : ''}${isDone ? ' is-done' : ''}${isSkip ? ' is-skip' : ''}" data-movement-row="${id}" title="${esc(title)}">
+      <input class="movement-done" type="checkbox" data-movement-id="${id}" data-bucket="${bucket}" aria-label="Done" ${isDone ? 'checked' : ''} ${isSkip ? 'disabled' : ''}>
       <span class="movement-item-body">
         <span class="movement-item-title">${esc(title)}</span>
-        <span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(item._date.slice(5).replace('-', '.'))}${time ? ` · ${esc(time)}` : ''}</span></span>
+        <span class="movement-item-meta"><span class="movement-item-type">[${esc(item._type)}]</span><span>${esc(item._date.slice(5).replace('-', '.'))}${statusText ? ` · ${statusText}` : ''}${time ? ` ${esc(time)}` : ''}</span></span>
       </span>
-    </label>`;
+      <button class="movement-skip" type="button" data-skip-id="${id}" data-bucket="${bucket}" ${isDone ? 'disabled' : ''}>${skipLabel}</button>
+    </div>`;
   }
 
-  function render(bucket) {
+  function recentProcessed(bucket) {
+    return poolItems(bucket)
+      .filter((item) => history[itemId(item)])
+      .sort((a, b) => String(history[itemId(b)]?.at || '').localeCompare(String(history[itemId(a)]?.at || '')))
+      .slice(0, DISPLAY_LIMIT);
+  }
+
+  function renderBucket(bucket) {
     const target = targets[bucket];
     target.list.classList.remove('movement-loading');
-    const cleaned = unique(pools[bucket]);
-    const open = cleaned.filter((item) => !checked[itemId(item)]);
-    const done = cleaned.filter((item) => checked[itemId(item)]);
+    syncQueue(bucket);
+    const open = openItems(bucket);
     target.count.textContent = String(open.length);
 
-    if (!cleaned.length) {
-      target.list.innerHTML = emptyRow();
+    const visible = queues[bucket]
+      .slice(0, DISPLAY_LIMIT)
+      .map((id) => itemById(bucket, id))
+      .filter(Boolean);
+
+    if (visible.length) {
+      target.list.innerHTML = visible.map((item) => rowHtml(bucket, item)).join('');
       return;
     }
 
-    const candidates = open.length ? open : done;
-    target.list.innerHTML = shuffle(candidates).slice(0, DISPLAY_LIMIT).map(rowHtml).join('');
+    const processed = recentProcessed(bucket);
+    target.list.innerHTML = processed.length
+      ? processed.map((item) => rowHtml(bucket, item, true)).join('')
+      : emptyRow();
   }
 
-  function renderAll() {
-    render('do');
-    render('check');
-    render('action');
+  function renderAll({ randomize = false } = {}) {
+    ['do', 'check', 'keep'].forEach((bucket) => {
+      if (randomize || !queues[bucket].length) rebuildQueue(bucket);
+      renderBucket(bucket);
+    });
   }
 
-  async function loadSevenDays() {
+  function setStatus(bucket, id, status) {
+    if (status === 'done' || status === 'skip') {
+      history[id] = { status, at: new Date().toISOString() };
+      queues[bucket] = queues[bucket].filter((queuedId) => queuedId !== id);
+    } else {
+      delete history[id];
+      if (!queues[bucket].includes(id)) queues[bucket].push(id);
+    }
+    writeHistory();
+    renderBucket(bucket);
+  }
+
+  async function loadCuratedWeek() {
+    const path = `indexes/movement/${weekStartKey}_${todayKey}.json`;
+    try {
+      const payload = await gh(path, 'my-storage-note');
+      if (!payload?.content) return null;
+      const data = JSON.parse(decode(payload.content));
+      if (!Array.isArray(data?.items)) return null;
+      return data.items.map((item) => ({
+        ...item,
+        _type: item.type || 'idea',
+        _date: item.date || todayKey
+      }));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function loadLegacySevenDays() {
     const directories = await Promise.all(TYPES.map(async (type) => {
       try {
         const entries = await gh(`extracted/${type}`, 'my-storage-note');
@@ -165,6 +262,12 @@
     return payloads.flat();
   }
 
+  async function loadSevenDays() {
+    const curated = await loadCuratedWeek();
+    if (curated?.length) return { items: curated, curated: true };
+    return { items: await loadLegacySevenDays(), curated: false };
+  }
+
   async function boot() {
     if (!token()) {
       source.textContent = '7 DAYS · ANALYSIS OFF';
@@ -177,23 +280,29 @@
     }
 
     source.textContent = '7 DAYS · LOADING';
-    const items = await loadSevenDays();
-    pools.do.length = pools.check.length = pools.action.length = 0;
-    items.forEach((item) => pools[classify(item._type, item)].push(item));
-    renderAll();
-    source.textContent = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
+    const result = await loadSevenDays();
+    pools.do.length = pools.check.length = pools.keep.length = 0;
+    result.items.forEach((item) => pools[classify(item._type, item)].push(item));
+    renderAll({ randomize: true });
+    const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
+    source.textContent = result.curated ? `${range} · CURATED` : range;
   }
 
-  randomButton?.addEventListener('click', () => renderAll());
+  randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
 
-  document.querySelector('.movement-object')?.addEventListener('change', (event) => {
-    const input = event.target.closest?.('[data-movement-id]');
+  root.addEventListener('change', (event) => {
+    const input = event.target.closest?.('.movement-done[data-movement-id]');
     if (!input) return;
-    const id = input.dataset.movementId;
-    if (input.checked) checked[id] = { checked_at: new Date().toISOString() };
-    else delete checked[id];
-    writeChecked();
-    renderAll();
+    setStatus(input.dataset.bucket, input.dataset.movementId, input.checked ? 'done' : null);
+  });
+
+  root.addEventListener('click', (event) => {
+    const button = event.target.closest?.('.movement-skip[data-skip-id]');
+    if (!button) return;
+    event.preventDefault();
+    const id = button.dataset.skipId;
+    const bucket = button.dataset.bucket;
+    setStatus(bucket, id, history[id]?.status === 'skip' ? null : 'skip');
   });
 
   boot().catch((error) => {
