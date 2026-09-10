@@ -42,6 +42,11 @@
     return { year: get('year'), month: get('month'), day: get('day') };
   }
 
+  function jstDateKey() {
+    const t = jstDateParts();
+    return `${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')}`;
+  }
+
   function jstClockMinutes() {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
@@ -108,10 +113,14 @@
     const endMinutes = endHour * 60;
     const pxPerMinute = 0.58;
     const height = Math.max(220, Math.round((endMinutes - startMinutes) * pxPerMinute));
-    const hours = [];
-    for (let hour = startHour; hour <= endHour; hour += 1) {
-      const top = Math.min(height, Math.max(0, Math.round((hour * 60 - startMinutes) * pxPerMinute)));
-      hours.push(`<div class="timeline-hour" style="top:${top}px"><span>${padHour(hour)}</span></div>`);
+    const marks = [];
+    for (let minutes = startMinutes; minutes <= endMinutes; minutes += 30) {
+      const top = Math.min(height, Math.max(0, Math.round((minutes - startMinutes) * pxPerMinute)));
+      if (minutes % 60 === 0) {
+        marks.push(`<div class="timeline-hour" style="top:${top}px"><span>${padHour(minutes / 60)}</span></div>`);
+      } else {
+        marks.push(`<div class="timeline-half" style="top:${top}px"></div>`);
+      }
     }
 
     const events = timed.map((item) => {
@@ -128,7 +137,7 @@
       ? `<div class="timeline-now" style="top:${Math.round((now - startMinutes) * pxPerMinute)}px"><span>NOW</span></div>`
       : '';
 
-    todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${hours.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
+    todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${marks.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
   }
 
   async function loadToday() {
@@ -160,11 +169,27 @@
   }
 
   async function loadPetHint() {
-    if (!token()) return;
+    const currentToken = token();
+    if (!currentToken) return;
     try {
-      const rows = await days('idea', 3);
-      const ideas = flattenDays(rows, 'IDEA');
-      const item = ideas[0];
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/my-storage-note/contents/extracted/idea?ref=main`, {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${currentToken}`
+        }
+      });
+      if (!response.ok) throw new Error(`idea index ${response.status}`);
+      const entries = await response.json();
+      const todayName = `${jstDateKey()}.json`;
+      const latest = (Array.isArray(entries) ? entries : [])
+        .filter((entry) => entry.type === 'file' && /^\d{4}-\d{2}-\d{2}\.json$/.test(entry.name) && entry.name <= todayName)
+        .sort((a, b) => b.name.localeCompare(a.name))[0];
+      if (!latest) return;
+
+      const payload = await gh(latest.path, 'my-storage-note');
+      if (!payload?.content) return;
+      const data = JSON.parse(decode(payload.content));
+      const item = Array.isArray(data?.items) ? data.items[0] : null;
       latestHint = item?.title || item?.summary || '';
     } catch (error) {
       console.error(error);
