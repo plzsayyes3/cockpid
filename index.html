@@ -14,7 +14,6 @@
     <div class="now">
       <div id="todayDate">----年--月--日</div>
       <small id="todayTime">--:--</small>
-      <a href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:8px;color:inherit;text-decoration:none;font:600 8px/1.4 ui-monospace,monospace;letter-spacing:.06em;opacity:.58">GOOGLE CALENDAR ↗</a>
     </div>
   </header>
 
@@ -30,7 +29,13 @@
 
     <div class="side-stack">
       <section class="object today-object">
-        <div class="object-head"><span class="object-label">TODAY</span><span class="object-no">01</span></div>
+        <div class="object-head">
+          <div class="calendar-title">
+            <span class="object-label">CALENDAR / TODAY</span>
+            <a class="calendar-external" href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" aria-label="Google カレンダーを開く" title="Google Calendar"><span aria-hidden="true">↗</span></a>
+          </div>
+          <span class="object-no">01</span>
+        </div>
         <div class="list" id="todayList"><div class="empty">Techoを読んでいます…</div></div>
       </section>
 
