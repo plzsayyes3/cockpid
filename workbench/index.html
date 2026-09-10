@@ -41,20 +41,20 @@
     <section class="object movement-object" aria-label="今日の動き">
       <div class="movement-head">
         <span class="movement-title">今日の動き</span>
-        <span class="movement-source" id="movementDate">ANALYSIS …</span>
+        <div class="movement-tools"><span class="movement-source" id="movementDate">7 DAYS · ANALYSIS …</span><button class="movement-random" id="movementRandom" type="button">↻ RANDOM</button></div>
       </div>
       <div class="movement-grid">
         <article class="movement-col">
-          <div class="movement-col-head"><span>する</span><b id="moveDoCount">—</b></div>
-          <div class="movement-items movement-loading" id="moveDoItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+          <div class="movement-col-head"><span>Do</span><b id="moveDoCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveDoItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div>
         </article>
         <article class="movement-col">
-          <div class="movement-col-head"><span>確認する</span><b id="moveCheckCount">—</b></div>
-          <div class="movement-items movement-loading" id="moveCheckItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+          <div class="movement-col-head"><span>Check</span><b id="moveCheckCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveCheckItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div>
         </article>
         <article class="movement-col">
-          <div class="movement-col-head"><span>考える</span><b id="moveThinkCount">—</b></div>
-          <div class="movement-items movement-loading" id="moveThinkItems"><div class="movement-item"><span class="movement-item-title">読み込み中…</span></div></div>
+          <div class="movement-col-head"><span>Action</span><b id="moveThinkCount">—</b></div>
+          <div class="movement-items movement-loading" id="moveThinkItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div>
         </article>
       </div>
     </section>
