@@ -7,6 +7,7 @@
 
   const HOME_FRAME = 7;
   const TYPE_FRAMES = [7, 8, 9, 8];
+  const REACTION_FRAMES = [1, 2, 4, 5, 7];
   const FRAME_SRC = {
     3: 'resident-frame3-full.svg?v=20260911',
     6: 'resident-frame6.png',
@@ -14,7 +15,7 @@
     8: 'resident-frame8.png',
     9: 'resident-frame9.png'
   };
-  const idleFrameSrc = {};
+  const generatedFrameSrc = {};
   const RADY_LINES = [
     'それ、いまやる？',
     'ちょっと別のこと考えてもいいかも。',
@@ -42,6 +43,8 @@
   let gestureTimer = null;
   let gestureRun = 0;
   let lastSpeech = '';
+  let activeReactionFrame = null;
+  let lastReactionFrame = null;
 
   avatar.innerHTML = '';
   const image = document.createElement('img');
@@ -57,11 +60,15 @@
   });
 
   function frameSource(frame) {
-    return FRAME_SRC[frame] || idleFrameSrc[frame] || FRAME_SRC[HOME_FRAME];
+    return FRAME_SRC[frame] || generatedFrameSrc[frame] || FRAME_SRC[HOME_FRAME];
+  }
+
+  function hasFrame(frame) {
+    return Boolean(FRAME_SRC[frame] || generatedFrameSrc[frame]);
   }
 
   function setFrame(frame) {
-    const safe = FRAME_SRC[frame] || idleFrameSrc[frame] ? Number(frame) : HOME_FRAME;
+    const safe = hasFrame(frame) ? Number(frame) : HOME_FRAME;
     const nextSrc = frameSource(safe);
     if (image.getAttribute('src') !== nextSrc) image.src = nextSrc;
     image.dataset.frame = String(safe);
@@ -70,6 +77,15 @@
 
   function sample(items) {
     return items.length ? items[Math.floor(Math.random() * items.length)] : '';
+  }
+
+  function chooseReactionFrame() {
+    const available = REACTION_FRAMES.filter(hasFrame);
+    const alternatives = available.filter((frame) => frame !== lastReactionFrame);
+    const pool = alternatives.length ? alternatives : available;
+    const picked = pool.length ? pool[Math.floor(Math.random() * pool.length)] : HOME_FRAME;
+    lastReactionFrame = picked;
+    return picked;
   }
 
   function clip(value, max = 38) {
@@ -140,12 +156,12 @@
 
   function scheduleIdle() {
     clearTimeout(idleTimer);
-    if (!idleFrameSrc[1] || !idleFrameSrc[2] || isBusy()) return;
+    if (!generatedFrameSrc[1] || !generatedFrameSrc[2] || isBusy()) return;
     idleTimer = setTimeout(runIdleGesture, 12000 + Math.random() * 8000);
   }
 
   function runIdleGesture() {
-    if (isBusy() || !idleFrameSrc[1] || !idleFrameSrc[2]) {
+    if (isBusy() || !generatedFrameSrc[1] || !generatedFrameSrc[2]) {
       scheduleIdle();
       return;
     }
@@ -180,9 +196,13 @@
       return true;
     }
     if (speaking) {
-      setFrame(3);
+      if (activeReactionFrame == null || !hasFrame(activeReactionFrame)) {
+        activeReactionFrame = chooseReactionFrame();
+      }
+      setFrame(activeReactionFrame);
       return true;
     }
+    activeReactionFrame = null;
     return false;
   }
 
@@ -218,14 +238,14 @@
     scheduleIdle();
   }
 
-  function prepareIdleFrames() {
+  function prepareGeneratedFrames() {
     const sprite = new Image();
     sprite.onload = () => {
       const cellW = sprite.naturalWidth / 3;
       const cellH = sprite.naturalHeight / 3;
       if (!Number.isFinite(cellW) || !Number.isFinite(cellH) || cellW <= 0 || cellH <= 0) return;
 
-      for (const frame of [1, 2]) {
+      for (const frame of [1, 2, 4, 5]) {
         const index = frame - 1;
         const col = index % 3;
         const row = Math.floor(index / 3);
@@ -246,11 +266,11 @@
           canvas.width,
           canvas.height
         );
-        idleFrameSrc[frame] = canvas.toDataURL('image/png');
+        generatedFrameSrc[frame] = canvas.toDataURL('image/png');
       }
       scheduleIdle();
     };
-    sprite.src = 'resident-sprites.png?v=20260910-idle';
+    sprite.src = 'resident-sprites.png?v=20260911-reactions';
   }
 
   const speechObserver = new MutationObserver(() => {
@@ -274,6 +294,6 @@
   capture?.addEventListener('input', startTypingPulse);
 
   setFrame(HOME_FRAME);
-  prepareIdleFrames();
+  prepareGeneratedFrames();
   syncState();
 })();
