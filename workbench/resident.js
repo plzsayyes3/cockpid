@@ -15,6 +15,24 @@
     9: 'resident-frame9.png'
   };
   const idleFrameSrc = {};
+  const RADY_LINES = [
+    'それ、いまやる？',
+    'ちょっと別のこと考えてもいいかも。',
+    '今日は、何を拾う？',
+    'これは後でもいい気がする。',
+    'なんか忘れてない？',
+    '……休憩する？',
+    'ひとつだけ進めるなら、どれ？',
+    'いま手元にあるもので十分かも。',
+    'まだ決めなくてもいいよ。',
+    'いったん置いておくのもあり。',
+    'ちょっと面白い方へ行く？',
+    '今日はここまででもいいんじゃない。',
+    'そのまま書いておけば、あとで拾えるよ。',
+    'いま気になってるもの、ひとつある？',
+    '急がないやつも、忘れなくていい。',
+    '静かなうちに、ひとつ考える？'
+  ];
 
   let currentFrame = HOME_FRAME;
   let typingTimer = null;
@@ -23,6 +41,7 @@
   let idleTimer = null;
   let gestureTimer = null;
   let gestureRun = 0;
+  let lastSpeech = '';
 
   avatar.innerHTML = '';
   const image = document.createElement('img');
@@ -47,6 +66,52 @@
     if (image.getAttribute('src') !== nextSrc) image.src = nextSrc;
     image.dataset.frame = String(safe);
     currentFrame = safe;
+  }
+
+  function sample(items) {
+    return items.length ? items[Math.floor(Math.random() * items.length)] : '';
+  }
+
+  function clip(value, max = 38) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
+
+  function visibleTexts(selector) {
+    return [...document.querySelectorAll(selector)]
+      .filter((element) => element.getClientRects().length > 0)
+      .map((element) => element.textContent?.replace(/\s+/g, ' ').trim() || '')
+      .filter((text) => text && !/読み込み中|Techoを読んでいます/.test(text));
+  }
+
+  function deskMessages(original) {
+    const messages = [];
+    const hinted = /「(.+?)」/.exec(original)?.[1]?.trim();
+    if (hinted) messages.push(`これ、まだ気になる？「${clip(hinted, 44)}」`);
+
+    const onHand = visibleTexts('.movement-item-title');
+    const onHandTitle = sample(onHand);
+    if (onHandTitle) {
+      const title = clip(onHandTitle, 34);
+      messages.push(`これ、拾ってみる？「${title}」`);
+      messages.push(`ON HANDに「${title}」がいる。`);
+    }
+
+    const calendar = visibleTexts('.timeline-event-title, .anytime-item');
+    const calendarTitle = sample(calendar);
+    if (calendarTitle) messages.push(`今日の予定に「${clip(calendarTitle, 34)}」があるよ。`);
+
+    if (capture?.value.trim()) messages.push('そのメモ、いま机に置いておく？');
+    return messages;
+  }
+
+  function nextSpeech(original) {
+    const contextual = deskMessages(original);
+    const pool = [...RADY_LINES, ...contextual, ...contextual];
+    const choices = pool.filter((message) => message && message !== lastSpeech);
+    const message = sample(choices.length ? choices : pool) || '……。';
+    lastSpeech = message;
+    return message;
   }
 
   function isSpeaking() {
@@ -188,12 +253,24 @@
     sprite.src = 'resident-sprites.png?v=20260910-idle';
   }
 
+  const speechObserver = new MutationObserver(() => {
+    if (!say.classList.contains('show')) return;
+    const original = say.textContent.trim();
+    if (!original) return;
+    const message = nextSpeech(original);
+    if (!message || message === original) return;
+    speechObserver.disconnect();
+    say.textContent = message;
+    speechObserver.observe(say, { childList: true, subtree: true, characterData: true });
+  });
+
   image.addEventListener('error', () => {
     if (currentFrame !== HOME_FRAME) setFrame(HOME_FRAME);
   });
 
   new MutationObserver(syncState).observe(say, { attributes: true, attributeFilter: ['class'] });
   new MutationObserver(syncState).observe(pet, { attributes: true, attributeFilter: ['class'] });
+  speechObserver.observe(say, { childList: true, subtree: true, characterData: true });
   capture?.addEventListener('input', startTypingPulse);
 
   setFrame(HOME_FRAME);
