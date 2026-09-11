@@ -158,7 +158,7 @@
     const desk = projects.filter((project) => project.meta.desk === true);
     deskCount.textContent = String(desk.length);
     if (!desk.length) {
-      deskItems.innerHTML = '<span class="quiet">まだ机に出しているProjectはありません。</span>';
+      deskItems.innerHTML = '<span class="quiet">重点的に扱うProjectだけ、ここに出ます。</span>';
       return;
     }
     deskItems.innerHTML = desk.map((project) => `<button class="desk-chip" type="button" data-project-id="${esc(project.id)}">${esc(project.title)}</button>`).join('');
@@ -255,11 +255,50 @@
     return html.join('');
   }
 
+  function githubPath(path, mode = 'blob') {
+    const value = String(path || '').trim().replace(/^\/+|\/+$/g, '');
+    if (!value) return '';
+    const encoded = value.split('/').map((part) => encodeURIComponent(part)).join('/');
+    return `https://github.com/${OWNER}/${REPO}/${mode}/${BRANCH}/${encoded}`;
+  }
+
+  function projectSourceLink(project) {
+    const url = githubPath(project?.path, 'blob');
+    if (!url) return '';
+    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">PROJECT ↗</a>`;
+  }
+
   function repositoryLink(repository) {
     const value = String(repository || '').trim();
     if (!value) return '';
     const url = value.startsWith('http') ? value : `https://github.com/${value}`;
     return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">REPOSITORY ↗</a>`;
+  }
+
+  function workspaceLink(workspace) {
+    const value = String(workspace || '').trim();
+    if (!value) return '';
+    const url = githubPath(value, 'tree');
+    if (!url) return '';
+    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">WORKSPACE ↗</a>`;
+  }
+
+  function detailMarkdown(project) {
+    const sourceBody = String(project.body || '').replace(/^#\s+.*(?:\r?\n|$)/, '').trim();
+    const current = String(project.meta.current || '').trim();
+    const next = String(project.meta.next || '').trim();
+    if (!current && !next) return sourceBody;
+
+    const rest = sourceBody
+      .replace(/(^|\n)##\s+Current\b[\s\S]*?(?=\n##\s+|$)/i, '\n')
+      .replace(/(^|\n)##\s+Next\b[\s\S]*?(?=\n##\s+|$)/i, '\n')
+      .trim();
+
+    return [
+      current ? `## Current\n\n${current}` : '',
+      next ? `## Next\n\n${next}` : '',
+      rest
+    ].filter(Boolean).join('\n\n');
   }
 
   function showProject(id, updateHash = true) {
@@ -270,9 +309,8 @@
 
     const tags = projectTags(project).map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
     const sheets = sheetsValue(project);
-    const workspace = String(project.meta.workspace || '').trim();
-    const links = [repositoryLink(project.meta.repository), workspace ? `<span>${esc(workspace)}</span>` : ''].filter(Boolean).join('');
-    const body = project.body.replace(/^#\s+.*(?:\r?\n|$)/, '');
+    const links = [projectSourceLink(project), repositoryLink(project.meta.repository), workspaceLink(project.meta.workspace)].filter(Boolean).join('');
+    const body = detailMarkdown(project);
 
     detailContent.innerHTML = `
       <button class="detail-back" id="detailBack" type="button">← BACKSTAGE</button>
