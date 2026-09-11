@@ -13,23 +13,75 @@
     news: { key: '4', title: '4 / NEWS', type: 'placeholder', text: 'News room is under construction.' },
     advice: { key: '5', title: '5 / AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '6', title: '6 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
-    board: { key: '8', title: '8 / BOARD', type: 'placeholder', text: 'Shared development board will be connected in STEP 4.' },
+    board: { key: '7', title: '7 / BOARD', type: 'board' },
+    backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
     secret: { key: '9', title: '9 / ???', type: 'game' }
   });
-
-  const backstageSlot = document.querySelector('.app-btn.app-slot[aria-label="App slot 7"]');
-  if (backstageSlot) {
-    backstageSlot.disabled = false;
-    backstageSlot.dataset.app = 'backstage';
-    backstageSlot.setAttribute('aria-label', 'Backstage');
-    const label = backstageSlot.querySelector('span');
-    if (label) label.textContent = 'Backstage';
-  }
 
   const keyToApp = Object.freeze(Object.fromEntries(
     Object.entries(apps).map(([name, app]) => [app.key, name])
   ));
+
+  function dockButton(key) {
+    return [...document.querySelectorAll('.dock .app-btn')]
+      .find((button) => button.querySelector('b')?.textContent?.trim() === String(key));
+  }
+
+  function configureDockButton(key, appName, label) {
+    let button = dockButton(key);
+    if (!button) {
+      button = document.createElement('button');
+      button.className = 'app-btn';
+      button.innerHTML = `<b>${key}</b><span></span>`;
+      const secret = dockButton('9');
+      secret?.parentNode?.insertBefore(button, secret);
+    }
+    if (!button) return;
+    button.disabled = false;
+    button.classList.remove('app-slot');
+    button.dataset.app = appName;
+    button.setAttribute('aria-label', label);
+    const text = button.querySelector('span');
+    if (text) text.textContent = label;
+  }
+
+  configureDockButton('7', 'board', 'Board');
+  configureDockButton('8', 'backstage', 'Backstage');
+
+  let boardLoader = null;
+  function ensureBoardModule() {
+    if (window.COCKPID_BOARD?.render) return Promise.resolve(window.COCKPID_BOARD);
+    if (boardLoader) return boardLoader;
+
+    boardLoader = new Promise((resolve, reject) => {
+      if (!document.querySelector('link[data-cockpid-board]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'board.css';
+        link.dataset.cockpidBoard = 'true';
+        document.head.appendChild(link);
+      }
+
+      const script = document.createElement('script');
+      script.src = 'board.js';
+      script.async = true;
+      script.onload = () => window.COCKPID_BOARD?.render ? resolve(window.COCKPID_BOARD) : reject(new Error('BOARD module unavailable'));
+      script.onerror = () => reject(new Error('board.js load failed'));
+      document.head.appendChild(script);
+    });
+    return boardLoader;
+  }
+
+  async function renderBoard() {
+    appContent.innerHTML = '<div class="under-construction"><div><strong>BOARD</strong><p>共有掲示板を読み込んでいます…</p></div></div>';
+    try {
+      const board = await ensureBoardModule();
+      await board.render(appContent);
+    } catch (error) {
+      console.error(error);
+      appContent.innerHTML = '<div class="under-construction"><div><strong>BOARD UNAVAILABLE</strong><p>共有掲示板を読み込めませんでした。</p></div></div>';
+    }
+  }
 
   function openApp(name) {
     const app = apps[name];
@@ -38,6 +90,8 @@
     appTitle.textContent = app.title;
     if (app.type === 'iframe') {
       appContent.innerHTML = `<iframe src="${app.src}" title="${app.title}"></iframe>`;
+    } else if (app.type === 'board') {
+      renderBoard();
     } else if (app.type === 'game') {
       appContent.innerHTML = '<div class="under-construction"><div><strong>SECRET DESK</strong><p>仕事をしないための場所。</p><button class="ghost-btn" id="fortuneBtn">今日の謎を引く</button><div class="game-result" id="gameResult"></div></div></div>';
       const button = document.getElementById('fortuneBtn');
