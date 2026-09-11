@@ -7,6 +7,7 @@
   if (!appWindow || !appTitle || !appContent) return;
 
   const apps = Object.freeze({
+    slot0: { key: '0', title: '0 / OPEN', type: 'placeholder', text: 'This slot is open.' },
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'https://plzsayyes3.github.io/taskliner_taskchute-line/' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
