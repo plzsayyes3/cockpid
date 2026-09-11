@@ -50,7 +50,7 @@
       list.innerHTML = items.map((item) => `
         <div class="news-home-item">
           <span class="news-home-source">${escapeHtml(item.source || 'NEWS')}</span>
-          <span class="news-home-title">${escapeHtml(item.title || 'Untitled')}</span>
+          <span class="news-home-title">${escapeHtml(item.title_ja || item.title || 'Untitled')}</span>
         </div>`).join('');
     } catch (error) {
       console.error(error);
