@@ -172,16 +172,16 @@
     todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${pastHtml}${marks.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
   }
 
-  async function loadToday() {
+  async function loadToday({ background = false } = {}) {
     if (!selectedDate) selectedDate = jstDateParts();
     updateSelectedDateLabel();
     const seq = ++calendarLoadSeq;
     if (!token()) {
-      todayList.innerHTML = '<div class="empty">GitHub token が必要です。</div>';
+      if (!background) todayList.innerHTML = '<div class="empty">GitHub token が必要です。</div>';
       return;
     }
     const t = selectedDate;
-    todayList.innerHTML = '<div class="empty">Techoを読んでいます…</div>';
+    if (!background) todayList.innerHTML = '<div class="empty">Techoを読んでいます…</div>';
     try {
       const payload = await gh(`02_techo/${t.year}-${String(t.month).padStart(2, '0')}.md`, 'mynotebook');
       if (seq !== calendarLoadSeq) return;
@@ -202,7 +202,7 @@
     } catch (error) {
       if (seq !== calendarLoadSeq) return;
       console.error(error);
-      todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
+      if (!background) todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
     }
   }
 
@@ -400,10 +400,10 @@
 
   selectedDate = jstDateParts();
   nowParts();
+  setInterval(nowParts, 30000);
   setInterval(() => {
-    nowParts();
-    if (selectedDate && dateRelation(selectedDate) === 0) loadToday();
-  }, 30000);
+    if (selectedDate) loadToday({ background: true });
+  }, 300000);
   loadToday();
   loadPetHint();
   restorePetPosition();
