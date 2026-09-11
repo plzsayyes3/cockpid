@@ -13,9 +13,19 @@
     news: { key: '4', title: '4 / NEWS', type: 'placeholder', text: 'News room is under construction.' },
     advice: { key: '5', title: '5 / AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '6', title: '6 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    board: { key: '7', title: '7 / BOARD', type: 'placeholder', text: 'Shared development board will be connected in STEP 4.' },
+    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
+    board: { key: '8', title: '8 / BOARD', type: 'placeholder', text: 'Shared development board will be connected in STEP 4.' },
     secret: { key: '9', title: '9 / ???', type: 'game' }
   });
+
+  const backstageSlot = document.querySelector('.app-btn.app-slot[aria-label="App slot 7"]');
+  if (backstageSlot) {
+    backstageSlot.disabled = false;
+    backstageSlot.dataset.app = 'backstage';
+    backstageSlot.setAttribute('aria-label', 'Backstage');
+    const label = backstageSlot.querySelector('span');
+    if (label) label.textContent = 'Backstage';
+  }
 
   const keyToApp = Object.freeze(Object.fromEntries(
     Object.entries(apps).map(([name, app]) => [app.key, name])
