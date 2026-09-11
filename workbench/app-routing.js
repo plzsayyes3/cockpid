@@ -7,7 +7,6 @@
   if (!appWindow || !appTitle || !appContent) return;
 
   const apps = Object.freeze({
-    slot0: { key: '0', title: '0 / OPEN', type: 'placeholder', text: 'This slot is open.' },
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'https://plzsayyes3.github.io/taskliner_taskchute-line/' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
@@ -16,7 +15,7 @@
     onhand: { key: '6', title: '6 / ON HAND', type: 'iframe', src: 'onhand.html' },
     board: { key: '7', title: '7 / BOARD', type: 'board' },
     backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
-    secret: { key: '9', title: '9 / ???', type: 'game' }
+    secret: { key: '0', title: '0 / ???', type: 'game' }
   });
 
   const keyToApp = Object.freeze(Object.fromEntries(
@@ -34,8 +33,8 @@
       button = document.createElement('button');
       button.className = 'app-btn';
       button.innerHTML = `<b>${key}</b><span></span>`;
-      const secret = dockButton('9');
-      secret?.parentNode?.insertBefore(button, secret);
+      const slot9 = dockButton('9');
+      slot9?.parentNode?.insertBefore(button, slot9);
     }
     if (!button) return;
     button.disabled = false;
