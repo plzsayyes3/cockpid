@@ -14,6 +14,7 @@
   let latestHint = '';
   let petTimer = null;
   let petDrag = null;
+  let calendarLoadSeq = 0;
 
   const apps = {
     calendar: { title: '1 / CALENDAR', type: 'iframe', src: previewMode ? '../calendar.html' : 'calendar.html' },
@@ -140,14 +141,17 @@
     todayList.innerHTML = `${anytimeHtml}<div class="timeline" style="height:${height}px">${marks.join('')}<div class="timeline-track">${events}</div>${nowHtml}</div>`;
   }
 
-  async function loadToday() {
+  async function loadToday({ background = false } = {}) {
+    const seq = ++calendarLoadSeq;
     if (!token()) {
-      todayList.innerHTML = '<div class="empty">GitHub token が必要です。</div>';
+      if (!background) todayList.innerHTML = '<div class="empty">GitHub token が必要です。</div>';
       return;
     }
     const t = jstDateParts();
+    if (!background) todayList.innerHTML = '<div class="empty">Techoを読んでいます…</div>';
     try {
       const payload = await gh(`02_techo/${t.year}-${String(t.month).padStart(2, '0')}.md`, 'mynotebook');
+      if (seq !== calendarLoadSeq) return;
       if (!payload?.content) throw new Error('no source');
       const lines = decode(payload.content).split(/\r?\n/);
       const heading = new RegExp(`^##\\s+${t.month}月${t.day}日(?:\\([^)]*\\))?\\s*$`);
@@ -163,8 +167,9 @@
       }
       renderTodayTimeline(items);
     } catch (error) {
+      if (seq !== calendarLoadSeq) return;
       console.error(error);
-      todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
+      if (!background) todayList.innerHTML = '<div class="empty">Techoを読み込めませんでした。</div>';
     }
   }
 
@@ -349,6 +354,7 @@
 
   nowParts();
   setInterval(nowParts, 30000);
+  setInterval(() => loadToday({ background: true }), 300000);
   loadToday();
   loadPetHint();
   restorePetPosition();
