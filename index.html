@@ -13,7 +13,13 @@
 <link rel="stylesheet" href="today-movement.css">
 <link rel="stylesheet" href="resident.css">
 <link rel="stylesheet" href="token-settings.css">
-<style>.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}</style>
+<link rel="stylesheet" href="zen-memo.css">
+<style>
+:root{--line:rgba(52,50,45,.12);--line-2:#cfcac0;--green:#6d786e;--text:#292924}
+.today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}
+.app-frame-actions{display:flex;align-items:center;gap:7px}.app-frame-actions .ghost-btn{font:700 8px/1 ui-monospace,monospace;letter-spacing:.05em}
+.drawer-backdrop{background:rgba(42,40,35,.18)!important;z-index:110!important}.drawer{background:#f8f7f2!important;color:var(--ink)!important;border-left:0!important;box-shadow:-18px 0 45px rgba(30,28,24,.16)!important;z-index:111!important}.drawer-head{border-bottom:1px solid var(--line)!important}.drawer-head strong{color:var(--ink)!important}.drawer textarea,.token-box input{background:#fff!important;color:var(--ink)!important;border:1px solid #d7d3ca!important}.token-box{border-color:var(--line)!important}.btn{border:0;border-radius:6px;background:#e9e7e0;color:var(--ink);padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.btn.primary{background:var(--ink);color:#faf9f5}.small,.drawer-status,.zen-hint,.token-box label{color:var(--muted)!important}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -28,7 +34,19 @@
   </main>
 </div>
 <nav class="dock" aria-label="Workbench apps"><button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button><button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button><button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button><button class="app-btn" data-app="news"><b>4</b><span>News</span></button><button class="app-btn" data-app="advice"><b>5</b><span>Advice</span></button><button class="app-btn" data-app="onhand"><b>6</b><span>On Hand</span></button><button class="app-btn app-slot" disabled aria-label="App slot 7"><b>7</b><span>—</span></button><button class="app-btn" data-app="board"><b>8</b><span>Board</span></button><button class="app-btn secret" data-app="secret"><b>9</b><span>???</span></button><button class="app-btn app-slot" data-app="slot0" aria-label="App slot 0"><b>0</b><span>—</span></button></nav>
-<section class="app-window" id="appWindow" aria-hidden="true"><div class="app-frame"><div class="app-frame-head"><span class="app-title" id="appTitle">APP</span><button class="ghost-btn" id="appClose">CLOSE / ESC</button></div><div class="app-content" id="appContent"></div></div></section>
+<section class="app-window" id="appWindow" aria-hidden="true"><div class="app-frame"><div class="app-frame-head"><span class="app-title" id="appTitle">APP</span><div class="app-frame-actions"><button class="ghost-btn" id="memoOpen" type="button">MEMO</button><button class="ghost-btn" id="appClose" type="button">CLOSE / ESC</button></div></div><div class="app-content" id="appContent"></div></div></section>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer" aria-label="Zen Memo">
+  <div class="drawer-head"><strong>ZEN V2 / QUICK MEMO</strong><button class="btn" id="memoClose" type="button">CLOSE</button></div>
+  <div class="small">mynotebook の <b>00_inbox</b> に新規メモとして保存します。</div>
+  <textarea id="memoText" placeholder="ここにメモを書く……"></textarea>
+  <div class="drawer-foot"><span class="drawer-status" id="memoStatus">READY</span><button class="btn primary" id="memoSave" type="button">POST / CTRL+ENTER</button></div>
+  <div class="zen-hint">Ctrl + Enter で投稿。ファイル名: YYYYMMDDHHMMSS.md</div>
+  <button class="btn token-toggle" id="tokenToggle" type="button">▸ 接続設定を表示</button>
+  <div class="token-settings" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">COCKPID本体と同じ <b>zen-note-github-token</b> を使います。</div><button class="btn token-save" id="tokenSave" type="button">TOKENを保存</button></div></div>
+</aside>
+
 <div class="pet" id="pet" title="Resident"><div class="pet-say" id="petSay"></div><div class="pet-avatar" aria-hidden="true"></div><div class="pet-shadow"></div></div>
 
 <section class="token-modal" id="tokenModal" aria-hidden="true" aria-label="GitHub connection settings">
@@ -42,6 +60,7 @@
 </section>
 
 <script src="prototype-common.js"></script>
+<script src="zen-memo.js"></script>
 <script src="workbench.js"></script>
 <script src="news-home.js"></script>
 <script src="token-settings.js"></script>
