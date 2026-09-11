@@ -106,6 +106,10 @@
     }
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && el('drawer').classList.contains('open')) closeZenMemo();
+    if (event.key === 'Escape' && el('drawer').classList.contains('open')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeZenMemo();
+    }
   });
 })();
