@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Hina+Mincho&display=swap');
 :root{
   --bg:#f1f0eb;
   --surface:rgba(252,251,247,.90);
@@ -22,7 +23,7 @@ button{cursor:pointer}
 .object{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);padding:18px;backdrop-filter:blur(8px)}
 .object-label{font:700 9px/1 ui-monospace,monospace;letter-spacing:.14em;color:var(--muted)}
 .object-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.object-no{font:700 8px ui-monospace,monospace;color:#a7a39b}
-.capture-object{grid-column:1/-1;min-height:300px;display:flex;flex-direction:column}.capture-object textarea{flex:1;min-height:180px;margin-top:18px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:18px/1.8 Georgia,"Yu Mincho",serif}.capture-object textarea::placeholder{color:#b0ada6}
+.capture-object{grid-column:1/-1;min-height:300px;display:flex;flex-direction:column}.capture-object textarea{flex:1;min-height:180px;margin-top:18px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:18px/1.8 "Hina Mincho","Yu Mincho",serif}.capture-object textarea::placeholder{color:#b0ada6}
 .capture-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}.quiet{color:var(--muted);font-size:9px}
 .action-btn,.ghost-btn{border:0;border-radius:7px;padding:9px 13px;background:var(--ink);color:#faf9f5;font-size:10px}.ghost-btn{background:var(--surface-soft);color:var(--ink)}.action-btn:hover,.ghost-btn:hover{transform:translateY(-1px)}
 .today-object{min-height:320px}.list{margin-top:14px}.empty{padding:10px 0;color:var(--muted);font-size:10px}
