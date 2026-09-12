@@ -28,6 +28,12 @@
     content.innerHTML = '';
   }
 
+  function closeDrawer() {
+    if (!isOpen()) return;
+    if (history.state?.[STATE_KEY]) history.back();
+    else forceClose();
+  }
+
   clearStaleState();
 
   const observer = new MutationObserver(() => {
@@ -36,17 +42,23 @@
   observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
 
   closeButton.addEventListener('click', (event) => {
-    if (!isOpen() || !history.state?.[STATE_KEY]) return;
+    if (!isOpen()) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    history.back();
+    closeDrawer();
   }, true);
 
+  drawer.addEventListener('click', (event) => {
+    if (event.target !== drawer || !isOpen()) return;
+    event.preventDefault();
+    closeDrawer();
+  });
+
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !isOpen() || !history.state?.[STATE_KEY]) return;
+    if (event.key !== 'Escape' || !isOpen()) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    history.back();
+    closeDrawer();
   }, true);
 
   window.addEventListener('popstate', (event) => {
