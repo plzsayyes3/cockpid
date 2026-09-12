@@ -324,15 +324,14 @@
   async function handleHandoff(id, button) {
     const p = projects.find((x) => x.id === id); if (!p) return;
     const prompt = handoffPrompt(p);
-    const ok = await copyText(prompt);
-    if (button) {
-      button.textContent = ok ? 'コピーしました → ChatGPTを開きます' : 'ChatGPTを開きます';
-      button.disabled = true;
-    }
+    const copying = copyText(prompt);
     window.open(CHATGPT_URL, '_blank', 'noopener,noreferrer');
-    setTimeout(() => {
-      if (button) { button.textContent = 'ChatGPTで続きを指示する'; button.disabled = false; }
-    }, 1600);
+    const ok = await copying;
+    if (button) {
+      button.textContent = ok ? 'コピーしました → ChatGPTへ貼り付け' : 'ChatGPTを開きました';
+      button.disabled = true;
+      setTimeout(() => { button.textContent = 'ChatGPTで続きを指示する'; button.disabled = false; }, 1600);
+    }
   }
 
   async function load({ silent = false } = {}) {
