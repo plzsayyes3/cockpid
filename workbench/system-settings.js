@@ -10,7 +10,7 @@
   const sourceApi = window.COCKPID_SOURCES || null;
 
   const SOURCE_ROWS = [
-    { key: 'daily', label: 'Daily Note', state: 'STORED' },
+    { key: 'daily', label: 'Daily / Merge destination', state: 'LIVE' },
     { key: 'techo', label: 'Techo / Calendar', state: 'LIVE' },
     { key: 'inbox', label: 'Inbox', state: 'LIVE' },
     { key: 'memo', label: 'Short Memo', state: 'LIVE' },
