@@ -33,13 +33,6 @@
       <div class="panel-title"><span>🌱 プロジェクト一覧</span><span id="projectCount">—</span></div>
       <div class="project-list" id="projectList"></div>
     </section>
-
-    <section class="pixel-panel detail-panel" id="detailPanel">
-      <div class="panel-title"><span>PROJECT STATUS</span><span id="detailState">—</span></div>
-      <div id="detailContent" class="detail-content">
-        <div class="detail-empty">プロジェクトを選ぶと、ここに今の様子が出ます。</div>
-      </div>
-    </section>
   </main>
 
   <footer class="town-message">
@@ -47,6 +40,19 @@
     <div><b id="messageTitle">ようこそ、プロジェクトの町へ。</b><p id="messageText">何をしているかと、どれくらい勢いがあるかを分けて眺めます。</p></div>
   </footer>
 </div>
+
+<div class="project-detail-overlay" id="detailOverlay" hidden aria-hidden="true">
+  <button class="project-detail-backdrop" type="button" data-detail-close aria-label="Project詳細を閉じる"></button>
+  <section class="pixel-panel detail-panel project-detail-modal" id="detailPanel" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+    <div class="panel-title"><span id="detailModalTitle">PROJECT STATUS</span><span id="detailState">—</span></div>
+    <button class="project-detail-close" type="button" data-detail-close aria-label="閉じる">×</button>
+    <div id="detailContent" class="detail-content">
+      <div class="detail-empty">プロジェクトを選ぶと、ここに今の様子が出ます。</div>
+    </div>
+  </section>
+</div>
+
 <script src="project-town-v2.js"></script>
+<script src="project-town-ui.js"></script>
 </body>
 </html>
