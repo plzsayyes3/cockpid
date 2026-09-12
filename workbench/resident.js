@@ -315,7 +315,7 @@
     const currentToken = token();
     if (!currentToken) return;
     try {
-      const response = await fetch(`https://api.github.com/repos/${OWNER}/my-storage-note/contents/extracted/idea?ref=main`, {
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/my-storage-note/contents/memory/extracted/idea?ref=main`, {
         headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${currentToken}` }
       });
       if (!response.ok) throw new Error(`idea index ${response.status}`);
