@@ -3,7 +3,7 @@
 
   const FALLBACK_SPRITE = 'assets/project-town/character.png';
   const CHARACTER_VARIANTS = Object.freeze([
-    { id: 'char-01', sprite: 'assets/project-town/characters/char-01.png', label: 'standard' }
+    { id: 'char-01', sprite: 'assets/project-town/characters/char-01.png?v=32', label: 'standard' }
   ]);
   const variant = CHARACTER_VARIANTS[0];
   let assetReady = false;
