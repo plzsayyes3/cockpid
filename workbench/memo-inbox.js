@@ -15,6 +15,7 @@
   let loading = false;
   let merging = false;
   let currentFiles = [];
+  let topMergeButton = null;
 
   function inboxSource() {
     return window.COCKPID_SOURCES?.get('inbox') || { repo: 'mynotebook', dir: '00_inbox' };
@@ -65,6 +66,33 @@
   function archiveStamp() {
     const p = jstParts();
     return `${p.year}${p.month}${p.day}-${p.hour}${p.minute}${p.second}${String(new Date().getMilliseconds()).padStart(3, '0')}`;
+  }
+
+  function syncTopMergeButton() {
+    const button = topMergeButton || document.getElementById('topMemoMerge');
+    if (!button) return;
+    const count = currentFiles.length;
+    button.disabled = merging || loading || !token();
+    button.textContent = merging ? 'INBOX → DAILY …' : `INBOX → DAILY${count ? ` · ${count}` : ''}`;
+    button.title = count ? `${count}件のInboxメモをDailyへ統合` : 'Inboxを確認してDailyへ統合';
+  }
+
+  function ensureTopMergeUi() {
+    const actions = document.querySelector('.capture-object .capture-actions');
+    const captureButton = document.getElementById('captureBtn');
+    if (!actions || !captureButton) return null;
+    let button = document.getElementById('topMemoMerge');
+    if (!button) {
+      button = document.createElement('button');
+      button.className = 'memo-top-merge';
+      button.id = 'topMemoMerge';
+      button.type = 'button';
+      button.textContent = 'INBOX → DAILY';
+      captureButton.before(button);
+    }
+    topMergeButton = button;
+    syncTopMergeButton();
+    return button;
   }
 
   function syncInboxSourceUi() {
@@ -150,6 +178,7 @@
     inboxCount.textContent = String(files.length);
     const mergeButton = document.getElementById('memoInboxMerge');
     if (mergeButton) mergeButton.disabled = merging || !files.length;
+    syncTopMergeButton();
     if (!files.length) {
       inboxList.innerHTML = '<div class="memo-inbox-empty">未処理Memoはありません。</div>';
       return;
@@ -169,10 +198,12 @@
       inboxList.innerHTML = '<div class="memo-inbox-empty">GitHub token が必要です。Battery / Settings → GitHub から設定してください。</div>';
       const mergeButton = document.getElementById('memoInboxMerge');
       if (mergeButton) mergeButton.disabled = true;
+      syncTopMergeButton();
       return;
     }
     const source = inboxSource();
     loading = true;
+    syncTopMergeButton();
     inboxList.innerHTML = `<div class="memo-inbox-empty">${esc(source.repo)}/${esc(source.dir)} を確認しています…</div>`;
     try {
       const rows = await gh(source.dir, source.repo);
@@ -187,6 +218,7 @@
       if (mergeButton) mergeButton.disabled = true;
     } finally {
       loading = false;
+      syncTopMergeButton();
     }
   }
 
@@ -321,6 +353,10 @@
     const files = [...currentFiles];
     if (!files.length) {
       setMergeStatus('統合対象はありません。');
+      if (topMergeButton) {
+        topMergeButton.textContent = 'INBOX EMPTY';
+        setTimeout(syncTopMergeButton, 1200);
+      }
       return;
     }
 
@@ -333,6 +369,7 @@
     merging = true;
     if (mergeButton) mergeButton.disabled = true;
     if (refreshButton) refreshButton.disabled = true;
+    syncTopMergeButton();
     setMergeStatus('メモを読み込んでいます…');
 
     try {
@@ -377,11 +414,17 @@
       if (refreshButton) refreshButton.disabled = false;
       const button = document.getElementById('memoInboxMerge');
       if (button) button.disabled = !currentFiles.length;
+      syncTopMergeButton();
     }
   }
 
   const { mergeButton } = ensureMergeUi();
+  const topButton = ensureTopMergeUi();
   mergeButton?.addEventListener('click', mergeInboxToDaily);
+  topButton?.addEventListener('click', async () => {
+    await loadInbox(true);
+    await mergeInboxToDaily();
+  });
   captureTab.addEventListener('click', () => setMode('capture'));
   inboxTab.addEventListener('click', () => setMode('inbox'));
   refreshButton?.addEventListener('click', () => loadInbox(true));
@@ -392,9 +435,10 @@
   window.addEventListener('cockpid:sources-changed', () => {
     loaded = false;
     syncInboxSourceUi();
-    if (inboxTab.classList.contains('active')) loadInbox(true);
+    loadInbox(true);
   });
 
   syncInboxSourceUi();
   setMode('capture');
+  loadInbox(true);
 })();
