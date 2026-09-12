@@ -6,6 +6,7 @@
   const BRANCH = 'main';
   const PROJECT_DIR = 'projects';
   const TOKEN_KEY = 'zen-note-github-token';
+  const SYMMETRIC_RELATIONS = new Set(['related', 'integrates_with']);
 
   const $ = (id) => document.getElementById(id);
   const list = $('projectList');
@@ -17,6 +18,7 @@
   const detailContent = $('detailContent');
   const detailEmpty = $('detailEmpty');
 
+  let allProjects = [];
   let projects = [];
   let selectedId = '';
 
@@ -67,22 +69,40 @@
 
     const meta = {};
     let arrayKey = '';
+    let currentObject = null;
+
     for (const line of lines.slice(1, end)) {
-      const arrayMatch = /^\s+-\s+(.*)$/.exec(line);
-      if (arrayMatch && arrayKey) {
-        if (!Array.isArray(meta[arrayKey])) meta[arrayKey] = [];
-        meta[arrayKey].push(parseScalar(arrayMatch[1]));
+      const topPair = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+      if (topPair) {
+        const [, key, rawValue] = topPair;
+        currentObject = null;
+        if (!rawValue.trim()) {
+          meta[key] = '';
+          arrayKey = key;
+        } else {
+          meta[key] = parseScalar(rawValue);
+          arrayKey = '';
+        }
         continue;
       }
-      const pair = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
-      if (!pair) continue;
-      const [, key, rawValue] = pair;
-      if (!rawValue.trim()) {
-        meta[key] = '';
-        arrayKey = key;
-      } else {
-        meta[key] = parseScalar(rawValue);
-        arrayKey = '';
+
+      const listItem = /^\s{2}-\s+(.*)$/.exec(line);
+      if (listItem && arrayKey) {
+        if (!Array.isArray(meta[arrayKey])) meta[arrayKey] = [];
+        const objectStart = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(listItem[1]);
+        if (objectStart) {
+          currentObject = { [objectStart[1]]: parseScalar(objectStart[2]) };
+          meta[arrayKey].push(currentObject);
+        } else {
+          currentObject = null;
+          meta[arrayKey].push(parseScalar(listItem[1]));
+        }
+        continue;
+      }
+
+      const objectField = /^\s{4}([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+      if (objectField && currentObject) {
+        currentObject[objectField[1]] = parseScalar(objectField[2]);
       }
     }
 
@@ -103,7 +123,6 @@
     const source = decodeBase64Utf8(payload.content);
     const parsed = parseFrontmatter(source);
     if (parsed.meta.type !== 'project') return null;
-    if (parsed.meta.status === 'archived') return null;
     return {
       id: String(parsed.meta.id || entry.name.replace(/\.md$/, '')),
       title: String(parsed.meta.title || parsed.meta.id || entry.name.replace(/\.md$/, '')),
@@ -202,9 +221,9 @@
   function inlineMarkdown(raw) {
     const links = [];
     let value = String(raw || '').replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
-      const token = `@@LINK_${links.length}@@`;
+      const linkToken = `@@LINK_${links.length}@@`;
       links.push(`<a href="${esc(resolveMarkdownLink(href))}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`);
-      return token;
+      return linkToken;
     });
     value = esc(value)
       .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -283,34 +302,138 @@
     return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">WORKSPACE ↗</a>`;
   }
 
-  function detailMarkdown(project) {
-    const sourceBody = String(project.body || '').replace(/^#\s+.*(?:\r?\n|$)/, '').trim();
-    const current = String(project.meta.current || '').trim();
-    const next = String(project.meta.next || '').trim();
-    if (!current && !next) return sourceBody;
+  function markdownSection(source, heading) {
+    const match = new RegExp(`(?:^|\\n)##\\s+${heading}\\b\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`, 'i').exec(source);
+    return match ? match[1].trim() : '';
+  }
 
+  function detailParts(project) {
+    const sourceBody = String(project.body || '').replace(/^#\s+.*(?:\r?\n|$)/, '').trim();
+    const current = String(project.meta.current || markdownSection(sourceBody, 'Current')).trim();
+    const next = String(project.meta.next || markdownSection(sourceBody, 'Next')).trim();
     const rest = sourceBody
       .replace(/(^|\n)##\s+Current\b[\s\S]*?(?=\n##\s+|$)/i, '\n')
       .replace(/(^|\n)##\s+Next\b[\s\S]*?(?=\n##\s+|$)/i, '\n')
       .trim();
-
-    return [
+    const resume = [
       current ? `## Current\n\n${current}` : '',
-      next ? `## Next\n\n${next}` : '',
-      rest
+      next ? `## Next\n\n${next}` : ''
     ].filter(Boolean).join('\n\n');
+    return { resume, rest };
+  }
+
+  function workstreamsOf(project) {
+    return Array.isArray(project.meta.workstreams)
+      ? project.meta.workstreams.filter((item) => item && typeof item === 'object' && (item.id || item.title))
+      : [];
+  }
+
+  function renderWorkstreams(project) {
+    const workstreams = workstreamsOf(project);
+    if (!workstreams.length) return '';
+    const active = workstreams.filter((item) => String(item.status || '').toLowerCase() !== 'done');
+    const doneCount = workstreams.length - active.length;
+    const rows = active.map((item) => {
+      const state = String(item.status || 'active').toLowerCase();
+      const title = String(item.title || item.id || 'Workstream');
+      const note = String(item.note || '').trim();
+      return `<div class="workstream-row">
+        <span class="workstream-dot ${esc(state)}" aria-hidden="true"></span>
+        <span class="workstream-main"><span class="workstream-title">${esc(title)}</span>${note ? `<span class="workstream-note">${esc(note)}</span>` : ''}</span>
+        <span class="workstream-status">${esc(state)}</span>
+      </div>`;
+    }).join('');
+    const done = doneCount ? `<div class="workstream-done">${doneCount} done</div>` : '';
+    return `<section class="detail-section">
+      <div class="detail-section-label">WORKSTREAMS</div>
+      <div class="workstream-list">${rows || '<div class="section-empty">現在のWorkstreamはすべて完了しています。</div>'}${done}</div>
+    </section>`;
+  }
+
+  function relationRecords(project) {
+    const records = [];
+    const outgoing = Array.isArray(project.meta.relations) ? project.meta.relations : [];
+    outgoing.forEach((relation) => {
+      if (!relation || typeof relation !== 'object' || !relation.project) return;
+      records.push({
+        projectId: String(relation.project),
+        type: String(relation.type || 'related'),
+        note: String(relation.note || ''),
+        direction: 'out'
+      });
+    });
+
+    allProjects.forEach((source) => {
+      if (source.id === project.id) return;
+      const relations = Array.isArray(source.meta.relations) ? source.meta.relations : [];
+      relations.forEach((relation) => {
+        if (!relation || typeof relation !== 'object') return;
+        if (String(relation.project || '') !== project.id) return;
+        records.push({
+          projectId: source.id,
+          type: String(relation.type || 'related'),
+          note: String(relation.note || ''),
+          direction: 'in'
+        });
+      });
+    });
+
+    const deduped = new Map();
+    records.forEach((record) => {
+      const type = record.type.toLowerCase();
+      const key = SYMMETRIC_RELATIONS.has(type)
+        ? `${record.projectId}:${type}`
+        : `${record.projectId}:${type}:${record.direction}`;
+      if (!deduped.has(key)) deduped.set(key, record);
+    });
+    return [...deduped.values()];
+  }
+
+  function relationLabel(type, direction) {
+    const normalized = String(type || 'related').toLowerCase();
+    if (normalized === 'related') return 'related';
+    if (normalized === 'integrates_with') return 'integrates with';
+    if (normalized === 'depends_on') return direction === 'in' ? 'required by' : 'depends on';
+    return normalized.replace(/_/g, ' ');
+  }
+
+  function renderRelations(project) {
+    const relations = relationRecords(project);
+    if (!relations.length) return '';
+    const rows = relations.map((relation) => {
+      const target = allProjects.find((item) => item.id === relation.projectId);
+      const missing = !target;
+      const archived = target?.meta?.status === 'archived';
+      const title = target?.title || relation.projectId;
+      const state = missing ? 'MISSING' : archived ? 'ARCHIVED' : '';
+      const body = `<span class="relation-main"><span class="relation-title">${esc(title)}</span><span class="relation-type">${esc(relationLabel(relation.type, relation.direction))}</span>${relation.note ? `<span class="relation-note">${esc(relation.note)}</span>` : ''}</span>${state ? `<span class="relation-state ${missing ? 'missing' : 'archived'}">${state}</span>` : ''}`;
+      if (missing) return `<div class="relation-row missing">${body}</div>`;
+      return `<button class="relation-row" type="button" data-project-id="${esc(target.id)}">${body}</button>`;
+    }).join('');
+    return `<section class="detail-section">
+      <div class="detail-section-label">RELATED PROJECTS</div>
+      <div class="relation-list">${rows}</div>
+    </section>`;
+  }
+
+  function renderProjectLinks(project) {
+    const links = [projectSourceLink(project), repositoryLink(project.meta.repository), workspaceLink(project.meta.workspace)].filter(Boolean).join('');
+    if (!links) return '';
+    return `<section class="detail-section detail-links-section">
+      <div class="detail-section-label">PROJECT LINKS</div>
+      <div class="detail-links">${links}</div>
+    </section>`;
   }
 
   function showProject(id, updateHash = true) {
-    const project = projects.find((item) => item.id === id);
+    const project = allProjects.find((item) => item.id === id);
     if (!project) return;
     selectedId = id;
     renderList();
 
     const tags = projectTags(project).map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
     const sheets = sheetsValue(project);
-    const links = [projectSourceLink(project), repositoryLink(project.meta.repository), workspaceLink(project.meta.workspace)].filter(Boolean).join('');
-    const body = detailMarkdown(project);
+    const parts = detailParts(project);
 
     detailContent.innerHTML = `
       <button class="detail-back" id="detailBack" type="button">← BACKSTAGE</button>
@@ -318,14 +441,17 @@
         <div>
           <h1 class="detail-title">${esc(project.title)}</h1>
           <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span></div>
-          ${links ? `<div class="detail-links">${links}</div>` : ''}
         </div>
         <div class="detail-meter" aria-label="${sheets} sheets / 100">
           <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
           <div class="detail-meter-label">${sheets} / 100 sheets</div>
         </div>
       </div>
-      <div class="markdown">${renderMarkdown(body)}</div>`;
+      ${parts.resume ? `<div class="markdown detail-resume">${renderMarkdown(parts.resume)}</div>` : ''}
+      ${renderWorkstreams(project)}
+      ${renderRelations(project)}
+      ${renderProjectLinks(project)}
+      ${parts.rest ? `<div class="markdown detail-rest">${renderMarkdown(parts.rest)}</div>` : ''}`;
 
     detailEmpty.hidden = true;
     detailContent.hidden = false;
@@ -368,23 +494,25 @@
         catch (error) { console.warn('Backstage project skip', entry.path, error); return null; }
       }));
 
-      projects = loaded.filter(Boolean).sort((a, b) => {
+      allProjects = loaded.filter(Boolean).sort((a, b) => {
         const byDate = String(b.meta.last_touched || '').localeCompare(String(a.meta.last_touched || ''));
         return byDate || a.title.localeCompare(b.title, 'ja');
       });
+      projects = allProjects.filter((project) => project.meta.status !== 'archived');
 
       renderDesk();
       renderList();
       status.textContent = `${projects.length} projects · source: gpts/projects`;
 
       const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
-      if (hashId && projects.some((project) => project.id === hashId)) {
+      if (hashId && allProjects.some((project) => project.id === hashId)) {
         showProject(hashId, false);
       } else if (window.innerWidth > 820 && projects[0]) {
         showProject(projects[0].id, false);
       }
     } catch (error) {
       console.error(error);
+      allProjects = [];
       projects = [];
       renderDesk();
       renderList();
