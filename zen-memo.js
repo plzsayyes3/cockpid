@@ -2,6 +2,7 @@
   const MEMO_REPO = 'mynotebook';
   const MEMO_DIR = '00_inbox';
   const el = (id) => document.getElementById(id);
+  let projectMemoContext = '';
 
   function zenPad(value) {
     return String(value).padStart(2, '0');
@@ -16,11 +17,26 @@
     return btoa(unescape(encodeURIComponent(value)));
   }
 
+  function prefillProjectMemo() {
+    if (!projectMemoContext) return;
+    const input = el('memoText');
+    const prefix = `${projectMemoContext}: `;
+    if (!input.value.startsWith(prefix)) input.value = `${prefix}${input.value}`;
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  }
+
   function openZenMemo() {
     el('drawer').classList.add('open');
     el('drawerBackdrop').classList.add('open');
     el('tokenInput').value = token();
-    setTimeout(() => el('memoText').focus(), 80);
+    prefillProjectMemo();
+    setTimeout(() => {
+      const input = el('memoText');
+      input.focus();
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    }, 80);
   }
 
   function closeZenMemo() {
@@ -92,6 +108,13 @@
       el('memoSave').disabled = false;
     }
   }
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== 'cockpid:project-detail') return;
+    projectMemoContext = data.open ? String(data.title || '').trim() : '';
+  });
 
   el('memoOpen').addEventListener('click', openZenMemo);
   el('memoClose').addEventListener('click', closeZenMemo);
