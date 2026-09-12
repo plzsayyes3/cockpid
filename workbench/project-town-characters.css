@@ -1,8 +1,11 @@
-/* Project Town character rendering: 32px source frames, 2x display. */
+/* Project Town character rendering: 32px source frames, exact 2x display. */
 .character-sprite{
-  background-image:var(--character-sprite,url("assets/project-town/character.png"));
-  background-repeat:no-repeat;
-  background-size:400% 400%;
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  background-image:var(--character-sprite,url("assets/project-town/characters/char-01.png?v=32")) !important;
+  background-repeat:no-repeat !important;
+  background-size:256px 256px !important;
   image-rendering:pixelated;
   image-rendering:crisp-edges;
 }
@@ -10,15 +13,31 @@
 .town-shared-room .character-actor{
   width:64px !important;
   height:64px !important;
+  z-index:14 !important;
+  overflow:visible !important;
 }
 
 .town-shared-room .character-sprite{
+  position:absolute !important;
+  inset:0 !important;
   width:64px !important;
   height:64px !important;
+  z-index:1 !important;
 }
 
-/* Keep the same 64px physical sprite in mobile/landscape.
-   32px source frames therefore always render at an exact 2x scale. */
+/* 4 columns × 4 rows, each source frame 32×32 rendered at 64×64. */
+.character-sprite[data-action="idle"]{background-position-y:0 !important}
+.character-sprite[data-action="walk"]{background-position-y:-64px !important}
+.character-sprite[data-action="work"]{background-position-y:-128px !important}
+.character-sprite[data-action="rest"]{background-position-y:-192px !important}
+
+@keyframes sprite4{
+  0%,24.99%{background-position-x:0}
+  25%,49.99%{background-position-x:-64px}
+  50%,74.99%{background-position-x:-128px}
+  75%,100%{background-position-x:-192px}
+}
+
 .mobile-ui .town-shared-room .character-actor,
 .mobile-ui .town-shared-room .character-sprite{
   width:64px !important;
