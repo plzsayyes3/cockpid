@@ -25,6 +25,50 @@
     return window.COCKPID_SOURCES?.get('daily') || { repo: 'mynotebook', dir: '01_Daily' };
   }
 
+  function normalizeSourceDir(dir) {
+    return String(dir || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '').replace(/\/{2,}/g, '/');
+  }
+
+  function unsafeSourceRelationship(inbox, daily) {
+    const inboxRepo = String(inbox?.repo || '').trim().toLowerCase();
+    const dailyRepo = String(daily?.repo || '').trim().toLowerCase();
+    if (inboxRepo !== dailyRepo) return false;
+
+    const inboxDir = normalizeSourceDir(inbox?.dir);
+    const dailyDir = normalizeSourceDir(daily?.dir);
+    const unsafeSegment = (dir) => dir.split('/').some((part) => part === '.' || part === '..');
+    if (unsafeSegment(inboxDir) || unsafeSegment(dailyDir)) return true;
+    if (inboxDir === dailyDir) return true;
+    if (!inboxDir || !dailyDir) return true;
+    return inboxDir.startsWith(`${dailyDir}/`) || dailyDir.startsWith(`${inboxDir}/`);
+  }
+
+  function parseMemoFileName(fileName) {
+    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.md$/.exec(String(fileName || ''));
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const second = Number(match[6]);
+    if (month < 1 || month > 12 || hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return null;
+
+    const leap = year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0);
+    const daysInMonth = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+    if (day < 1 || day > daysInMonth) return null;
+
+    return {
+      dateStr: `${match[1]}-${match[2]}-${match[3]}`,
+      timeStr: `${match[4]}:${match[5]}:${match[6]}`
+    };
+  }
+
+  function isMergeCandidateFile(file) {
+    return file?.type === 'file' && Boolean(parseMemoFileName(file.name));
+  }
+
   function joinPath(dir, child) {
     const base = String(dir || '').replace(/^\/+|\/+$/g, '');
     const tail = String(child || '').replace(/^\/+/, '');
@@ -56,11 +100,6 @@
       hourCycle: 'h23'
     }).formatToParts(date);
     return Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
-  }
-
-  function fallbackDateTime() {
-    const p = jstParts();
-    return { dateStr: `${p.year}-${p.month}-${p.day}`, timeStr: `${p.hour}:${p.minute}:${p.second}` };
   }
 
   function archiveStamp() {
@@ -165,9 +204,9 @@
   }
 
   function labelFor(name) {
-    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(name);
-    if (!match) return name.replace(/\.md$/i, '');
-    return `${match[1]}.${match[2]}.${match[3]} ${match[4]}:${match[5]}`;
+    const parsed = parseMemoFileName(name);
+    if (!parsed) return name.replace(/\.md$/i, '');
+    return `${parsed.dateStr.replace(/-/g, '.')} ${parsed.timeStr.slice(0, 5)}`;
   }
 
   function render(rows, source) {
@@ -251,16 +290,10 @@
     return apiWrite('DELETE', repo, path, { message, sha, branch: 'main' });
   }
 
-  function parseMemoTime(fileName) {
-    const match = String(fileName).match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
-    if (!match) return fallbackDateTime();
-    return {
-      dateStr: `${match[1]}-${match[2]}-${match[3]}`,
-      timeStr: `${match[4]}:${match[5]}:${match[6]}`
-    };
-  }
-
   async function readMemo(file, source) {
+    const parsed = parseMemoFileName(file?.name);
+    if (!parsed) throw new Error(`${file?.name || '不明なファイル'} は統合対象のMemo名ではありません。`);
+
     const path = joinPath(source.dir, file.name);
     const detail = await gh(path, source.repo);
     if (!detail || Array.isArray(detail) || !detail.content || !detail.sha) throw new Error(`${file.name} を読み込めません。`);
@@ -268,12 +301,11 @@
     let body = rawText.replace(/^---[\s\S]*?---\n?/, '').trim();
     if (!body) body = `*(空のメモ: ${file.name.replace(/\.md$/i, '')})*`;
     const indentedBody = body.split('\n').map((line, index) => index === 0 ? line : `  ${line}`).join('\n');
-    const { dateStr, timeStr } = parseMemoTime(file.name);
-    return { fileName: file.name, path, sha: detail.sha, rawText, body: indentedBody, dateStr, timeStr };
+    return { fileName: file.name, path, sha: detail.sha, rawText, body: indentedBody, ...parsed };
   }
 
   function markerFor(entry) {
-    return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)} -->`;
+    return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)}:${encodeURIComponent(entry.sha)} -->`;
   }
 
   function visibleEntry(entry) {
@@ -285,7 +317,7 @@
   }
 
   function alreadyMerged(content, entry) {
-    return content.includes(markerFor(entry)) || content.includes(visibleEntry(entry));
+    return content.includes(markerFor(entry));
   }
 
   function insertUnderHeading(content, appendBlock) {
@@ -304,18 +336,30 @@
     return content.trimEnd() + `\n\n${TARGET_HEADING}\n${appendBlock}`;
   }
 
+  function missingDailyError(dateStr) {
+    return new Error(`${dateStr} のDailyが存在しないため統合を停止しました。`);
+  }
+
+  async function assertDailyFilesExist(dates, source) {
+    for (const dateStr of dates) {
+      const path = joinPath(source.dir, `${dateStr}.md`);
+      const daily = await gh(path, source.repo);
+      if (!daily || Array.isArray(daily) || !daily.sha) throw missingDailyError(dateStr);
+    }
+  }
+
   async function writeDaily(dateStr, entries, source) {
     const path = joinPath(source.dir, `${dateStr}.md`);
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const old = await gh(path, source.repo);
-      if (Array.isArray(old)) throw new Error(`${path} がファイルではありません。`);
-      const current = old?.content ? decodeContent(old.content) : '';
+      if (!old || Array.isArray(old) || !old.sha) throw missingDailyError(dateStr);
+      const current = old.content ? decodeContent(old.content) : '';
       const pending = entries.filter((entry) => !alreadyMerged(current, entry));
       if (!pending.length) return 0;
       const appendBlock = pending.map(formattedEntry).join('\n') + '\n';
       const next = insertUnderHeading(current, appendBlock);
       try {
-        await putFile(source.repo, path, next, `workbench: merge ${pending.length} memo(s) into ${dateStr}`, old?.sha || '');
+        await putFile(source.repo, path, next, `workbench: merge ${pending.length} memo(s) into ${dateStr}`, old.sha);
         return pending.length;
       } catch (error) {
         if (error.status === 409 && attempt === 0) continue;
@@ -326,6 +370,8 @@
   }
 
   async function archiveMemo(entry, source) {
+    if (!parseMemoFileName(entry?.fileName)) throw new Error(`${entry?.fileName || '不明なファイル'} はarchive対象のMemo名ではありません。`);
+
     const archiveDir = joinPath(source.dir, 'archive');
     let destPath = joinPath(archiveDir, entry.fileName);
     const existing = await gh(destPath, source.repo);
@@ -350,10 +396,11 @@
       setMergeStatus('TOKEN REQUIRED', true);
       return;
     }
-    const files = [...currentFiles];
+
+    const files = currentFiles.filter(isMergeCandidateFile);
     if (!files.length) {
-      setMergeStatus('統合対象はありません。');
-      if (topMergeButton) {
+      setMergeStatus(currentFiles.length ? '統合対象のMemoはありません。' : '統合対象はありません。');
+      if (!currentFiles.length && topMergeButton) {
         topMergeButton.textContent = 'INBOX EMPTY';
         setTimeout(syncTopMergeButton, 1200);
       }
@@ -362,6 +409,11 @@
 
     const inbox = inboxSource();
     const daily = dailySource();
+    if (unsafeSourceRelationship(inbox, daily)) {
+      setMergeStatus('安全のため統合を停止しました。Inbox / Daily の保存先設定を確認してください。', true);
+      return;
+    }
+
     const approved = window.confirm(`${inbox.repo}/${inbox.dir} の ${files.length} 件を ${daily.repo}/${daily.dir} の「${TARGET_HEADING}」へ統合し、archiveへ退避します。`);
     if (!approved) return;
 
@@ -386,9 +438,12 @@
       });
       groups.forEach((group) => group.sort((a, b) => a.fileName.localeCompare(b.fileName)));
 
+      const dates = [...groups.keys()].sort();
+      setMergeStatus('Dailyの存在を確認しています…');
+      await assertDailyFilesExist(dates, daily);
+
       let added = 0;
       let archived = 0;
-      const dates = [...groups.keys()].sort();
       for (let dateIndex = 0; dateIndex < dates.length; dateIndex += 1) {
         const dateStr = dates[dateIndex];
         const group = groups.get(dateStr);
