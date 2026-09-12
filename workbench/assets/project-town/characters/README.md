@@ -1,19 +1,17 @@
 # Project Town production characters
 
-The production sprites in this directory use the **Project Town 人間キャラ ドット絵パターン集** supplied on 2026-09-12 as the authoritative visual source.
+The authoritative visual source is the **Project Town 人間キャラ ドット絵パターン集** supplied on 2026-09-12.
 
-**Production rule:** when this sheet and an older generated character reference differ, this supplied pattern sheet wins.
+## Current production mode
 
-The characters are not reinterpretations of the reference. The first six variants are derived directly from the reference image's 「1. ベーシックスタイル（基本候補）」:
+For visual-quality validation, Project Town currently uses **one character only**:
 
-1. `char-01.png` — A. スタンダード
-2. `char-02.png` — B. ショートヘア
-3. `char-03.png` — C. ボブ
-4. `char-04.png` — D. ロングヘア
-5. `char-05.png` — E. メガネ
-6. `char-06.png` — F. 帽子
-7. `char-07.png` — 「5. 役割・雰囲気のバリエーション」マネージャー
-8. `char-08.png` — 「5. 役割・雰囲気のバリエーション」カジュアル
+- `char-01.png` — A. スタンダード
+- every Project displays this same character
+- Project activity still controls `idle / walk / work / rest`
+- existing movement destinations, momentum, modal, MEMO, handoff and mobile behavior remain independent from character identity
+
+This is intentional. Additional character variants will be re-enabled only after `char-01` is visually approved in the actual town view.
 
 ## Sprite contract
 
@@ -26,17 +24,5 @@ The characters are not reinterpretations of the reference. The first six variant
 - row 4: `rest`
 - transparent background
 - shared CSS animation and shared `CharacterController`
-- character identity is independent from activity
 
-The source characters are reduced to the 24×24 production grid while preserving their actual hair silhouette, face, glasses/cap, clothing and palette as closely as possible. The four-frame rows add small pixel-scale motion without changing the character identity.
-
-## Project assignment
-
-`project-town-characters.js` owns character identity.
-
-1. If Project frontmatter contains `character: char-04` (or another known variant), that explicit character is used.
-2. Otherwise a stable FNV-1a hash of `project.id` selects one of the variants.
-
-The character layer reuses the Project markdown responses already fetched by Project Town, so explicit `character` does not add a second Project download.
-
-`../character.png` remains the fallback sprite if a production character image fails to preload.
+`../character.png` remains the fallback sprite if `char-01.png` fails to preload.
