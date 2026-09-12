@@ -4,7 +4,7 @@ const token=()=>localStorage.getItem(STORAGE_KEY)||'';
 function jst(d=new Date()){const s=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);return new Date(`${s.find(x=>x.type==='year').value}-${s.find(x=>x.type==='month').value}-${s.find(x=>x.type==='day').value}T00:00:00+09:00`)}
 function fmt(d){return d.toISOString().slice(0,10)}
 function label(n){return n===1?'昨日':n===2?'一昨日':`${n}日前`}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]))}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function decode(v){const b=atob(v.replace(/\n/g,''));return new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0)))}
 async function gh(path,repo=REPO){const r=await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${path}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token()}`}});if(r.status===404)return null;if(!r.ok)throw Error(`${repo} ${r.status}`);return r.json()}
 async function load(path){const j=await gh(path,REPO);return j?JSON.parse(decode(j.content)):null}
