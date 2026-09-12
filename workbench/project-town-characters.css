@@ -1,0 +1,3 @@
+.character-sprite{
+  background-image:var(--character-sprite,url("assets/project-town/character.png"));
+}
