@@ -1,3 +1,34 @@
+/* Project Town character rendering: 32px source frames, 2x display. */
 .character-sprite{
   background-image:var(--character-sprite,url("assets/project-town/character.png"));
+  background-repeat:no-repeat;
+  background-size:400% 400%;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+
+.town-shared-room .character-actor{
+  width:64px !important;
+  height:64px !important;
+}
+
+.town-shared-room .character-sprite{
+  width:64px !important;
+  height:64px !important;
+}
+
+/* Keep the same 64px physical sprite in mobile/landscape.
+   32px source frames therefore always render at an exact 2x scale. */
+.mobile-ui .town-shared-room .character-actor,
+.mobile-ui .town-shared-room .character-sprite{
+  width:64px !important;
+  height:64px !important;
+}
+
+@media (orientation:landscape) and (min-width:760px){
+  .town-shared-room .character-actor,
+  .town-shared-room .character-sprite{
+    width:64px !important;
+    height:64px !important;
+  }
 }
