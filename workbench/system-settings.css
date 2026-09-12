@@ -14,6 +14,7 @@
 .path-row{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(0,1.2fr);gap:12px;align-items:center;padding:10px 11px;border-radius:8px;background:#efede6}
 .path-row span{color:#77736c;font:700 9px ui-monospace,monospace}
 .path-row b{min-width:0;color:#45423d;font:700 9px/1.4 ui-monospace,monospace;overflow-wrap:anywhere}
+.system-status{height:32px!important}
 .status-system{width:32px!important;height:32px!important;min-width:32px;border-radius:7px}
 .status-system:hover{background:rgba(235,232,223,.8)}
 .status-mail{position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-width:32px;padding:0;border:0;border-radius:7px;background:transparent;color:#77736c;opacity:.58;transition:opacity .14s,transform .14s,background .14s}
@@ -31,5 +32,6 @@
   .settings-nav-btn{flex:0 0 auto;min-height:40px}
   .settings-content{min-height:330px}
   .path-row{grid-template-columns:1fr;gap:4px}
+  .system-status{height:40px!important}
   .status-mail,.status-system{width:40px!important;height:40px!important;min-width:40px}
 }
