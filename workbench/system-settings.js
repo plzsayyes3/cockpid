@@ -15,7 +15,7 @@
     { key: 'inbox', label: 'Inbox', state: 'LIVE' },
     { key: 'memo', label: 'Short Memo', state: 'LIVE' },
     { key: 'projects', label: 'Project root', state: 'STORED' },
-    { key: 'taskliner', label: 'TaskLiner data', state: 'STORED' }
+    { key: 'taskliner', label: 'TaskLiner data', state: 'LIVE' }
   ];
 
   const escHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -109,6 +109,29 @@
     return next;
   }
 
+  function tasklinerBranch() {
+    try {
+      const config = JSON.parse(localStorage.getItem('taskliner_github_sync_config_v1') || '{}');
+      return String(config?.branch || 'task-data').trim() || 'task-data';
+    } catch (_) {
+      return 'task-data';
+    }
+  }
+
+  async function checkTasklinerSource(source) {
+    const branch = tasklinerBranch();
+    const path = source.dir.split('/').map(encodeURIComponent).join('/');
+    const response = await fetch(`https://api.github.com/repos/plzsayyes3/${encodeURIComponent(source.repo)}/contents/${path}?ref=${encodeURIComponent(branch)}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token()}`
+      }
+    });
+    if (response.status === 404) return { result: null, branch };
+    if (!response.ok) throw new Error(`${source.repo} ${response.status}`);
+    return { result: await response.json(), branch };
+  }
+
   async function checkSource(row) {
     if (!row || !sourceApi) return;
     const status = row.querySelector('.source-check-status');
@@ -129,8 +152,14 @@
     if (button) button.disabled = true;
     if (status) status.textContent = 'CHECKING…';
     try {
-      const result = await gh(validation.value.dir, validation.value.repo);
-      if (status) status.textContent = result == null ? 'NOT FOUND' : Array.isArray(result) ? `FOUND · ${result.length} items` : 'FOUND';
+      if (row.dataset.sourceKey === 'taskliner') {
+        const checked = await checkTasklinerSource(validation.value);
+        const result = checked.result;
+        if (status) status.textContent = result == null ? `NOT FOUND · ${checked.branch}` : Array.isArray(result) ? `FOUND · ${checked.branch} · ${result.length} items` : `FOUND · ${checked.branch}`;
+      } else {
+        const result = await gh(validation.value.dir, validation.value.repo);
+        if (status) status.textContent = result == null ? 'NOT FOUND' : Array.isArray(result) ? `FOUND · ${result.length} items` : 'FOUND';
+      }
     } catch (error) {
       console.error('source check', error);
       if (status) status.textContent = String(error?.message || error).toUpperCase();
