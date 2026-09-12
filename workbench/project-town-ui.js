@@ -16,12 +16,26 @@
     document.documentElement.classList.toggle('mobile-ui', isPhoneLike());
   }
 
+  function projectTitle(trigger) {
+    return trigger?.querySelector?.('.project-name, .worker-name')?.textContent?.trim() || '';
+  }
+
+  function notifyProjectDetail(open, title = '') {
+    if (window.parent === window) return;
+    window.parent.postMessage({
+      type: 'cockpid:project-detail',
+      open: Boolean(open),
+      title: open ? String(title || '').trim() : ''
+    }, window.location.origin);
+  }
+
   function openDetail(trigger) {
     if (!overlay) return;
     lastTrigger = trigger || document.activeElement;
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     document.documentElement.classList.add('detail-open');
+    notifyProjectDetail(true, projectTitle(trigger));
     requestAnimationFrame(() => modal?.querySelector('.project-detail-close')?.focus());
   }
 
@@ -30,6 +44,7 @@
     overlay.hidden = true;
     overlay.setAttribute('aria-hidden', 'true');
     document.documentElement.classList.remove('detail-open');
+    notifyProjectDetail(false);
     if (lastTrigger instanceof HTMLElement && lastTrigger.isConnected) lastTrigger.focus();
   }
 
@@ -58,6 +73,7 @@
 
   window.addEventListener('resize', syncMobileUi, { passive: true });
   window.addEventListener('orientationchange', syncMobileUi, { passive: true });
+  window.addEventListener('pagehide', () => notifyProjectDetail(false));
 
   syncMobileUi();
 })();
