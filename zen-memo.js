@@ -1,8 +1,28 @@
 (() => {
-  const MEMO_REPO = 'mynotebook';
-  const MEMO_DIR = '00_inbox';
+  const DEFAULT_MEMO_REPO = 'mynotebook';
+  const DEFAULT_MEMO_DIR = '00_inbox';
   const el = (id) => document.getElementById(id);
   let projectMemoContext = '';
+
+  function memoSource() {
+    return window.COCKPID_SOURCES?.get('memo') || { repo: DEFAULT_MEMO_REPO, dir: DEFAULT_MEMO_DIR };
+  }
+
+  function joinPath(dir, child) {
+    const base = String(dir || '').replace(/^\/+|\/+$/g, '');
+    const tail = String(child || '').replace(/^\/+/, '');
+    return base ? `${base}/${tail}` : tail;
+  }
+
+  function encodeApiPath(path) {
+    return String(path || '').split('/').map(encodeURIComponent).join('/');
+  }
+
+  function syncMemoSourceLabel() {
+    const source = memoSource();
+    const label = document.querySelector('#memoCapturePanel .small') || document.querySelector('.drawer .small');
+    if (label) label.textContent = `${source.repo} / ${source.dir} に新規メモとして保存します。`;
+  }
 
   function zenPad(value) {
     return String(value).padStart(2, '0');
@@ -27,6 +47,7 @@
   }
 
   function openZenMemo() {
+    syncMemoSourceLabel();
     el('drawer').classList.add('open');
     el('drawerBackdrop').classList.add('open');
     el('tokenInput').value = token();
@@ -76,8 +97,9 @@
       return;
     }
 
+    const source = memoSource();
     const name = `${zenStamp()}.md`;
-    const path = `${MEMO_DIR}/${name}`;
+    const path = joinPath(source.dir, name);
     status.textContent = 'POSTING…';
     el('memoSave').disabled = true;
 
@@ -86,7 +108,7 @@
         message: `cockpid: zen memo ${name}`,
         content: encodeUtf8(`${text}\n`)
       };
-      const response = await fetch(`https://api.github.com/repos/${OWNER}/${MEMO_REPO}/contents/${path}`, {
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/${source.repo}/contents/${encodeApiPath(path)}`, {
         method: 'PUT',
         headers: {
           Accept: 'application/vnd.github+json',
@@ -96,7 +118,7 @@
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error(`mynotebook write ${response.status}`);
+      if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
 
       status.textContent = `POSTED · ${name}`;
       el('memoText').value = '';
@@ -115,6 +137,7 @@
     if (!data || data.type !== 'cockpid:project-detail') return;
     projectMemoContext = data.open ? String(data.title || '').trim() : '';
   });
+  window.addEventListener('cockpid:sources-changed', syncMemoSourceLabel);
 
   el('memoOpen').addEventListener('click', openZenMemo);
   el('memoClose').addEventListener('click', closeZenMemo);
@@ -135,4 +158,5 @@
       closeZenMemo();
     }
   });
+  syncMemoSourceLabel();
 })();
