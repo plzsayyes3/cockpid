@@ -14,7 +14,7 @@
     { key: 'techo', label: 'Techo / Calendar', state: 'LIVE' },
     { key: 'inbox', label: 'Inbox', state: 'LIVE' },
     { key: 'memo', label: 'Short Memo', state: 'LIVE' },
-    { key: 'projects', label: 'Project root', state: 'STORED' },
+    { key: 'projects', label: 'Project root', state: 'LIVE' },
     { key: 'taskliner', label: 'TaskLiner data', state: 'LIVE' }
   ];
 
