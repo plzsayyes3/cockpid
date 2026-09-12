@@ -6,7 +6,8 @@ function fmt(d){return d.toISOString().slice(0,10)}
 function label(n){return n===1?'昨日':n===2?'一昨日':`${n}日前`}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function decode(v){const b=atob(v.replace(/\n/g,''));return new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0)))}
-async function gh(path,repo=REPO){const r=await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${path}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token()}`}});if(r.status===404)return null;if(!r.ok)throw Error(`${repo} ${r.status}`);return r.json()}
+function canonicalStoragePath(path,repo=REPO){const p=String(path||'').replace(/^\/+/, '');if(repo!=='my-storage-note'||p.startsWith('memory/'))return p;return /^(extracted|entities|connections|indexes|sources|state)(\/|$)/.test(p)?`memory/${p}`:p}
+async function gh(path,repo=REPO){const resolved=canonicalStoragePath(path,repo);const r=await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${resolved}?ref=main`,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token()}`}});if(r.status===404)return null;if(!r.ok)throw Error(`${repo} ${r.status}`);return r.json()}
 async function load(path){const j=await gh(path,REPO);return j?JSON.parse(decode(j.content)):null}
 async function days(type,n=14){const base=jst(),out=[];for(let i=1;i<=n;i++){const d=new Date(base);d.setDate(d.getDate()-i);const date=fmt(d);const data=await load(`extracted/${type}/${date}.json`);if(data?.items?.length)out.push({i,date,items:data.items})}return out}
 function flattenDays(rows,type){return rows.flatMap(r=>r.items.map((item,index)=>({...item,_type:type,_date:r.date,_distance:r.i,_index:index}))).sort((a,b)=>String(b._date).localeCompare(String(a._date)))}
