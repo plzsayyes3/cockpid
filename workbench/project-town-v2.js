@@ -144,7 +144,7 @@
   }
 
   function decisionText(p, a) {
-    if (a.key === 'review') return String(p.next || '成果物を確認し、次へ進めるか・修正するかを指示してください。');
+    if (a.key === 'review') return String(p.decision || p.next || '成果物を確認し、次へ進めるか・修正するかを指示してください。');
     if (a.key === 'external_wait') return `いまは外部要因待ちです。${p.next ? ` 次の確認点: ${p.next}` : ''}`;
     if (a.key === 'paused') return String(p.next || '再開するか、そのまま休止するかを判断できます。');
     if (a.key === 'researching') return '現在はAI側の調査ターンです。急いで判断する必要はありません。';
@@ -152,7 +152,7 @@
   }
 
   function handoffPrompt(p) {
-    return `「${p.title}」Projectの続きを進めたい。\n\nまず gpts/${p.path} を確認して、Project正本を基準に現在地を把握してください。\n\n現在の記録:\nCurrent: ${p.current || '未記載'}\nNext: ${p.next || '未記載'}\nactivity: ${p.activity || activity(p).key}\n\nこのProjectは私の判断・指示を待っている状態です。まず、今私が判断すべきことを1〜3点に絞って提示してください。私が返答したら、その内容に従って作業を進め、Project正本の current / next / activity / last_touched / History を必要に応じて更新してください。`;
+    return `「${p.title}」Projectの続きを進めたい。\n\nまず gpts/${p.path} を確認して、Project正本を基準に現在地を把握してください。\n\n現在の記録:\nCurrent: ${p.current || '未記載'}\nNext: ${p.next || '未記載'}\nDecision: ${p.decision || '未記載'}\nactivity: ${p.activity || activity(p).key}\n\nこのProjectは私の判断・指示を待っている状態です。まず、今私が判断すべきことを1〜3点に絞って提示してください。私が返答したら、その内容に従って作業を進め、Project正本の current / next / decision / activity / last_touched / History を必要に応じて更新してください。`;
   }
 
   async function copyText(text) {
@@ -310,7 +310,7 @@
     detailState.textContent = `${a.label} · ${m.mark}${m.label}`;
     detail.innerHTML = `<div class="detail-head"><div><h2>${esc(p.title)}</h2><div class="detail-meta">最終更新 ${esc(p.last_touched || '—')} · activity: ${esc(p.activity || '推定')}</div></div><span class="big-status" data-activity="${a.key}">${esc(a.label)}</span></div><div class="stat-grid"><div class="stat"><b>勢い</b><strong>${esc(m.mark)}${esc(m.label)}</strong></div><div class="stat"><b>やる気</b><strong>${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</strong></div><div class="stat"><b>SHEETS</b><strong>${sheets}</strong></div></div>${handoff}<div class="detail-block"><b>いま</b><p>${esc(p.current || 'まだCurrentは書かれていません。')}</p></div><div class="detail-block"><b>つぎ</b><p>${esc(p.next || 'まだNextは書かれていません。')}</p></div>`;
     msgTitle.textContent = `「${p.title}」は ${a.label}。${m.key === 'normal' ? '' : `${m.mark}${m.label}中。`}`;
-    msgText.textContent = a.key === 'working' ? 'AI側の作業ターンです。PCの前で作業しています。' : a.key === 'researching' ? 'AI側の調査ターンです。資料棚の近くで調査・検討中です。' : a.key === 'review' ? 'あなたのターンです。成果物とNextを確認して、次の指示を返せます。' : a.key === 'external_wait' ? '外部要因を待っています。今すぐあなたが判断する必要はありません。' : 'いまは休止しています。再開するときに起こせます。';
+    msgText.textContent = a.key === 'working' ? 'AI側の作業ターンです。PCの前で作業しています。' : a.key === 'researching' ? 'AI側の調査ターンです。資料棚の近くで調査・検討中です。' : a.key === 'review' ? 'あなたのターンです。成果物と判断内容を確認して、次の指示を返せます。' : a.key === 'external_wait' ? '外部要因を待っています。今すぐあなたが判断する必要はありません。' : 'いまは休止しています。再開するときに起こせます。';
     syncSelection();
   }
 
