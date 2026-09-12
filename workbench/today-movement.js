@@ -227,7 +227,7 @@
 
   async function loadCuratedWeek() {
     try {
-      const payload = await gh(`indexes/movement/${weekStartKey}_${todayKey}.json`, 'my-storage-note');
+      const payload = await gh(`memory/indexes/movement/${weekStartKey}_${todayKey}.json`, 'my-storage-note');
       if (!payload?.content) return null;
       const data = JSON.parse(decode(payload.content));
       if (!Array.isArray(data?.items)) return null;
@@ -241,7 +241,7 @@
   async function loadLegacySevenDays() {
     const directories = await Promise.all(TYPES.map(async (type) => {
       try {
-        const entries = await gh(`extracted/${type}`, 'my-storage-note');
+        const entries = await gh(`memory/extracted/${type}`, 'my-storage-note');
         return { type, entries: Array.isArray(entries) ? entries : [] };
       } catch (error) {
         console.error(error);
@@ -252,7 +252,7 @@
     directories.forEach(({ type, entries }) => entries.forEach((entry) => {
       if (entry?.type !== 'file' || !dateName.test(entry.name)) return;
       const date = entry.name.slice(0, 10);
-      if (date >= weekStartKey && date <= todayKey) files.push({ type, date, path: `extracted/${type}/${entry.name}` });
+      if (date >= weekStartKey && date <= todayKey) files.push({ type, date, path: `memory/extracted/${type}/${entry.name}` });
     }));
     const payloads = await Promise.all(files.map(async (file) => {
       try {
@@ -275,7 +275,7 @@
 
   async function latestAuditPath() {
     try {
-      const entries = await gh('indexes/movement', 'my-storage-note');
+      const entries = await gh('memory/indexes/movement', 'my-storage-note');
       if (!Array.isArray(entries)) return null;
       const matches = entries.filter((entry) => entry?.type === 'file' && AUDIT_NAME.test(entry.name));
       matches.sort((a, b) => {

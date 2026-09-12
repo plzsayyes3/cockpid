@@ -29,11 +29,11 @@ DISPLAY / EXPLORATION
 ### 2. ANALYSIS DATA
 `plzsayyes3/my-storage-note` contains the structured outputs produced from the source data, including:
 
-- `extracted/theme/YYYY-MM-DD.json`
-- `extracted/idea/YYYY-MM-DD.json`
-- `extracted/action/YYYY-MM-DD.json`
-- `connections/semantic.json`
-- `state/completed_actions.json` — written by cockpid itself (not the analysis pipeline): a map of `{action id: completion timestamp}`, updated when a user marks an action complete from the ACTIONS list. Kept separate from the `extracted/` tree so the analysis pipeline can keep regenerating those files without clobbering completion state.
+- `memory/extracted/theme/YYYY-MM-DD.json`
+- `memory/extracted/idea/YYYY-MM-DD.json`
+- `memory/extracted/action/YYYY-MM-DD.json`
+- `memory/connections/semantic.json`
+- `memory/state/completed_actions.json` — written by cockpid itself (not the analysis pipeline): a map of `{action id: completion timestamp}`, updated when a user marks an action complete from the ACTIONS list. Kept separate from the `memory/extracted/` tree so the analysis pipeline can keep regenerating those files without clobbering completion state.
 
 The normal cockpit cycle is **previous-day first**, because the source/analysis pipeline does not need to be queried repeatedly during the same day.
 
@@ -124,7 +124,7 @@ self-contained page for **placing a small number of cards deliberately and think
 
 ```text
 LIBRARY            DECK                     LATTICE 16×16
-extracted/*.json → JSON cards (snapshot) → cards are 4×4 cells
+memory/extracted/*.json → JSON cards (snapshot) → cards are 4×4 cells
 (fetched)          localStorage             the offset is the meaning
 ```
 
@@ -179,10 +179,10 @@ Never share a screenshot that shows the actual token value (e.g. a DevTools Netw
 ## Known pitfalls (learned the hard way)
 
 - **One token key, one input field.** Current cockpit pages and `prototype-common.js` use the same `localStorage` key: `zen-note-github-token`. Do not reintroduce a second token key. `board.html`, `calendar.html`, `index.html`, and pages using `prototype-common.js` are expected to see the same token on the same GitHub Pages origin.
-- **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes. The Techo calendar reports both possibilities because the target month itself may legitimately not exist.
+- **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `memory/extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes. The Techo calendar reports both possibilities because the target month itself may legitimately not exist.
 - **The GitHub Contents API can 404 on a bare/empty path with a trailing slash** (`.../contents/`) even when the token has valid read access to the repo. Always probe a real, non-empty subpath (e.g. `extracted`), never `''`.
 - **A fine-grained PAT's repository list must be re-verified after every edit.** Adding a repo to "Repository access" on GitHub's token settings page can, in practice, require re-confirming the rest of the list — a repo you thought was still selected can silently drop off. After editing a token's scope, re-check the full list, not just the repo you meant to add.
-- **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token for the full cockpit.** The calendar itself only reads `mynotebook`, but `mynotebook` also needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` needs Write because marking an action complete writes to `state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature while read-only surfaces may continue to work.
+- **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token for the full cockpit.** The calendar itself only reads `mynotebook`, but `mynotebook` also needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` needs Write because marking an action complete writes to `memory/state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature while read-only surfaces may continue to work.
 - **Don't let independent async status writers share the same DOM element.** An earlier bug had `loadDay()` and `loadAnalysis()` both write to the same header status text without coordination; whichever finished last silently overwrote the other's (possibly more important) error message. If you add another concurrent status source, route it through a single combining function (see `refreshStatus()` in `index.html`) rather than writing directly.
 - **A debounce that resets on every action can defer a save indefinitely.** `board.html` saves deck state on a 250ms debounce; because every drag and placement reset the timer, continuous editing never actually reached the write. It now force-flushes when more than 2s has passed since the last real write — keep that guarantee if the save path changes.
 - **The board's status readout has several independent async writers** (library load, deck save, placement refusal). A "placement refused" message was being overwritten by the `SAVED` that landed just behind it, so the refusal looked like a success. `setStatus(text, sticky)` now protects an explicit message for 1.6s. This is the same class of bug as the `refreshStatus()` note above — check it whenever a new status source is added.

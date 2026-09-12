@@ -167,7 +167,7 @@ function toCards(data,type,date,path){
     source:{repo:CFG.analysisRepo,path,index:i}
   })).filter(x=>x.title);
 }
-async function loadDay(type,date){const j=await repoGetSafe(CFG.analysisRepo,`extracted/${type}/${date}.json`);if(!j||!j.content)return[];return toCards(JSON.parse(decode64(j.content)),type,date,`extracted/${type}/${date}.json`)}
+async function loadDay(type,date){const j=await repoGetSafe(CFG.analysisRepo,`memory/extracted/${type}/${date}.json`);if(!j||!j.content)return[];return toCards(JSON.parse(decode64(j.content)),type,date,`memory/extracted/${type}/${date}.json`)}
 async function loadRange(type,days){const out=[];for(let i=1;i<=days;i++)out.push(...await loadDay(type,iso(addDays(jst(),-i))));return out}
 
 /* ---- state ---- */
