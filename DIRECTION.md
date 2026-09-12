@@ -25,8 +25,12 @@ SOURCE
   mynotebook
        │
        ▼
-ANALYSIS DATA
+AI KNOWLEDGE SYSTEM
   my-storage-note
+  ├─ brain
+  ├─ objects
+  ├─ memory
+  └─ views
        │
        ▼
 作業台
@@ -38,8 +42,8 @@ ANALYSIS DATA
 ```
 
 - `mynotebook`: 原文・Daily・記録のSOURCE。
-- `my-storage-note`: AI等で抽出・整理したANALYSIS DATA。
-- `cockpid`: 作業台の表示・操作層。原文や分析データを重複保存しない。
+- `my-storage-note`: AIが扱うルール・Canonical Object・Memory・Viewの正本。
+- `cockpid`: 作業台の表示・操作層。原文やCanonical dataを重複保存しない。
 
 ## 3. Workbench principle
 
@@ -62,6 +66,7 @@ HOMEは「静かな作業台」とする。
 - Daily Noteの正本
 - 原文ノートの大量コピー
 - AI分類・LLM処理そのもの
+- Canonical Project / Assignment / Task / Idea / Reference
 - 各独立Appの全機能
 - 外部Repositoryのコードの複製
 
@@ -75,11 +80,15 @@ HOMEは「静かな作業台」とする。
 
 ## 5. Project / Human Decision model
 
-Projectの正本は `plzsayyes3/gpts/projects/` に置く。
+Projectの正本は `plzsayyes3/my-storage-note/objects/projects/` に置く。
+
+CockpidはProject Markdownを正本として持たず、表示用途では原則として `my-storage-note/views/` のread modelを利用する。
 
 BackstageはProject棚、Project TownはProjectの活動状態を眺め、必要なときに人間が判断を返す場所として扱う。
 
 `activity: review` のProjectだけをHuman Decision Queueとして明確に人間へ渡す。Projectの `next` と「いま人間が決めること」は別概念とし、後者は `decision` を使用する。
+
+一時的なparallel workerの担当・lock・handoffは `my-storage-note/brain/coordination/` に置ける。
 
 ## 6. Naming policy
 
@@ -89,7 +98,7 @@ BackstageはProject棚、Project TownはProjectの活動状態を眺め、必要
 
 - GitHub Repository: `plzsayyes3/cockpid`
 - Project ID: `cockpid`
-- Project canonical path: `gpts/projects/cockpid.md`
+- Project canonical path: `my-storage-note/objects/projects/cockpid.md`
 - 既存の内部キーやコード識別子のうち、名称変更だけのために壊す必要がないもの
 
 `COCKPID` は旧称・aliasとして保持する。
@@ -99,7 +108,7 @@ BackstageはProject棚、Project TownはProjectの活動状態を眺め、必要
 今後の設計判断では、次の順で優先する。
 
 1. HOMEを静かな作業台として保つ
-2. SOURCE / ANALYSIS DATA / 表示層の役割分担を壊さない
+2. SOURCE / AI Knowledge System / 表示層の役割分担を壊さない
 3. 独立Appの責務をHOMEへ重複実装しない
 4. 人間が次に何をすればよいか分かる
 5. 必要な道具へ少ない操作で入り、すぐHOMEへ戻れる
