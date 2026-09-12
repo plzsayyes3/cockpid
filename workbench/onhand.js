@@ -175,7 +175,7 @@
 
   async function loadCurated() {
     try {
-      const p = await gh(`indexes/movement/${start}_${today}.json`);
+      const p = await gh(`memory/indexes/movement/${start}_${today}.json`);
       if (!p?.content) return null;
       const data = JSON.parse(decode(p.content));
       if (!Array.isArray(data?.items)) return null;
@@ -189,7 +189,7 @@
   async function loadLegacy() {
     const directories = await Promise.all(TYPES.map(async (type) => {
       try {
-        const entries = await gh(`extracted/${type}`);
+        const entries = await gh(`memory/extracted/${type}`);
         return { type, entries:Array.isArray(entries) ? entries : [] };
       } catch (error) {
         console.error(error);
@@ -200,7 +200,7 @@
     directories.forEach(({ type, entries }) => entries.forEach((entry) => {
       if (entry?.type !== 'file' || !/^\d{4}-\d{2}-\d{2}\.json$/.test(entry.name)) return;
       const date = entry.name.slice(0, 10);
-      if (date >= start && date <= today) files.push({ type, date, path:`extracted/${type}/${entry.name}` });
+      if (date >= start && date <= today) files.push({ type, date, path:`memory/extracted/${type}/${entry.name}` });
     }));
     const groups = await Promise.all(files.map(async (file) => {
       try {
@@ -223,7 +223,7 @@
 
   async function latestAuditPath() {
     try {
-      const entries = await gh('indexes/movement');
+      const entries = await gh('memory/indexes/movement');
       if (!Array.isArray(entries)) return null;
       const matches = entries.filter((entry) => entry?.type === 'file' && AUDIT_NAME.test(entry.name));
       matches.sort((a, b) => {
