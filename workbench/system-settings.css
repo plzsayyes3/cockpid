@@ -1,4 +1,4 @@
-.settings-panel{width:min(760px,100%)}
+.settings-panel{width:min(760px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .settings-layout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;margin-top:18px}
 .settings-nav{display:flex;flex-direction:column;gap:4px}
 .settings-nav-btn{border:0;border-radius:7px;background:transparent;color:#77736c;padding:9px 10px;text-align:left;font:700 9px ui-monospace,monospace;cursor:pointer}
@@ -42,17 +42,18 @@
 .status-mail.has-unread{opacity:1;color:#4f4b45}
 .status-mail.mail-error{color:#a35f58;opacity:.8}
 @media(max-width:620px){
+  .settings-panel{max-height:calc(100vh - env(safe-area-inset-top) - 12px);max-height:calc(100dvh - env(safe-area-inset-top) - 12px);padding-bottom:calc(18px + env(safe-area-inset-bottom))}
   .settings-layout{grid-template-columns:1fr;gap:12px}
   .settings-nav{flex-direction:row;overflow-x:auto;padding-bottom:3px}
   .settings-nav-btn{flex:0 0 auto;min-height:40px}
-  .settings-content{min-height:330px}
+  .settings-content{min-height:0;padding-bottom:8px}
   .path-row{grid-template-columns:1fr;gap:4px}
   .source-row{grid-template-columns:1fr 1fr;gap:8px}
   .source-meta{grid-column:1/-1}
   .source-folder{grid-column:1/-1}
   .source-check{min-height:40px}
   .source-check-status{grid-column:1/-1}
-  .source-actions{flex-wrap:wrap;justify-content:stretch}
+  .source-actions{flex-wrap:wrap;justify-content:stretch;padding-bottom:4px}
   .source-save-status{width:100%;margin:0 0 2px}
   .source-actions .token-btn{flex:1;min-height:40px}
   .system-status{height:40px!important}
