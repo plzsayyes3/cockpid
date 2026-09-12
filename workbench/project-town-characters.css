@@ -1,3 +1,16 @@
 .character-sprite{
   background-image:var(--character-sprite,url("assets/project-town/character.png"));
 }
+
+/* Safe 32px test mode. Default Project Town remains on the stable 24px sprite. */
+html.pt-character-32-test .town-shared-room .character-actor,
+html.pt-character-32-test .town-shared-room .character-sprite{
+  width:64px !important;
+  height:64px !important;
+}
+
+html.pt-character-32-test .town-shared-room .character-sprite{
+  background-size:400% 400% !important;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}

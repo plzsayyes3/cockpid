@@ -2,10 +2,17 @@
   'use strict';
 
   const FALLBACK_SPRITE = 'assets/project-town/character.png';
+  const STABLE_SPRITE = 'assets/project-town/characters/char-01.png';
+  const TEST32_SPRITE = 'assets/project-town/characters/char-01-32.png';
+  const params = new URLSearchParams(window.location.search);
+  const requested32 = params.get('character32') === '1';
+
   const CHARACTER_VARIANTS = Object.freeze([
-    { id: 'char-01', sprite: 'assets/project-town/characters/char-01.png', label: 'standard' }
+    { id: 'char-01', sprite: STABLE_SPRITE, label: 'standard-24' },
+    { id: 'char-01-32', sprite: TEST32_SPRITE, label: 'standard-32-test' }
   ]);
-  const variant = CHARACTER_VARIANTS[0];
+
+  let activeVariant = requested32 ? CHARACTER_VARIANTS[1] : CHARACTER_VARIANTS[0];
   let assetReady = false;
 
   function hashProjectId(value) {
@@ -18,14 +25,18 @@
     return hash >>> 0;
   }
 
+  function setModeClass() {
+    document.documentElement.classList.toggle('pt-character-32-test', activeVariant.id === 'char-01-32' && assetReady);
+  }
+
   function spriteUrl() {
-    return assetReady ? variant.sprite : FALLBACK_SPRITE;
+    return assetReady ? activeVariant.sprite : FALLBACK_SPRITE;
   }
 
   function applyWorker(worker) {
     if (!(worker instanceof HTMLElement)) return;
     if (!worker.dataset.projectId) return;
-    worker.dataset.characterId = variant.id;
+    worker.dataset.characterId = activeVariant.id;
     worker.style.setProperty('--character-sprite', `url("${spriteUrl()}")`);
   }
 
@@ -34,18 +45,37 @@
     root.querySelectorAll?.('.worker[data-project-id]').forEach(applyWorker);
   }
 
-  function preload() {
+  function loadVariant(variant, onDone) {
     const image = new Image();
     image.decoding = 'async';
-    image.onload = () => {
-      assetReady = true;
-      scan(document);
-    };
-    image.onerror = () => {
-      assetReady = false;
-      scan(document);
-    };
+    image.onload = () => onDone(true);
+    image.onerror = () => onDone(false);
     image.src = variant.sprite;
+  }
+
+  function preload() {
+    loadVariant(activeVariant, (ok) => {
+      if (ok) {
+        assetReady = true;
+        setModeClass();
+        scan(document);
+        return;
+      }
+
+      if (activeVariant.id === 'char-01-32') {
+        activeVariant = CHARACTER_VARIANTS[0];
+        loadVariant(activeVariant, (stableOk) => {
+          assetReady = stableOk;
+          setModeClass();
+          scan(document);
+        });
+        return;
+      }
+
+      assetReady = false;
+      setModeClass();
+      scan(document);
+    });
   }
 
   function observeRoom() {
@@ -66,8 +96,9 @@
     variants: CHARACTER_VARIANTS,
     fallbackSprite: FALLBACK_SPRITE,
     hashProjectId,
+    is32TestRequested: requested32,
     resolve() {
-      return variant;
+      return activeVariant;
     }
   });
 
