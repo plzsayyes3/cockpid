@@ -8,7 +8,7 @@
 
   const apps = Object.freeze({
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
-    tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'https://plzsayyes3.github.io/taskliner_taskchute-line/' },
+    tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: '5', title: '5 / AI ADVICE', type: 'iframe', src: 'advice.html' },
