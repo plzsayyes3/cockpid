@@ -2,6 +2,8 @@
 
 The production sprites in this directory use the **Project Town 人間キャラ ドット絵パターン集** supplied on 2026-09-12 as the authoritative visual source.
 
+**Production rule:** when this sheet and an older generated character reference differ, this supplied pattern sheet wins.
+
 The characters are not reinterpretations of the reference. The first six variants are derived directly from the reference image's 「1. ベーシックスタイル（基本候補）」:
 
 1. `char-01.png` — A. スタンダード
