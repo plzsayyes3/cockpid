@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  const BOARD_PATH = 'projects/cockpid/board.md';
-  const BOARD_REPO = 'gpts';
+  const BOARD_PATH = 'brain/coordination/cockpid-board.md';
+  const BOARD_REPO = 'my-storage-note';
   const META_KEYS = new Set(['status', 'area', 'owner', 'started', 'branch', 'commit', 'summary', 'next', 'blocked reason', 'updated']);
 
   function escapeHtml(value) {
@@ -81,7 +81,7 @@
     container.innerHTML = '<div class="board-view"><div class="board-loading">BOARDを読んでいます…</div></div>';
 
     if (typeof token !== 'function' || !token()) {
-      container.innerHTML = '<div class="board-view"><div class="board-error"><strong>GitHub token が必要です。</strong><p>BOARDはprivateな gpts リポジトリから読み込みます。</p></div></div>';
+      container.innerHTML = '<div class="board-view"><div class="board-error"><strong>GitHub token が必要です。</strong><p>BOARDはprivateな my-storage-note リポジトリから読み込みます。</p></div></div>';
       return;
     }
 
@@ -92,7 +92,7 @@
       container.innerHTML = `<div class="board-view">${renderMarkdown(markdown)}</div>`;
     } catch (error) {
       console.error(error);
-      container.innerHTML = `<div class="board-view"><div class="board-error"><strong>BOARDを読み込めませんでした。</strong><p>${escapeHtml(error?.message || error)}</p><p>保存済みGitHub tokenに plzsayyes3/gpts の読み取り権限があるか確認してください。</p></div></div>`;
+      container.innerHTML = `<div class="board-view"><div class="board-error"><strong>BOARDを読み込めませんでした。</strong><p>${escapeHtml(error?.message || error)}</p><p>保存済みGitHub tokenに plzsayyes3/my-storage-note の読み取り権限があるか確認してください。</p></div></div>`;
     }
   }
 
