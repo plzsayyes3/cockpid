@@ -15,6 +15,7 @@
     onhand: { key: '6', title: '6 / ON HAND', type: 'iframe', src: 'onhand.html' },
     board: { key: '7', title: '7 / BOARD', type: 'board' },
     backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
+    projecttown: { key: '9', title: '9 / PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
 
@@ -47,6 +48,7 @@
 
   configureDockButton('7', 'board', 'Board');
   configureDockButton('8', 'backstage', 'Backstage');
+  configureDockButton('9', 'projecttown', 'Project Town');
 
   let boardLoader = null;
   function ensureBoardModule() {
