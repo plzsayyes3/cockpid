@@ -15,3 +15,5 @@ Assets:
 - `wood-dark.png` — dark wood trim
 - `wood-light.png` — desk/counter wood
 - `rug-green.png` — small decorative rest-area rug pattern
+
+Status: first visual pass. The responsive room geometry stays in CSS; this layer only replaces the overly clean surfaces with pixel-pattern materials.
