@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TaskLiner</title>
+</head>
+<body>
+<script>
+(() => {
+  'use strict';
+
+  const SOURCE_KEY = 'cockpid.sources.v1';
+  const TASKLINER_CONFIG_KEY = 'taskliner_github_sync_config_v1';
+  const TARGET = 'https://plzsayyes3.github.io/taskliner_taskchute-line/';
+
+  const cleanDir = (value) => String(value || '').trim().replace(/^\/+|\/+$/g, '').replace(/\/{2,}/g, '/');
+  const normalizeRepo = (value) => {
+    const repo = String(value || '').trim();
+    if (!repo) return '';
+    return repo.includes('/') ? repo : `plzsayyes3/${repo}`;
+  };
+
+  try {
+    const sources = JSON.parse(localStorage.getItem(SOURCE_KEY) || '{}');
+    const source = sources?.taskliner;
+    const repo = normalizeRepo(source?.repo);
+    const folder = cleanDir(source?.dir);
+
+    if (repo && folder) {
+      let current = {};
+      try { current = JSON.parse(localStorage.getItem(TASKLINER_CONFIG_KEY) || '{}') || {}; }
+      catch (_) { current = {}; }
+
+      localStorage.setItem(TASKLINER_CONFIG_KEY, JSON.stringify({
+        ...current,
+        repo,
+        branch: String(current.branch || 'task-data').trim() || 'task-data',
+        folder
+      }));
+    }
+  } catch (error) {
+    console.warn('[COCKPID] TaskLiner source bridge skipped', error);
+  }
+
+  window.location.replace(TARGET);
+})();
+</script>
+</body>
+</html>
