@@ -28,8 +28,8 @@
 @media(max-width:620px){
   .settings-layout{grid-template-columns:1fr;gap:12px}
   .settings-nav{flex-direction:row;overflow-x:auto;padding-bottom:3px}
-  .settings-nav-btn{flex:0 0 auto;min-height:38px}
+  .settings-nav-btn{flex:0 0 auto;min-height:40px}
   .settings-content{min-height:330px}
   .path-row{grid-template-columns:1fr;gap:4px}
-  .status-mail,.status-system{width:36px!important;height:36px!important;min-width:36px}
+  .status-mail,.status-system{width:40px!important;height:40px!important;min-width:40px}
 }
