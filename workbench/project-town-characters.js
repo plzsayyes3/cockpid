@@ -4,14 +4,14 @@
   const FALLBACK_SPRITE = 'assets/project-town/character.png';
   const PROJECT_CONTENT_PREFIX = '/repos/plzsayyes3/gpts/contents/projects/';
   const CHARACTER_VARIANTS = Object.freeze([
-    { id: 'char-01', sprite: 'assets/project-town/characters/char-01.png', label: 'brown-short-white' },
-    { id: 'char-02', sprite: 'assets/project-town/characters/char-02.png', label: 'black-short-blue' },
-    { id: 'char-03', sprite: 'assets/project-town/characters/char-03.png', label: 'brown-bob-mustard' },
-    { id: 'char-04', sprite: 'assets/project-town/characters/char-04.png', label: 'long-hair-green' },
-    { id: 'char-05', sprite: 'assets/project-town/characters/char-05.png', label: 'glasses-teal' },
-    { id: 'char-06', sprite: 'assets/project-town/characters/char-06.png', label: 'cap-coral' },
-    { id: 'char-07', sprite: 'assets/project-town/characters/char-07.png', label: 'hoodie-plum' },
-    { id: 'char-08', sprite: 'assets/project-town/characters/char-08.png', label: 'formal-navy' }
+    { id: 'char-01', sprite: 'assets/project-town/characters/char-01.png', label: 'reference-a-standard' },
+    { id: 'char-02', sprite: 'assets/project-town/characters/char-02.png', label: 'reference-b-short-hair' },
+    { id: 'char-03', sprite: 'assets/project-town/characters/char-03.png', label: 'reference-c-bob' },
+    { id: 'char-04', sprite: 'assets/project-town/characters/char-04.png', label: 'reference-d-long-hair' },
+    { id: 'char-05', sprite: 'assets/project-town/characters/char-05.png', label: 'reference-e-glasses' },
+    { id: 'char-06', sprite: 'assets/project-town/characters/char-06.png', label: 'reference-f-cap' },
+    { id: 'char-07', sprite: 'assets/project-town/characters/char-07.png', label: 'reference-manager-navy' },
+    { id: 'char-08', sprite: 'assets/project-town/characters/char-08.png', label: 'reference-casual-beanie' }
   ]);
 
   const variantById = new Map(CHARACTER_VARIANTS.map((variant) => [variant.id, variant]));
