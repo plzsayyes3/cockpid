@@ -1,0 +1,11 @@
+/* Project Town UI shell overrides */
+@media (orientation:landscape) and (min-width:760px){
+  .town-app{grid-template-columns:minmax(220px,.72fr) minmax(0,1.9fr)}
+  .project-list-panel{grid-column:1;grid-row:2}
+  .studio{grid-column:2;grid-row:2}
+  .town-message{grid-column:1/-1}
+}
+
+/* A phone-like touch device must never fall back to the desktop landscape grid. */
+.mobile-ui .town-app{grid-template-columns:none!important;grid-template-rows:none!important}
+.mobile-ui .project-list-panel,.mobile-ui .studio,.mobile-ui .town-message{grid-column:auto!important;grid-row:auto!important}
