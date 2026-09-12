@@ -1,6 +1,7 @@
 (() => {
   'use strict';
 
+  const TARGET_HEADING = '#### ショートメモ';
   const captureTab = document.getElementById('memoCaptureTab');
   const inboxTab = document.getElementById('memoInboxTab');
   const capturePanel = document.getElementById('memoCapturePanel');
@@ -12,24 +13,113 @@
 
   let loaded = false;
   let loading = false;
+  let merging = false;
+  let currentFiles = [];
 
   function inboxSource() {
     return window.COCKPID_SOURCES?.get('inbox') || { repo: 'mynotebook', dir: '00_inbox' };
+  }
+
+  function dailySource() {
+    return window.COCKPID_SOURCES?.get('daily') || { repo: 'mynotebook', dir: '01_Daily' };
+  }
+
+  function joinPath(dir, child) {
+    const base = String(dir || '').replace(/^\/+|\/+$/g, '');
+    const tail = String(child || '').replace(/^\/+/, '');
+    return base ? `${base}/${tail}` : tail;
   }
 
   function encodeWebPath(path) {
     return String(path || '').split('/').map(encodeURIComponent).join('/');
   }
 
+  function encodeContent(value) {
+    const bytes = new TextEncoder().encode(String(value ?? ''));
+    let binary = '';
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary);
+  }
+
+  function decodeContent(value) {
+    const binary = atob(String(value || '').replace(/\n/g, ''));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function jstParts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(date);
+    return Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  }
+
+  function fallbackDateTime() {
+    const p = jstParts();
+    return { dateStr: `${p.year}-${p.month}-${p.day}`, timeStr: `${p.hour}:${p.minute}:${p.second}` };
+  }
+
+  function archiveStamp() {
+    const p = jstParts();
+    return `${p.year}${p.month}${p.day}-${p.hour}${p.minute}${p.second}${String(new Date().getMilliseconds()).padStart(3, '0')}`;
+  }
+
   function syncInboxSourceUi() {
     const source = inboxSource();
+    const daily = dailySource();
     const heading = inboxPanel.querySelector('.memo-inbox-head b');
     if (heading) heading.textContent = `${source.repo} / ${source.dir}`;
+    const description = inboxPanel.querySelector('.memo-inbox-head span:not(.memo-inbox-merge-status)');
+    if (description) description.textContent = `Daily: ${daily.repo} / ${daily.dir} → ${TARGET_HEADING}`;
     const links = inboxPanel.querySelectorAll('.memo-inbox-actions a');
     const obsidianLink = links[0];
     const githubLink = links[1];
     if (obsidianLink) obsidianLink.href = `obsidian://open?vault=Notebook&file=${encodeURIComponent(source.dir)}`;
     if (githubLink) githubLink.href = `https://github.com/plzsayyes3/${encodeURIComponent(source.repo)}/tree/main/${encodeWebPath(source.dir)}`;
+  }
+
+  function ensureMergeUi() {
+    const head = inboxPanel.querySelector('.memo-inbox-head');
+    if (!head || !refreshButton) return {};
+
+    let controls = head.querySelector('.memo-inbox-controls');
+    if (!controls) {
+      controls = document.createElement('div');
+      controls.className = 'memo-inbox-controls';
+      refreshButton.before(controls);
+      controls.append(refreshButton);
+    }
+
+    let mergeButton = document.getElementById('memoInboxMerge');
+    if (!mergeButton) {
+      mergeButton = document.createElement('button');
+      mergeButton.className = 'btn primary';
+      mergeButton.id = 'memoInboxMerge';
+      mergeButton.type = 'button';
+      mergeButton.textContent = 'MERGE TO DAILY';
+      controls.append(mergeButton);
+    }
+
+    let status = document.getElementById('memoInboxMergeStatus');
+    if (!status) {
+      status = document.createElement('span');
+      status.className = 'memo-inbox-merge-status';
+      status.id = 'memoInboxMergeStatus';
+      status.setAttribute('aria-live', 'polite');
+      const info = head.querySelector('div:not(.memo-inbox-controls)');
+      info?.append(status);
+    }
+    return { mergeButton, status };
+  }
+
+  function setMergeStatus(message = '', error = false) {
+    const status = document.getElementById('memoInboxMergeStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('is-error', error);
   }
 
   function setMode(mode) {
@@ -56,7 +146,10 @@
     const files = (Array.isArray(rows) ? rows : [])
       .filter((row) => row.type === 'file' && /\.md$/i.test(row.name))
       .sort((a, b) => b.name.localeCompare(a.name));
+    currentFiles = files;
     inboxCount.textContent = String(files.length);
+    const mergeButton = document.getElementById('memoInboxMerge');
+    if (mergeButton) mergeButton.disabled = merging || !files.length;
     if (!files.length) {
       inboxList.innerHTML = '<div class="memo-inbox-empty">未処理Memoはありません。</div>';
       return;
@@ -71,8 +164,11 @@
   async function loadInbox(force = false) {
     if (loading || (loaded && !force)) return;
     if (!token()) {
+      currentFiles = [];
       inboxCount.textContent = '—';
       inboxList.innerHTML = '<div class="memo-inbox-empty">GitHub token が必要です。Battery / Settings → GitHub から設定してください。</div>';
+      const mergeButton = document.getElementById('memoInboxMerge');
+      if (mergeButton) mergeButton.disabled = true;
       return;
     }
     const source = inboxSource();
@@ -84,13 +180,208 @@
       loaded = true;
     } catch (error) {
       console.error('memo inbox', error);
+      currentFiles = [];
       inboxCount.textContent = '!';
       inboxList.innerHTML = `<div class="memo-inbox-empty">${esc(String(error?.message || error))}</div>`;
+      const mergeButton = document.getElementById('memoInboxMerge');
+      if (mergeButton) mergeButton.disabled = true;
     } finally {
       loading = false;
     }
   }
 
+  async function apiWrite(method, repo, path, payload) {
+    const response = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${encodeWebPath(path)}`, {
+      method,
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token()}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      const error = new Error(detail?.message || `${repo} ${method} ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json().catch(() => ({}));
+  }
+
+  async function putFile(repo, path, content, message, sha = '') {
+    const payload = { message, content: encodeContent(content), branch: 'main' };
+    if (sha) payload.sha = sha;
+    return apiWrite('PUT', repo, path, payload);
+  }
+
+  async function deleteFile(repo, path, sha, message) {
+    return apiWrite('DELETE', repo, path, { message, sha, branch: 'main' });
+  }
+
+  function parseMemoTime(fileName) {
+    const match = String(fileName).match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+    if (!match) return fallbackDateTime();
+    return {
+      dateStr: `${match[1]}-${match[2]}-${match[3]}`,
+      timeStr: `${match[4]}:${match[5]}:${match[6]}`
+    };
+  }
+
+  async function readMemo(file, source) {
+    const path = joinPath(source.dir, file.name);
+    const detail = await gh(path, source.repo);
+    if (!detail || Array.isArray(detail) || !detail.content || !detail.sha) throw new Error(`${file.name} を読み込めません。`);
+    const rawText = decodeContent(detail.content);
+    let body = rawText.replace(/^---[\s\S]*?---\n?/, '').trim();
+    if (!body) body = `*(空のメモ: ${file.name.replace(/\.md$/i, '')})*`;
+    const indentedBody = body.split('\n').map((line, index) => index === 0 ? line : `  ${line}`).join('\n');
+    const { dateStr, timeStr } = parseMemoTime(file.name);
+    return { fileName: file.name, path, sha: detail.sha, rawText, body: indentedBody, dateStr, timeStr };
+  }
+
+  function markerFor(entry) {
+    return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)} -->`;
+  }
+
+  function visibleEntry(entry) {
+    return `- ${entry.timeStr} ${entry.body}`;
+  }
+
+  function formattedEntry(entry) {
+    return `${visibleEntry(entry)}\n  ${markerFor(entry)}`;
+  }
+
+  function alreadyMerged(content, entry) {
+    return content.includes(markerFor(entry)) || content.includes(visibleEntry(entry));
+  }
+
+  function insertUnderHeading(content, appendBlock) {
+    if (!content.trim()) return `${TARGET_HEADING}\n${appendBlock}`;
+    if (content.includes(TARGET_HEADING)) {
+      const headingIndex = content.indexOf(TARGET_HEADING);
+      const afterHeadingIndex = headingIndex + TARGET_HEADING.length;
+      const remainder = content.slice(afterHeadingIndex);
+      const nextHeadingMatch = remainder.match(/\n#{1,6}\s/);
+      if (nextHeadingMatch) {
+        const insertPos = afterHeadingIndex + nextHeadingMatch.index;
+        return content.slice(0, insertPos) + `\n${appendBlock}` + content.slice(insertPos);
+      }
+      return content.trimEnd() + `\n${appendBlock}`;
+    }
+    return content.trimEnd() + `\n\n${TARGET_HEADING}\n${appendBlock}`;
+  }
+
+  async function writeDaily(dateStr, entries, source) {
+    const path = joinPath(source.dir, `${dateStr}.md`);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const old = await gh(path, source.repo);
+      if (Array.isArray(old)) throw new Error(`${path} がファイルではありません。`);
+      const current = old?.content ? decodeContent(old.content) : '';
+      const pending = entries.filter((entry) => !alreadyMerged(current, entry));
+      if (!pending.length) return 0;
+      const appendBlock = pending.map(formattedEntry).join('\n') + '\n';
+      const next = insertUnderHeading(current, appendBlock);
+      try {
+        await putFile(source.repo, path, next, `workbench: merge ${pending.length} memo(s) into ${dateStr}`, old?.sha || '');
+        return pending.length;
+      } catch (error) {
+        if (error.status === 409 && attempt === 0) continue;
+        throw error;
+      }
+    }
+    return 0;
+  }
+
+  async function archiveMemo(entry, source) {
+    const archiveDir = joinPath(source.dir, 'archive');
+    let destPath = joinPath(archiveDir, entry.fileName);
+    const existing = await gh(destPath, source.repo);
+    if (existing && !Array.isArray(existing)) {
+      const same = existing.content && decodeContent(existing.content) === entry.rawText;
+      if (same) {
+        await deleteFile(source.repo, entry.path, entry.sha, `workbench: archive memo ${entry.fileName}`);
+        return;
+      }
+      const dot = entry.fileName.lastIndexOf('.');
+      const base = dot > 0 ? entry.fileName.slice(0, dot) : entry.fileName;
+      const ext = dot > 0 ? entry.fileName.slice(dot) : '';
+      destPath = joinPath(archiveDir, `${base}_${archiveStamp()}${ext}`);
+    }
+    await putFile(source.repo, destPath, entry.rawText, `workbench: archive memo ${entry.fileName}`);
+    await deleteFile(source.repo, entry.path, entry.sha, `workbench: remove merged memo ${entry.fileName}`);
+  }
+
+  async function mergeInboxToDaily() {
+    if (merging) return;
+    if (!token()) {
+      setMergeStatus('TOKEN REQUIRED', true);
+      return;
+    }
+    const files = [...currentFiles];
+    if (!files.length) {
+      setMergeStatus('統合対象はありません。');
+      return;
+    }
+
+    const inbox = inboxSource();
+    const daily = dailySource();
+    const approved = window.confirm(`${inbox.repo}/${inbox.dir} の ${files.length} 件を ${daily.repo}/${daily.dir} の「${TARGET_HEADING}」へ統合し、archiveへ退避します。`);
+    if (!approved) return;
+
+    const mergeButton = document.getElementById('memoInboxMerge');
+    merging = true;
+    if (mergeButton) mergeButton.disabled = true;
+    if (refreshButton) refreshButton.disabled = true;
+    setMergeStatus('メモを読み込んでいます…');
+
+    try {
+      const entries = [];
+      for (let index = 0; index < files.length; index += 1) {
+        setMergeStatus(`読み込み ${index + 1}/${files.length}…`);
+        entries.push(await readMemo(files[index], inbox));
+      }
+
+      const groups = new Map();
+      entries.forEach((entry) => {
+        if (!groups.has(entry.dateStr)) groups.set(entry.dateStr, []);
+        groups.get(entry.dateStr).push(entry);
+      });
+      groups.forEach((group) => group.sort((a, b) => a.fileName.localeCompare(b.fileName)));
+
+      let added = 0;
+      let archived = 0;
+      const dates = [...groups.keys()].sort();
+      for (let dateIndex = 0; dateIndex < dates.length; dateIndex += 1) {
+        const dateStr = dates[dateIndex];
+        const group = groups.get(dateStr);
+        setMergeStatus(`Daily更新 ${dateIndex + 1}/${dates.length} · ${dateStr}…`);
+        added += await writeDaily(dateStr, group, daily);
+        for (const entry of group) {
+          setMergeStatus(`archive ${archived + 1}/${entries.length}…`);
+          await archiveMemo(entry, inbox);
+          archived += 1;
+        }
+      }
+
+      setMergeStatus(`完了 · ${added}件追記 / ${archived}件archive`);
+      loaded = false;
+      await loadInbox(true);
+    } catch (error) {
+      console.error('memo inbox merge', error);
+      setMergeStatus(`停止 · ${String(error?.message || error)}`, true);
+      loaded = false;
+      await loadInbox(true).catch(() => {});
+    } finally {
+      merging = false;
+      if (refreshButton) refreshButton.disabled = false;
+      const button = document.getElementById('memoInboxMerge');
+      if (button) button.disabled = !currentFiles.length;
+    }
+  }
+
+  const { mergeButton } = ensureMergeUi();
+  mergeButton?.addEventListener('click', mergeInboxToDaily);
   captureTab.addEventListener('click', () => setMode('capture'));
   inboxTab.addEventListener('click', () => setMode('inbox'));
   refreshButton?.addEventListener('click', () => loadInbox(true));
