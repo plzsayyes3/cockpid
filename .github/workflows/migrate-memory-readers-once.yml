@@ -1,0 +1,70 @@
+name: Migrate warehouse readers to memory once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/migrate-memory-readers-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move runtime warehouse paths under memory
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          roots = ('extracted', 'indexes', 'connections', 'entities', 'sources', 'state')
+          pattern = re.compile(r'(?<!memory/)(?<![A-Za-z0-9_-])(' + '|'.join(roots) + r')/')
+          suffixes = {'.js', '.html', '.md'}
+          changed = []
+
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or path.suffix.lower() not in suffixes:
+                  continue
+              if '.git' in path.parts or '.github' in path.parts:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              updated = pattern.sub(r'memory/\1/', text)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+                  changed.append(str(path))
+
+          print('changed files:')
+          for path in changed:
+              print(' -', path)
+
+          # Runtime guard: no legacy root warehouse path should remain in JS/HTML.
+          offenders = []
+          runtime_pattern = re.compile(r'(?<!memory/)(?<![A-Za-z0-9_-])(' + '|'.join(roots) + r')/')
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or path.suffix.lower() not in {'.js', '.html'}:
+                  continue
+              if '.git' in path.parts or '.github' in path.parts:
+                  continue
+              text = path.read_text(encoding='utf-8')
+              if runtime_pattern.search(text):
+                  offenders.append(str(path))
+          if offenders:
+              raise SystemExit('legacy runtime warehouse paths remain: ' + ', '.join(offenders))
+
+      - name: Commit migration
+        run: |
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor: point Cockpid warehouse readers to memory'
+          git pull --rebase origin main
+          git push origin HEAD:main
