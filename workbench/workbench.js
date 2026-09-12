@@ -9,6 +9,29 @@
   let selectedDate = null;
   let calendarLoadSeq = 0;
 
+  function sourceFor(name, fallbackRepo, fallbackDir) {
+    return window.COCKPID_SOURCES?.get(name) || { repo: fallbackRepo, dir: fallbackDir };
+  }
+
+  function joinPath(dir, child) {
+    const base = String(dir || '').replace(/^\/+|\/+$/g, '');
+    const tail = String(child || '').replace(/^\/+/, '');
+    return base ? `${base}/${tail}` : tail;
+  }
+
+  function encodeApiPath(path) {
+    return String(path || '').split('/').map(encodeURIComponent).join('/');
+  }
+
+  function captureDefaultHint() {
+    const source = sourceFor('inbox', 'mynotebook', '00_inbox');
+    return `Ctrl / ⌘ + Enter で ${source.repo}/${source.dir} へ直接保存`;
+  }
+
+  function syncSourceHints() {
+    if (captureHint) captureHint.textContent = captureDefaultHint();
+  }
+
   function nowParts() {
     $w('todayDate').textContent = new Intl.DateTimeFormat('ja-JP', {
       timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
@@ -165,9 +188,11 @@
     }
 
     const target = { ...selectedDate };
+    const source = sourceFor('techo', 'mynotebook', '02_techo');
+    const sourcePath = joinPath(source.dir, `${target.year}-${String(target.month).padStart(2, '0')}.md`);
     if (!background) todayList.innerHTML = '<div class="empty">Techoを読んでいます…</div>';
     try {
-      const payload = await gh(`02_techo/${target.year}-${String(target.month).padStart(2, '0')}.md`, 'mynotebook');
+      const payload = await gh(sourcePath, source.repo);
       if (seq !== calendarLoadSeq) return;
       if (!payload?.content) throw new Error('no source');
       const lines = decode(payload.content).split(/\r?\n/);
@@ -203,7 +228,7 @@
   function captureStatus(message, reset = true) {
     if (!captureHint) return;
     captureHint.textContent = message;
-    if (reset) setTimeout(() => { captureHint.textContent = 'Ctrl / ⌘ + Enter で 00_inbox へ直接保存'; }, 2200);
+    if (reset) setTimeout(() => { captureHint.textContent = captureDefaultHint(); }, 2200);
   }
 
   async function saveCaptureDirect() {
@@ -212,19 +237,20 @@
     const currentToken = token();
     if (!currentToken) return captureStatus('GitHub token が必要です');
 
+    const source = sourceFor('inbox', 'mynotebook', '00_inbox');
     const name = `${inboxStamp()}.md`;
-    const path = `00_inbox/${name}`;
+    const path = joinPath(source.dir, name);
     const originalLabel = captureBtn.textContent;
     captureBtn.disabled = true;
     captureBtn.textContent = '保存中…';
-    captureStatus('00_inbox へ保存しています…', false);
+    captureStatus(`${source.repo}/${source.dir} へ保存しています…`, false);
     try {
-      const response = await fetch(`https://api.github.com/repos/${OWNER}/mynotebook/contents/${path}`, {
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/${source.repo}/contents/${encodeApiPath(path)}`, {
         method: 'PUT',
         headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: `cockpid workbench: capture ${name}`, content: encodeUtf8(`${text}\n`) })
       });
-      if (!response.ok) throw new Error(`mynotebook write ${response.status}`);
+      if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
       captureText.value = '';
       captureBtn.textContent = '保存済み ✓';
       captureStatus(`保存しました · ${name}`);
@@ -249,8 +275,13 @@
       saveCaptureDirect();
     }
   });
+  window.addEventListener('cockpid:sources-changed', () => {
+    syncSourceHints();
+    loadToday();
+  });
 
   selectedDate = jstDateParts();
+  syncSourceHints();
   nowParts();
   setInterval(nowParts, 30000);
   setInterval(() => loadToday({ background: true }), 300000);
