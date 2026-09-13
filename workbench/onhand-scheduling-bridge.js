@@ -34,9 +34,26 @@
     return `${get('year')}-${get('month')}-${get('day')}`;
   }
 
+  function dateInfo(date) {
+    const match = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) throw new Error('日付が不正です');
+    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+    const weekday = ['日','月','火','水','木','金','土'][new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+    return { year, month, day, weekday };
+  }
+
+  function isoWeek(date) {
+    const info = dateInfo(date);
+    const value = new Date(Date.UTC(info.year, info.month - 1, info.day));
+    const day = value.getUTCDay() || 7;
+    value.setUTCDate(value.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
+    return Math.ceil((((value - yearStart) / 86400000) + 1) / 7);
+  }
+
   async function getFile(repo, path, branch) {
     const response = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(branch)}`, {
-      headers: { Accept:'application/vnd.github+json', Authorization:`Bearer ${token()}` },
+      headers:{ Accept:'application/vnd.github+json', Authorization:`Bearer ${token()}` },
       cache:'no-store'
     });
     if (response.status === 404) return null;
@@ -50,11 +67,7 @@
     if (sha) body.sha = sha;
     const response = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${encodePath(path)}`, {
       method:'PUT',
-      headers: {
-        Accept:'application/vnd.github+json',
-        Authorization:`Bearer ${token()}`,
-        'Content-Type':'application/json'
-      },
+      headers:{ Accept:'application/vnd.github+json', Authorization:`Bearer ${token()}`, 'Content-Type':'application/json' },
       body:JSON.stringify(body)
     });
     if (response.status === 409 || response.status === 422) {
@@ -71,10 +84,10 @@
     for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
       const current = await getFile(repo, path, branch);
       const result = mutate(current?.text || '');
-      if (result.duplicate) return { duplicate:true, path };
+      if (result.duplicate) return { duplicate:true, path, detail:result.detail || '' };
       try {
         await putFile(repo, path, branch, result.text, current?.sha || null, message);
-        return { duplicate:false, path };
+        return { duplicate:false, path, detail:result.detail || '' };
       } catch (error) {
         if (!error.conflict || attempt === MAX_RETRIES - 1) throw error;
       }
@@ -83,136 +96,212 @@
   }
 
   function tasklinerTitleFromRow(line) {
-    const cells = line.split('|').slice(1, -1).map((cell) => clean(cell.replace(/\\\|/g, '|')));
-    return cells.length >= 2 ? cells[1] : '';
+    const cells = line.split('|').slice(1, -1).map((cell) => clean(cell));
+    return cells.length >= 2 ? cells[1].replace(/｜/g, '|') : '';
   }
 
   function appendTaskliner(text, title, date) {
-    const wanted = clean(title);
+    const wanted = clean(title).replace(/｜/g, '|');
     const lines = String(text || '').replace(/\r/g, '').split('\n');
-    if (lines.some((line) => /^\s*\|/.test(line) && clean(tasklinerTitleFromRow(line)) === wanted)) {
-      return { duplicate:true };
-    }
+    if (lines.some((line) => /^\s*\|/.test(line) && clean(tasklinerTitleFromRow(line)) === wanted)) return { duplicate:true };
 
-    const safeTitle = wanted.replace(/\|/g, '｜');
+    const safeTitle = clean(title).replace(/\|/g, '｜');
     const header = '| ✓ | Task | Planned | Actual Start | Actual End | Actual | Status |';
     const divider = '|---|---|---|---|---|---|---|';
     const row = `| □ | ${safeTitle} |  |  |  | 0m |  |`;
     let base = String(text || '').replace(/\s+$/, '');
     if (!base) base = `# TaskLiner ${date}`;
 
-    const existingLines = base.split('\n');
-    const headerIndex = existingLines.findIndex((line) => clean(line) === clean(header));
+    const existing = base.split('\n');
+    const headerIndex = existing.findIndex((line) => clean(line) === clean(header));
     if (headerIndex >= 0) {
       let insertAt = headerIndex + 1;
-      if (/^\s*\|[-:| ]+\|\s*$/.test(existingLines[insertAt] || '')) insertAt += 1;
-      while (insertAt < existingLines.length && /^\s*\|/.test(existingLines[insertAt])) insertAt += 1;
-      existingLines.splice(insertAt, 0, row);
-      return { text:`${existingLines.join('\n').replace(/\s+$/, '')}\n` };
+      if (/^\s*\|[-:| ]+\|\s*$/.test(existing[insertAt] || '')) insertAt += 1;
+      while (insertAt < existing.length && /^\s*\|/.test(existing[insertAt])) insertAt += 1;
+      existing.splice(insertAt, 0, row);
+      return { text:`${existing.join('\n').replace(/\s+$/, '')}\n` };
     }
-
     return { text:`${base}\n\n${header}\n${divider}\n${row}\n` };
   }
 
-  async function sendTaskliner({ title }) {
+  async function sendTodayToTaskliner({ title }) {
     const target = source('taskliner', { repo:'mynotebook', dir:'09_taskchute' });
     const date = jstDate();
-    const path = pathJoin(target.dir, `${date}.md`);
     return mutateFile({
       repo:target.repo,
-      path,
+      path:pathJoin(target.dir, `${date}.md`),
       branch:TASK_BRANCH,
       message:`cockpid: send ON HAND to TaskLiner ${date}`,
       mutate:(text) => appendTaskliner(text, title, date)
     });
   }
 
-  function fnv32(value) {
-    let hash = 2166136261;
-    for (let i = 0; i < value.length; i += 1) {
-      hash ^= value.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
+  function headingLevel(line) {
+    return String(line || '').match(/^(#{1,6})\s+/)?.[1].length || 0;
+  }
+
+  function sectionEnd(lines, start, level) {
+    for (let i = start + 1; i < lines.length; i += 1) {
+      const next = headingLevel(lines[i]);
+      if (next && next <= level) return i;
     }
-    return (hash >>> 0).toString(16).padStart(8, '0');
+    return lines.length;
   }
 
-  function dateInfo(date) {
-    const match = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) throw new Error('日付が不正です');
-    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
-    const weekday = ['日','月','火','水','木','金','土'][new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
-    return { year, month, day, weekday };
+  function itemTitle(line) {
+    const match = String(line || '').match(/^\s*-\s+(?:\[([ xX])\]\s+)?(?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)\s+)?(.+?)\s*$/);
+    return match ? clean(match[3]) : '';
   }
 
-  function headingIndex(lines, start, pattern, end = lines.length) {
-    for (let i = start; i < end; i += 1) if (pattern.test(lines[i])) return i;
-    return -1;
-  }
-
-  function nextHeading(lines, start, levelPattern, fallback) {
-    for (let i = start; i < fallback; i += 1) if (levelPattern.test(lines[i])) return i;
-    return fallback;
-  }
-
-  function categoryHasDuplicate(lines, start, end, title, id) {
+  function hasTitle(lines, start, end, title) {
     const wanted = clean(title);
-    for (let i = start; i < end; i += 1) {
-      if (String(lines[i]).includes(`{#${id}}`)) return true;
-      const match = String(lines[i]).match(/^\s*-\s*\[[ xX]\]\s*(.*?)(?:\s+\{#[-\w]+\})?(?:\s+\{[^}]+\})*\s*$/);
-      if (match && clean(match[1]) === wanted) return true;
-    }
+    for (let i = start; i < end; i += 1) if (itemTitle(lines[i]) === wanted) return true;
     return false;
   }
 
-  function insertTecho(text, { title, date, category, id }) {
-    const info = dateInfo(date);
-    const taskId = fnv32(`${id}|${date}|${category}`);
-    const taskLine = `- [ ] ${clean(title)} {#${taskId}}`;
-    const datePattern = new RegExp(`^##\\s+${info.month}\\/${info.day}\\([^)]*\\)\\s*$`);
-    let lines = String(text || '').replace(/\r/g, '').split('\n');
-    if (lines.length === 1 && !lines[0]) lines = [`# ${info.year}年${info.month}月`];
-    if (!lines.some((line) => /^#\s+/.test(line))) lines.unshift(`# ${info.year}年${info.month}月`, '');
-
-    let dateStart = headingIndex(lines, 0, datePattern);
-    if (dateStart < 0) {
-      while (lines.length && !clean(lines[lines.length - 1])) lines.pop();
-      lines.push('', `## ${info.month}/${info.day}(${info.weekday})`, `### ${category}`, '#### その他', taskLine, '');
-      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n` };
-    }
-
-    const dateEnd = nextHeading(lines, dateStart + 1, /^##\s+/, lines.length);
-    const categoryPattern = new RegExp(`^###\\s+${category}\\s*$`);
-    let categoryStart = headingIndex(lines, dateStart + 1, categoryPattern, dateEnd);
-    if (categoryStart < 0) {
-      lines.splice(dateEnd, 0, `### ${category}`, '#### その他', taskLine, '');
-      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n` };
-    }
-
-    const categoryEnd = nextHeading(lines, categoryStart + 1, /^(?:##|###)\s+/, dateEnd);
-    if (categoryHasDuplicate(lines, categoryStart + 1, categoryEnd, title, taskId)) return { duplicate:true };
-
-    const groupStart = headingIndex(lines, categoryStart + 1, /^####\s+その他\s*$/, categoryEnd);
-    if (groupStart < 0) {
-      lines.splice(categoryEnd, 0, '#### その他', taskLine, '');
-      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n` };
-    }
-
-    const groupEnd = nextHeading(lines, groupStart + 1, /^(?:##|###|####)\s+/, categoryEnd);
-    lines.splice(groupEnd, 0, taskLine);
-    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n` };
+  function ensureMonthBase(text, info) {
+    const raw = String(text || '').replace(/\r/g, '');
+    if (raw.trim()) return raw.split('\n');
+    return [`# ${info.year}年${info.month}月`, ''];
   }
 
-  async function scheduleTecho({ title, id, date, category }) {
-    if (!['事業','家庭'].includes(category)) throw new Error('分類が不正です');
+  function targetDateHeading(line, info) {
+    const value = String(line || '');
+    return new RegExp(`^#{1,6}\\s+${info.year}-${String(info.month).padStart(2, '0')}-${String(info.day).padStart(2, '0')}\\s*$`).test(value)
+      || new RegExp(`^#{1,6}\\s+${info.month}月${info.day}日(?:\\([^)]*\\))?\\s*$`).test(value)
+      || new RegExp(`^#{1,6}\\s+${info.month}/${info.day}(?:\\([^)]*\\))?\\s*$`).test(value);
+  }
+
+  function weekNumberFromHeading(line) {
+    const match = String(line || '').match(/^##\s+week\s*(\d{1,2})\s*$/i);
+    return match ? Number(match[1]) : null;
+  }
+
+  function dateFromHeading(line, year) {
+    let match = String(line || '').match(/^##\s+(\d{4})-(\d{2})-(\d{2})\s*$/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+    match = String(line || '').match(/^##\s+(\d{1,2})月(\d{1,2})日(?:\([^)]*\))?\s*$/);
+    if (match) return `${year}-${String(Number(match[1])).padStart(2, '0')}-${String(Number(match[2])).padStart(2, '0')}`;
+    match = String(line || '').match(/^##\s+(\d{1,2})\/(\d{1,2})(?:\([^)]*\))?\s*$/);
+    if (match) return `${year}-${String(Number(match[1])).padStart(2, '0')}-${String(Number(match[2])).padStart(2, '0')}`;
+    return '';
+  }
+
+  function appendDatedTecho(text, title, date) {
+    const info = dateInfo(date);
+    const lines = ensureMonthBase(text, info);
+    const dateStart = lines.findIndex((line) => targetDateHeading(line, info));
+    const taskLine = `- [ ] ${clean(title)}`;
+
+    if (dateStart >= 0) {
+      const level = headingLevel(lines[dateStart]);
+      const end = sectionEnd(lines, dateStart, level);
+      if (hasTitle(lines, dateStart + 1, end, title)) return { duplicate:true };
+      let insertAt = end;
+      while (insertAt > dateStart + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
+      lines.splice(insertAt, 0, taskLine);
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:date };
+    }
+
+    const targetWeek = isoWeek(date);
+    const weekStarts = lines.map((line, index) => ({ index, week:weekNumberFromHeading(line) })).filter((entry) => entry.week !== null);
+    const exactWeek = weekStarts.find((entry) => entry.week === targetWeek);
+    let start = exactWeek ? exactWeek.index + 1 : 0;
+    let end = exactWeek ? (weekStarts.find((entry) => entry.index > exactWeek.index)?.index ?? lines.length) : lines.length;
+
+    if (!exactWeek && weekStarts.length) {
+      const later = weekStarts.find((entry) => entry.week > targetWeek);
+      if (later) end = later.index;
+    }
+
+    let insertAt = end;
+    for (let i = start; i < end; i += 1) {
+      const existingDate = dateFromHeading(lines[i], info.year);
+      if (existingDate && existingDate > date) { insertAt = i; break; }
+    }
+    while (insertAt > start && !clean(lines[insertAt - 1])) insertAt -= 1;
+    const block = [`## ${info.month}月${info.day}日(${info.weekday})`, '', taskLine, ''];
+    if (insertAt > 0 && clean(lines[insertAt - 1])) block.unshift('');
+    lines.splice(insertAt, 0, ...block);
+    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:date };
+  }
+
+  function findUndatedHeading(lines, start, end) {
+    for (let i = start; i < end; i += 1) if (/^###\s+日付未定\s*$/.test(lines[i])) return i;
+    return -1;
+  }
+
+  function appendMonthUndated(text, title, date) {
+    const info = dateInfo(date);
+    const lines = ensureMonthBase(text, info);
+    const firstWeek = lines.findIndex((line) => weekNumberFromHeading(line) !== null);
+    const boundary = firstWeek >= 0 ? firstWeek : lines.length;
+    let heading = findUndatedHeading(lines, 0, boundary);
+    const taskLine = `- [ ] ${clean(title)}`;
+
+    if (heading < 0) {
+      let insertAt = lines.findIndex((line) => /^#\s+/.test(line));
+      insertAt = insertAt >= 0 ? insertAt + 1 : 0;
+      while (insertAt < lines.length && !clean(lines[insertAt])) insertAt += 1;
+      lines.splice(insertAt, 0, '', '### 日付未定', taskLine, '');
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`${info.year}-${String(info.month).padStart(2, '0')}` };
+    }
+
+    const end = sectionEnd(lines, heading, 3);
+    if (hasTitle(lines, heading + 1, end, title)) return { duplicate:true };
+    let insertAt = end;
+    while (insertAt > heading + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
+    lines.splice(insertAt, 0, taskLine);
+    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`${info.year}-${String(info.month).padStart(2, '0')}` };
+  }
+
+  function appendWeekUndated(text, title, date) {
+    const info = dateInfo(date);
+    const week = isoWeek(date);
+    const lines = ensureMonthBase(text, info);
+    const weeks = lines.map((line, index) => ({ index, week:weekNumberFromHeading(line) })).filter((entry) => entry.week !== null);
+    let current = weeks.find((entry) => entry.week === week);
+    const taskLine = `- [ ] ${clean(title)}`;
+
+    if (!current) {
+      const later = weeks.find((entry) => entry.week > week);
+      const insertAt = later?.index ?? lines.length;
+      const block = [`## week${week}`, '### 日付未定', taskLine, ''];
+      if (insertAt > 0 && clean(lines[insertAt - 1])) block.unshift('');
+      lines.splice(insertAt, 0, ...block);
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+    }
+
+    const weekEnd = weeks.find((entry) => entry.index > current.index)?.index ?? lines.length;
+    let heading = findUndatedHeading(lines, current.index + 1, weekEnd);
+    if (heading < 0) {
+      lines.splice(current.index + 1, 0, '### 日付未定', taskLine);
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+    }
+
+    const end = sectionEnd(lines, heading, 3);
+    if (hasTitle(lines, heading + 1, Math.min(end, weekEnd), title)) return { duplicate:true };
+    let insertAt = Math.min(end, weekEnd);
+    while (insertAt > heading + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
+    lines.splice(insertAt, 0, taskLine);
+    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+  }
+
+  async function sendToTecho({ title, date, mode }) {
     const info = dateInfo(date);
     const target = source('techo', { repo:'mynotebook', dir:'02_techo' });
     const path = pathJoin(target.dir, `${info.year}-${String(info.month).padStart(2, '0')}.md`);
+    const mutate = mode === 'date' ? (text) => appendDatedTecho(text, title, date)
+      : mode === 'week' ? (text) => appendWeekUndated(text, title, date)
+      : mode === 'month' ? (text) => appendMonthUndated(text, title, date)
+      : null;
+    if (!mutate) throw new Error('送信先が不正です');
     return mutateFile({
       repo:target.repo,
       path,
       branch:TECHO_BRANCH,
-      message:`cockpid: schedule ON HAND ${date}`,
-      mutate:(text) => insertTecho(text, { title, id, date, category })
+      message:`cockpid: route ON HAND to Techo ${mode} ${date}`,
+      mutate
     });
   }
 
@@ -221,14 +310,13 @@
     const style = document.createElement('style');
     style.id = 'onhand-scheduling-bridge-style';
     style.textContent = `
-      .onhand-bridge-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:7px}
-      .onhand-bridge-btn{border:0;border-radius:5px;background:rgba(234,232,225,.9);color:#706d66;padding:5px 7px;font:700 7px/1 ui-monospace,monospace;letter-spacing:.04em;cursor:pointer}
-      .onhand-bridge-btn:hover{background:#e1ded6;color:#4f4c46}.onhand-bridge-btn:disabled{opacity:.42;cursor:default}
-      .onhand-bridge-status{min-height:1em;color:#8b8880;font:650 7px/1.3 ui-monospace,monospace}.onhand-bridge-status.error{color:#a24f49}
-      .onhand-schedule-form{display:grid;grid-template-columns:minmax(120px,1fr) auto auto auto;gap:5px;align-items:center;margin-top:6px}.onhand-schedule-form[hidden]{display:none}
-      .onhand-schedule-form input,.onhand-schedule-form select{min-width:0;border:1px solid #dedbd3;border-radius:5px;background:#fffef9;color:#5e5a53;padding:5px 6px;font:650 8px/1.2 ui-monospace,monospace}
+      .onhand-route-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+      .onhand-send-btn,.onhand-route-btn{border:0;border-radius:5px;background:var(--soft,#eceae3);color:#77736c;padding:5px 7px;font:700 7px/1 ui-monospace,monospace;letter-spacing:.04em;cursor:pointer}.onhand-send-btn:hover,.onhand-route-btn:hover{background:#e1ded6;color:#4f4c46}.onhand-send-btn:disabled,.onhand-route-btn:disabled{opacity:.4;cursor:default}
+      .onhand-route-panel{margin-top:7px;padding:7px;border:1px solid rgba(80,76,68,.10);border-radius:7px;background:rgba(248,247,242,.72)}.onhand-route-panel[hidden],.onhand-date-form[hidden]{display:none}
+      .onhand-route-choices{display:flex;gap:5px;flex-wrap:wrap}.onhand-date-form{display:flex;align-items:center;gap:5px;margin-top:6px}.onhand-date-form input{min-width:130px;border:1px solid #dedbd3;border-radius:5px;background:#fffef9;color:#5e5a53;padding:5px 6px;font:650 8px/1.2 ui-monospace,monospace}
+      .onhand-route-status{display:block;min-height:1em;margin-top:5px;color:#8b8880;font:650 7px/1.3 ui-monospace,monospace}.onhand-route-status.error{color:#a24f49}
       .onhand-bridge-toast{position:fixed;left:50%;bottom:max(22px,env(safe-area-inset-bottom));z-index:80;transform:translate(-50%,12px);opacity:0;pointer-events:none;padding:9px 13px;border-radius:999px;background:rgba(41,41,36,.94);color:#fffef9;box-shadow:0 8px 24px rgba(37,34,29,.14);font:700 10px/1 ui-monospace,monospace;transition:opacity .16s,transform .16s}.onhand-bridge-toast.show{opacity:1;transform:translate(-50%,0)}
-      @media(max-width:820px){.onhand-bridge-actions{gap:6px;margin-top:9px}.onhand-bridge-btn{padding:7px 9px;font-size:8px}.onhand-bridge-status{font-size:8px}.onhand-schedule-form{grid-template-columns:1fr auto;gap:6px}.onhand-schedule-form input{grid-column:1/-1}.onhand-schedule-form select{min-height:30px}.onhand-bridge-toast{max-width:calc(100vw - 24px);white-space:normal;text-align:center}}
+      @media(max-width:820px){.onhand-route-actions{gap:7px}.onhand-send-btn,.onhand-route-btn{padding:7px 9px;font-size:8px}.onhand-route-panel{margin-top:9px;padding:9px}.onhand-route-choices{gap:7px}.onhand-date-form{align-items:stretch;flex-wrap:wrap}.onhand-date-form input{min-height:32px;flex:1 1 160px}.onhand-route-status{font-size:8px}.onhand-bridge-toast{max-width:calc(100vw - 24px);white-space:normal;text-align:center}}
     `;
     document.head.appendChild(style);
   }
@@ -247,7 +335,7 @@
     node.textContent = message;
     node.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => node.classList.remove('show'), 2600);
+    toastTimer = setTimeout(() => node.classList.remove('show'), 2800);
   }
 
   function rowInfo(row) {
@@ -255,28 +343,31 @@
     const checkbox = movement ? row.querySelector('.movement-done[data-movement-id]') : row.querySelector('.done-box[data-id]');
     const titleNode = movement ? row.querySelector('.movement-item-title') : row.querySelector('.item-title');
     const body = movement ? row.querySelector('.movement-item-body') : row.querySelector('.item-main');
-    if (!checkbox || !titleNode || !body) return null;
-    return {
-      id:movement ? checkbox.dataset.movementId : checkbox.dataset.id,
-      bucket:checkbox.dataset.bucket,
-      title:clean(titleNode.textContent),
-      checkbox,
-      body
-    };
+    const skip = movement ? row.querySelector('.movement-skip') : row.querySelector('.skip-btn');
+    if (!checkbox || !titleNode || !body || !skip) return null;
+    return { id:movement ? checkbox.dataset.movementId : checkbox.dataset.id, title:clean(titleNode.textContent), checkbox, body, skip };
   }
 
   function injectRow(row) {
-    if (row.querySelector('.onhand-bridge-actions')) return;
+    if (row.querySelector('.onhand-route-actions')) return;
     const info = rowInfo(row);
     if (!info || info.checkbox.checked || info.checkbox.disabled || !info.title) return;
-    const actions = document.createElement('div');
-    actions.className = 'onhand-bridge-actions';
-    actions.innerHTML = `<button type="button" class="onhand-bridge-btn" data-onhand-taskliner>→ TASK</button><button type="button" class="onhand-bridge-btn" data-onhand-schedule>予定</button><span class="onhand-bridge-status" aria-live="polite"></span>`;
-    const form = document.createElement('div');
-    form.className = 'onhand-schedule-form';
-    form.hidden = true;
-    form.innerHTML = `<input type="date" data-onhand-date value="${jstDate()}"><select data-onhand-category aria-label="予定の分類"><option value="事業">事業</option><option value="家庭">家庭</option></select><button type="button" class="onhand-bridge-btn" data-onhand-schedule-save>登録</button><button type="button" class="onhand-bridge-btn" data-onhand-schedule-cancel>×</button>`;
-    info.body.append(actions, form);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'onhand-route-actions';
+    const send = document.createElement('button');
+    send.type = 'button';
+    send.className = 'onhand-send-btn';
+    send.dataset.onhandSend = '';
+    send.textContent = '送る';
+    info.skip.replaceWith(wrap);
+    wrap.append(send, info.skip);
+
+    const panel = document.createElement('div');
+    panel.className = 'onhand-route-panel';
+    panel.hidden = true;
+    panel.innerHTML = `<div class="onhand-route-choices"><button type="button" class="onhand-route-btn" data-onhand-route="today">今日</button><button type="button" class="onhand-route-btn" data-onhand-route="date">日付</button><button type="button" class="onhand-route-btn" data-onhand-route="week">週未定</button><button type="button" class="onhand-route-btn" data-onhand-route="month">月未定</button></div><div class="onhand-date-form" hidden><input type="date" data-onhand-date value="${jstDate()}"><button type="button" class="onhand-route-btn" data-onhand-date-save>登録</button><button type="button" class="onhand-route-btn" data-onhand-date-cancel>×</button></div><span class="onhand-route-status" aria-live="polite"></span>`;
+    info.body.appendChild(panel);
   }
 
   function scan() {
@@ -284,8 +375,8 @@
   }
 
   function setBusy(row, busy, message = '', error = false) {
-    row.querySelectorAll('.onhand-bridge-btn').forEach((button) => { button.disabled = busy; });
-    const status = row.querySelector('.onhand-bridge-status');
+    row.querySelectorAll('.onhand-send-btn,.onhand-route-btn,.movement-skip,.skip-btn').forEach((button) => { button.disabled = busy; });
+    const status = row.querySelector('.onhand-route-status');
     if (status) {
       status.textContent = message;
       status.classList.toggle('error', error);
@@ -299,51 +390,62 @@
     info.checkbox.dispatchEvent(new Event('change', { bubbles:true }));
   }
 
+  async function completeSend(row, operation, successText) {
+    setBusy(row, true, '送信中…');
+    try {
+      const result = await operation();
+      toast(result.duplicate ? `登録済み · ON HAND処理済み` : successText(result));
+      markHandled(row);
+    } catch (error) {
+      console.error('ON HAND scheduling bridge failed', error);
+      setBusy(row, false, `送信失敗: ${error.message}`, true);
+      toast('送信に失敗しました。候補はOPENのままです');
+    }
+  }
+
   document.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-onhand-taskliner],[data-onhand-schedule],[data-onhand-schedule-save],[data-onhand-schedule-cancel]');
-    if (!button) return;
-    const row = button.closest('.movement-item[data-movement-row],.item[data-row-id]');
+    const control = event.target.closest('[data-onhand-send],[data-onhand-route],[data-onhand-date-save],[data-onhand-date-cancel]');
+    if (!control) return;
+    const row = control.closest('.movement-item[data-movement-row],.item[data-row-id]');
     if (!row) return;
     const info = rowInfo(row);
     if (!info) return;
-    const form = row.querySelector('.onhand-schedule-form');
+    const panel = row.querySelector('.onhand-route-panel');
+    const dateForm = row.querySelector('.onhand-date-form');
 
-    if (button.matches('[data-onhand-schedule]')) {
-      form.hidden = !form.hidden;
+    if (control.matches('[data-onhand-send]')) {
+      panel.hidden = !panel.hidden;
+      if (panel.hidden) dateForm.hidden = true;
       return;
     }
-    if (button.matches('[data-onhand-schedule-cancel]')) {
-      form.hidden = true;
+    if (control.matches('[data-onhand-date-cancel]')) {
+      dateForm.hidden = true;
       return;
     }
-
-    if (button.matches('[data-onhand-taskliner]')) {
-      setBusy(row, true, '送信中…');
-      try {
-        const result = await sendTaskliner(info);
-        toast(result.duplicate ? 'TaskLiner登録済み · ON HAND処理済み' : 'TaskLinerへ送りました');
-        markHandled(row);
-      } catch (error) {
-        console.error('ON HAND → TaskLiner failed', error);
-        setBusy(row, false, `送信失敗: ${error.message}`, true);
-        toast('TaskLinerへの送信に失敗しました');
-      }
+    if (control.matches('[data-onhand-date-save]')) {
+      const date = dateForm.querySelector('[data-onhand-date]')?.value || '';
+      await completeSend(row, () => sendToTecho({ ...info, date, mode:'date' }), () => `${date} のTechoへ送りました`);
       return;
     }
 
-    if (button.matches('[data-onhand-schedule-save]')) {
-      const date = form.querySelector('[data-onhand-date]')?.value || '';
-      const category = form.querySelector('[data-onhand-category]')?.value || '';
-      setBusy(row, true, '登録中…');
-      try {
-        const result = await scheduleTecho({ ...info, date, category });
-        toast(result.duplicate ? 'Techo登録済み · ON HAND処理済み' : `${date} のTechoへ予定化しました`);
-        markHandled(row);
-      } catch (error) {
-        console.error('ON HAND → Techo failed', error);
-        setBusy(row, false, `登録失敗: ${error.message}`, true);
-        toast('Techoへの登録に失敗しました');
-      }
+    const mode = control.dataset.onhandRoute;
+    if (mode === 'date') {
+      dateForm.hidden = false;
+      dateForm.querySelector('[data-onhand-date]')?.focus();
+      return;
+    }
+    if (mode === 'today') {
+      await completeSend(row, () => sendTodayToTaskliner(info), () => '今日のTaskLinerへ送りました');
+      return;
+    }
+    if (mode === 'week') {
+      const date = jstDate();
+      await completeSend(row, () => sendToTecho({ ...info, date, mode:'week' }), (result) => `${result.detail} の日付未定へ送りました`);
+      return;
+    }
+    if (mode === 'month') {
+      const date = jstDate();
+      await completeSend(row, () => sendToTecho({ ...info, date, mode:'month' }), (result) => `${result.detail} の日付未定へ送りました`);
     }
   });
 
@@ -354,8 +456,9 @@
   else scan();
 
   window.COCKPID_ON_HAND_BRIDGE = Object.freeze({
-    sendTaskliner,
-    scheduleTecho,
-    defaultDate:jstDate
+    sendTodayToTaskliner,
+    sendToTecho,
+    defaultDate:jstDate,
+    isoWeek
   });
 })();
