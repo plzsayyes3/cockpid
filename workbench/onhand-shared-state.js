@@ -104,6 +104,18 @@
     return out;
   }
 
+  function hasExpiredSharedSkip(raw, now = Date.now()) {
+    const source = raw?.items && typeof raw.items === 'object' ? raw.items : raw;
+    if (!source || typeof source !== 'object') return false;
+    return Object.values(source).some((value) => {
+      let status = value?.status;
+      if (status === 'skip') status = 'skipped';
+      if (status !== 'skipped' || !value?.skip_until) return false;
+      const until = Date.parse(value.skip_until);
+      return Number.isFinite(until) && now >= until;
+    });
+  }
+
   function readCacheItems() {
     return normalizeSharedItems(readJsonStorage(CACHE_KEY, {}));
   }
@@ -272,11 +284,15 @@
       },
       cache: 'no-store'
     });
-    if (response.status === 404) return { sha: null, items: {} };
+    if (response.status === 404) return { sha: null, items: {}, hasExpiredSkip: false };
     if (!response.ok) throw new Error(`ON HAND state read ${response.status}`);
     const payload = await response.json();
     const data = safeJson(decodeUtf8Base64(payload.content), {});
-    return { sha: payload.sha || null, items: normalizeSharedItems(data) };
+    return {
+      sha: payload.sha || null,
+      items: normalizeSharedItems(data),
+      hasExpiredSkip: hasExpiredSharedSkip(data)
+    };
   }
 
   async function putRemote(items, sha = null) {
@@ -342,7 +358,7 @@
         const cacheItems = readCacheItems();
         const merged = mergeItems(remote.items, cacheItems);
         applySharedItems(merged);
-        if (sameObject(remote.items, merged)) {
+        if (sameObject(remote.items, merged) && !remote.hasExpiredSkip) {
           markSaved();
           return;
         }
@@ -377,7 +393,7 @@
       const localItems = historyToShared(readHistory());
       const merged = mergeItems(cacheItems, localItems, remote.items);
       applySharedItems(merged);
-      if (!sameObject(remote.items, merged)) {
+      if (!sameObject(remote.items, merged) || remote.hasExpiredSkip) {
         hasPendingChanges = true;
         setSaveState('dirty', '共有先への保存待ちです。');
         schedulePush();
