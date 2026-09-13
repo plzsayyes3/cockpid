@@ -1,7 +1,9 @@
 /* Project Town world grid
-   One source-art pixel is rendered as exactly 2 CSS px in the normal 24px character mode. */
+   One source-art pixel is rendered as exactly 2 CSS px in the normal 24px character mode.
+   Character travel is intentionally coarser: positions advance on a 4px / 10Hz game grid. */
 :root{
   --pt-world-pixel:2px;
+  --pt-motion-grid:4px;
 }
 
 /* Scale bitmap materials by an integer factor so their source pixels match the characters. */
@@ -92,7 +94,17 @@
   height:48px!important;
   image-rendering:pixelated;
   image-rendering:crisp-edges;
+  filter:none!important;
+  animation-timing-function:step-end!important;
 }
+
+/* Famicom-style cadence: keep the four source frames, but expose them slowly
+   enough that each pose is visibly discrete rather than a smooth animation. */
+.town-shared-room .character-sprite[data-action="idle"]{animation-duration:2.4s!important}
+.town-shared-room .character-sprite[data-action="walk"]{animation-duration:.8s!important}
+.town-shared-room .character-sprite[data-action="work"]{animation-duration:.8s!important}
+.town-shared-room .character-sprite[data-action="rest"]{animation-duration:3.2s!important}
+
 .town-shared-room .worker.active{
   outline-width:2px;
   outline-offset:2px;
@@ -106,6 +118,7 @@
   top:-12px;
   right:-40px;
   border-width:2px;
+  transition:none!important;
 }
 .town-shared-room .bubble::after{
   border-right-width:2px;
@@ -120,7 +133,7 @@
   height:20px;
 }
 .town-shared-room .worker[data-momentum="surging"] .momentum-badge{
-  animation:townSurgePixel .55s steps(2,end) infinite;
+  animation:townSurgePixel .8s steps(2,end) infinite;
 }
 @keyframes townSurgePixel{
   0%,49%{margin-top:0}
