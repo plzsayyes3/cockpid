@@ -1,0 +1,76 @@
+/* Project Town — Famicom/NES-style palette layer
+   Visual-only override. Motion, activity and Project logic are untouched.
+   Colors are selected from a commonly used NTSC NES palette family. */
+:root{
+  --fc-black:#000000;
+  --fc-dark-gray:#7c7c7c;
+  --fc-light-gray:#bcbcbc;
+  --fc-white:#f8f8f8;
+  --fc-dark-blue:#004058;
+  --fc-blue:#0058f8;
+  --fc-sky:#3cbcfc;
+  --fc-dark-green:#005800;
+  --fc-green:#58d854;
+  --fc-dark-brown:#503000;
+  --fc-brown:#881400;
+  --fc-orange:#e45c10;
+  --fc-red:#a80020;
+  --fc-skin:#f0d0b0;
+  --fc-cream:#fce0a8;
+  --fc-yellow:#f8d878;
+}
+
+html,body{background:var(--fc-sky)!important;color:var(--fc-black)!important}
+.town-app{background:linear-gradient(var(--fc-sky) 0 28%,var(--fc-cream) 28% 100%)!important}
+.town-topbar{background:var(--fc-blue)!important;color:var(--fc-white)!important;border-color:var(--fc-black)!important;box-shadow:4px 4px 0 var(--fc-black)!important}
+.town-summary{background:var(--fc-yellow)!important;color:var(--fc-black)!important;border-color:var(--fc-dark-brown)!important}
+.pixel-button{background:var(--fc-white)!important;border-color:var(--fc-black)!important;box-shadow:3px 3px 0 var(--fc-black)!important;color:var(--fc-black)!important}
+
+.studio{background-color:var(--fc-dark-brown)!important;border-color:var(--fc-dark-brown)!important;box-shadow:6px 6px 0 var(--fc-black)!important}
+.skyline{background:var(--fc-sky)!important;border-color:var(--fc-dark-brown)!important}
+.skyline i{background:var(--fc-cream)!important;border-color:var(--fc-blue)!important}
+.studio-sign{background:var(--fc-cream)!important;border-color:var(--fc-dark-brown)!important;box-shadow:3px 3px 0 var(--fc-black)!important;color:var(--fc-black)!important}
+
+.room.town-shared-room{background-color:var(--fc-cream)!important;box-shadow:inset 0 0 0 4px var(--fc-dark-brown)!important}
+.room.town-shared-room::after{border-top-color:var(--fc-dark-brown)!important;opacity:1!important}
+.room.town-shared-room::before{background-color:var(--fc-green)!important;border-color:var(--fc-dark-green)!important;box-shadow:4px 4px 0 var(--fc-dark-brown)!important}
+.town-zone-label{background:var(--fc-cream)!important;border-color:var(--fc-dark-brown)!important;box-shadow:2px 2px 0 var(--fc-dark-brown)!important;color:var(--fc-black)!important}
+
+.town-work-desk,.town-review-counter{background-color:var(--fc-orange)!important;border-color:var(--fc-dark-brown)!important;box-shadow:4px 4px 0 var(--fc-dark-brown)!important}
+.town-work-desk::before{background:var(--fc-dark-blue)!important;border-color:var(--fc-black)!important;box-shadow:4px 4px 0 var(--fc-dark-brown)!important}
+.town-work-desk::after{background:var(--fc-sky)!important;box-shadow:inset 0 0 0 2px var(--fc-blue)!important}
+.town-shelf{background-color:var(--fc-dark-brown)!important;border-color:var(--fc-black)!important;box-shadow:4px 4px 0 var(--fc-black)!important}
+.town-shelf::before{background:var(--fc-cream)!important;border-color:var(--fc-dark-brown)!important;color:var(--fc-blue)!important;text-shadow:none!important}
+.town-review-counter::before{background:var(--fc-cream)!important;border-color:var(--fc-dark-brown)!important;box-shadow:2px 2px 0 var(--fc-dark-brown)!important;color:var(--fc-black)!important}
+.town-wait-spot{background:var(--fc-cream)!important;border-color:var(--fc-dark-gray)!important}
+.town-wait-spot::before{color:var(--fc-dark-gray)!important}
+.town-rest-sofa{background:var(--fc-brown)!important;border-color:var(--fc-dark-brown)!important;box-shadow:inset 0 12px 0 var(--fc-orange),4px 4px 0 var(--fc-dark-brown)!important}
+
+.town-shared-room .character-sprite{filter:none!important}
+.town-shared-room .worker.active{outline-color:var(--fc-yellow)!important;background:transparent!important}
+.town-shared-room .worker-state,.town-shared-room .worker-name,.town-shared-room .bubble{background:var(--fc-cream)!important;color:var(--fc-black)!important;border-color:var(--fc-black)!important}
+.town-shared-room .bubble::after{background:var(--fc-cream)!important;border-color:var(--fc-black)!important}
+.town-shared-room .momentum-badge,.town-shared-room .character-effect{background:var(--fc-yellow)!important;color:var(--fc-black)!important;border-color:var(--fc-black)!important}
+
+.pixel-panel{background:var(--fc-cream)!important;border-color:var(--fc-blue)!important;box-shadow:5px 5px 0 var(--fc-black)!important}
+.panel-title{background:var(--fc-blue)!important;color:var(--fc-white)!important;border-color:var(--fc-black)!important}
+.project-row{background:var(--fc-cream)!important;border-color:var(--fc-dark-gray)!important;color:var(--fc-black)!important}
+.project-row.active,.project-row:hover{background:var(--fc-yellow)!important}
+.state-chip,.momentum-chip,.big-status{border-color:var(--fc-black)!important;color:var(--fc-black)!important}
+.state-chip[data-activity="working"],.big-status[data-activity="working"]{background:var(--fc-sky)!important}
+.state-chip[data-activity="researching"],.big-status[data-activity="researching"]{background:var(--fc-light-gray)!important}
+.state-chip[data-activity="review"],.state-chip[data-activity="review_wait"],.big-status[data-activity="review"],.big-status[data-activity="review_wait"]{background:var(--fc-yellow)!important}
+.state-chip[data-activity="paused"],.big-status[data-activity="paused"]{background:var(--fc-dark-gray)!important;color:var(--fc-white)!important}
+.state-chip[data-activity="external_wait"],.big-status[data-activity="external_wait"]{background:var(--fc-green)!important}
+.momentum-chip{background:var(--fc-white)!important}
+.momentum-chip[data-momentum="rising"]{background:var(--fc-orange)!important;color:var(--fc-white)!important}
+.momentum-chip[data-momentum="surging"]{background:var(--fc-yellow)!important}
+.meter{border-color:var(--fc-black)!important;background:var(--fc-light-gray)!important}.meter span{background:var(--fc-blue)!important}
+
+.decision-card{background:var(--fc-yellow)!important;border-color:var(--fc-dark-brown)!important;box-shadow:3px 3px 0 var(--fc-dark-brown)!important}
+.decision-card.is-passive{background:var(--fc-light-gray)!important;border-color:var(--fc-dark-gray)!important}
+.handoff-button{background:var(--fc-blue)!important;border-color:var(--fc-black)!important;box-shadow:3px 3px 0 var(--fc-black)!important;color:var(--fc-white)!important}
+.town-message{background:var(--fc-cream)!important;border-color:var(--fc-dark-brown)!important;box-shadow:5px 5px 0 var(--fc-black)!important;color:var(--fc-black)!important}
+
+/* Remove soft/translucent modern shading from the Town surface. */
+.town-work-desk,.town-shelf,.town-review-counter,.town-rest-sofa,.town-zone-label,.town-message,.pixel-panel,.town-topbar{filter:none!important}
