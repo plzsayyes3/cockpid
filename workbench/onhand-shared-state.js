@@ -7,16 +7,30 @@
   const TOKEN_KEY = 'zen-note-github-token';
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
   const CACHE_KEY = 'cockpid.onhand.shared-state.v1';
+  const RESET_MARKER_KEY = 'cockpid.onhand.shared-state.reset.v2';
+  const RESET_MARKER_VALUE = '2026-09-13T05:32:00.000Z';
+  const RESET_CUTOFF_MS = Date.parse(RESET_MARKER_VALUE);
   const REMOTE_PATH = 'memory/state/on-hand.json';
   const LOCAL_POLL_MS = 1000;
   const REMOTE_REFRESH_MS = 60000;
   const PUSH_DEBOUNCE_MS = 800;
 
+  function resetLegacyLocalStateOnce() {
+    if (localStorage.getItem(RESET_MARKER_KEY) === RESET_MARKER_VALUE) return false;
+    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.setItem(RESET_MARKER_KEY, RESET_MARKER_VALUE);
+    return true;
+  }
+
+  const resetApplied = resetLegacyLocalStateOnce();
   let applyingSharedState = false;
   let baselineHistory = readHistory();
   let pushTimer = null;
   let syncPromise = null;
   let pushAgain = false;
+  let hasPendingChanges = false;
+  let statusNode = null;
 
   const token = () => localStorage.getItem(TOKEN_KEY) || '';
   const nowIso = () => new Date().toISOString();
@@ -66,9 +80,12 @@
       if (status === 'done') status = 'handled';
       if (status === 'skip') status = 'skipped';
       if (!['open', 'handled', 'skipped'].includes(status)) return;
+      const at = value?.at || '';
+      const parsedAt = Date.parse(at);
+      if (Number.isFinite(parsedAt) && parsedAt < RESET_CUTOFF_MS) return;
       out[id] = {
         status,
-        at: value?.at || '',
+        at,
         title_key: value?.title_key,
         recurring: Boolean(value?.recurring)
       };
@@ -124,9 +141,59 @@
 
   const sameObject = (a, b) => JSON.stringify(a || {}) === JSON.stringify(b || {});
 
+  function installStatusUi() {
+    if (document.getElementById('onhandSaveState')) {
+      statusNode = document.getElementById('onhandSaveState');
+      return;
+    }
+    const style = document.createElement('style');
+    style.id = 'onhand-shared-state-style';
+    style.textContent = `
+      .onhand-save-state{display:inline-flex;align-items:center;white-space:nowrap;padding:5px 9px;border:1px solid #d9ddd7;background:rgba(255,255,255,.9);color:#6b7069;border-radius:999px;font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.02em;backdrop-filter:blur(8px)}
+      .onhand-save-state.dirty{color:#9a682f}.onhand-save-state.syncing{color:#2f5d50}.onhand-save-state.error{color:#b24b45}.onhand-save-state.local{color:#7a7d77}
+      .movement-tools .onhand-save-state{margin-right:2px}.filters .onhand-save-state{margin-right:2px}
+      @media(max-width:640px){.onhand-save-state{padding:4px 7px;font-size:9px}}
+    `;
+    document.head.appendChild(style);
+    statusNode = document.createElement('span');
+    statusNode.id = 'onhandSaveState';
+    statusNode.className = 'onhand-save-state';
+    statusNode.setAttribute('role', 'status');
+    statusNode.setAttribute('aria-live', 'polite');
+    const target = document.querySelector('.movement-tools') || document.querySelector('.filters');
+    if (target) target.prepend(statusNode);
+  }
+
+  function setSaveState(kind, detail = '') {
+    installStatusUi();
+    document.documentElement.dataset.onhandSync = kind;
+    if (!statusNode) return;
+    const labels = {
+      saved: '保存済み',
+      dirty: '未保存',
+      syncing: '同期中',
+      error: '保存失敗',
+      local: 'ローカルのみ'
+    };
+    statusNode.textContent = labels[kind] || labels.local;
+    statusNode.className = `onhand-save-state${kind === 'saved' ? '' : ` ${kind}`}`;
+    statusNode.title = detail || (kind === 'saved' ? 'ON HANDのチェック状態は共有先へ保存されています。' : '');
+  }
+
+  function markDirty() {
+    hasPendingChanges = true;
+    setSaveState(token() ? 'dirty' : 'local', token() ? '共有先への保存待ちです。' : 'GitHub tokenがないため共有保存されていません。');
+  }
+
+  function markSaved() {
+    hasPendingChanges = false;
+    setSaveState('saved');
+  }
+
   function writeCache(items) {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       schema_version: 1,
+      reset_at: RESET_MARKER_VALUE,
       updated_at: nowIso(),
       items: normalizeSharedItems(items)
     }));
@@ -196,6 +263,7 @@
   async function putRemote(items, sha = null) {
     const payload = {
       schema_version: 1,
+      reset_at: RESET_MARKER_VALUE,
       updated_at: nowIso(),
       items: normalizeSharedItems(items)
     };
@@ -225,23 +293,30 @@
   }
 
   function schedulePush() {
-    if (!token()) return;
+    if (!token()) {
+      setSaveState('local', 'GitHub tokenがないため共有保存されていません。');
+      return;
+    }
     clearTimeout(pushTimer);
     pushTimer = setTimeout(() => pushSharedState().catch((error) => {
       console.warn('ON HAND shared-state push failed', error);
-      document.documentElement.dataset.onhandSync = 'error';
+      hasPendingChanges = true;
+      setSaveState('error', error.message);
     }), PUSH_DEBOUNCE_MS);
   }
 
   async function pushSharedState() {
-    if (!token()) return;
+    if (!token()) {
+      setSaveState('local', 'GitHub tokenがないため共有保存されていません。');
+      return;
+    }
     if (syncPromise) {
       pushAgain = true;
       return syncPromise;
     }
 
     syncPromise = (async () => {
-      document.documentElement.dataset.onhandSync = 'syncing';
+      setSaveState('syncing');
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const remote = await fetchRemote();
         if (!remote) return;
@@ -249,12 +324,12 @@
         const merged = mergeItems(remote.items, cacheItems);
         applySharedItems(merged);
         if (sameObject(remote.items, merged)) {
-          document.documentElement.dataset.onhandSync = 'ok';
+          markSaved();
           return;
         }
         try {
           await putRemote(merged, remote.sha);
-          document.documentElement.dataset.onhandSync = 'ok';
+          markSaved();
           return;
         } catch (error) {
           if (!error.conflict || attempt === 2) throw error;
@@ -272,21 +347,27 @@
 
   async function pullSharedState() {
     if (!token()) {
-      document.documentElement.dataset.onhandSync = 'local';
+      setSaveState('local', 'GitHub tokenがないため共有保存されていません。');
       return;
     }
     try {
+      if (!hasPendingChanges) setSaveState('syncing');
       const remote = await fetchRemote();
       if (!remote) return;
       const cacheItems = readCacheItems();
       const localItems = historyToShared(readHistory());
       const merged = mergeItems(cacheItems, localItems, remote.items);
       applySharedItems(merged);
-      document.documentElement.dataset.onhandSync = 'ok';
-      if (!sameObject(remote.items, merged)) schedulePush();
+      if (!sameObject(remote.items, merged)) {
+        hasPendingChanges = true;
+        setSaveState('dirty', '共有先への保存待ちです。');
+        schedulePush();
+      } else {
+        markSaved();
+      }
     } catch (error) {
       console.warn('ON HAND shared-state pull failed', error);
-      document.documentElement.dataset.onhandSync = 'error';
+      setSaveState('error', error.message);
     }
   }
 
@@ -324,7 +405,13 @@
     if (!changed) return;
     const merged = mergeItems(readCacheItems(), changes);
     writeCache(merged);
+    markDirty();
     schedulePush();
+  }
+
+  function scheduleImmediateDetection(event) {
+    if (!event.target?.closest?.('.done-box,.skip-btn,.movement-done,.movement-skip')) return;
+    setTimeout(detectLocalChanges, 0);
   }
 
   window.addEventListener('storage', (event) => {
@@ -335,6 +422,8 @@
     }
   });
 
+  document.addEventListener('change', scheduleImmediateDetection);
+  document.addEventListener('click', scheduleImmediateDetection);
   window.addEventListener('focus', () => pullSharedState());
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) pullSharedState();
@@ -345,8 +434,11 @@
     if (!document.hidden) pullSharedState();
   }, REMOTE_REFRESH_MS);
 
-  // Bootstrap: legacy local DONE/SKIP becomes the first shared-state seed.
-  const initial = mergeItems(readCacheItems(), historyToShared(baselineHistory));
+  installStatusUi();
+  if (resetApplied) setSaveState(token() ? 'syncing' : 'local', '旧ローカル状態をリセットしました。');
+
+  // Bootstrap from the shared-state cache only. Legacy local DONE/SKIP is intentionally not seeded.
+  const initial = readCacheItems();
   applySharedItems(initial);
   pullSharedState();
 
@@ -354,6 +446,8 @@
     pull: pullSharedState,
     push: pushSharedState,
     remotePath: REMOTE_PATH,
-    cacheKey: CACHE_KEY
+    cacheKey: CACHE_KEY,
+    resetMarker: RESET_MARKER_VALUE,
+    status: () => document.documentElement.dataset.onhandSync || 'local'
   });
 })();
