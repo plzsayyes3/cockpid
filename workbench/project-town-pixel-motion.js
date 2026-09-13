@@ -10,6 +10,7 @@
   const states = new WeakMap();
   const live = new Set();
   let rafId = 0;
+  let lastStepAt = 0;
 
   const snap = (value) => Math.round(value / GRID) * GRID;
   const snapUp = (value) => Math.max(GRID, Math.ceil(value / GRID) * GRID);
@@ -111,7 +112,7 @@
     return current + Math.sign(delta) * Math.min(Math.abs(delta), amount);
   }
 
-  function tick() {
+  function advanceWorkers() {
     live.forEach((worker) => {
       if (!worker.isConnected) {
         live.delete(worker);
@@ -134,7 +135,15 @@
         state.moving = false;
       }
     });
+  }
 
+  function tick(time) {
+    if (!lastStepAt) lastStepAt = time;
+    const elapsed = time - lastStepAt;
+    if (elapsed + 0.5 >= FRAME_MS) {
+      lastStepAt = time - (elapsed % FRAME_MS);
+      advanceWorkers();
+    }
     rafId = requestAnimationFrame(tick);
   }
 
