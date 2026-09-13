@@ -4,6 +4,11 @@
 > Former name: `COCKPID`
 > Current user-facing name: **作業台 / Workbench**
 
+> ✅ **2026-09-12 検証済み**: このファイルの記述は`workbench/`の実装（コード）と
+> 照合済みで、事実誤認は見つかりませんでした。実装の詳細な棚卸し（各画面・データソース・
+> 実際のビジュアルトークン・認証方式）は[`SURFACES.md`](./SURFACES.md)を参照してください。
+> このファイルは方針、`SURFACES.md`は実装済みのものだけを書く仕様書という役割分担です。
+
 ## 1. Purpose
 
 作業台は、個人の情報・予定・タスク・考えを全部並べるダッシュボードではない。
@@ -16,7 +21,7 @@
 
 旧称 `COCKPID` で使っていた「cockpit / mission-control」の比喩は履歴として残すが、現行UIの設計原則にはしない。
 
-## 2. Three-layer architecture
+## 2. Three-layer architecture ✅ 実装と一致
 
 基盤の3層構造は維持する。
 
@@ -45,7 +50,7 @@ AI KNOWLEDGE SYSTEM
 - `my-storage-note`: AIが扱うルール・Canonical Object・Memory・Viewの正本。
 - `cockpid`: 作業台の表示・操作層。原文やCanonical dataを重複保存しない。
 
-## 3. Workbench principle
+## 3. Workbench principle ✅ dock実装(10アプリ中Advice/secretを除く8個)と一致
 
 HOMEは「静かな作業台」とする。
 
@@ -78,7 +83,7 @@ HOMEは「静かな作業台」とする。
 4. 人間が判断する場所への導線
 5. 元データ・Project・Appへの移動
 
-## 5. Project / Human Decision model
+## 5. Project / Human Decision model ✅ views/経由の互換アダプタ含め確認済み
 
 Projectの正本は `plzsayyes3/my-storage-note/objects/projects/` に置く。
 
