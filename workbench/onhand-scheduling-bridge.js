@@ -51,6 +51,28 @@
     return Math.ceil((((value - yearStart) / 86400000) + 1) / 7);
   }
 
+  function addDays(date, amount) {
+    const info = dateInfo(date);
+    const value = new Date(Date.UTC(info.year, info.month - 1, info.day + amount));
+    return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  function startOfWeek(date) {
+    const info = dateInfo(date);
+    const weekday = new Date(Date.UTC(info.year, info.month - 1, info.day)).getUTCDay();
+    return addDays(date, -((weekday + 6) % 7));
+  }
+
+  function weekTarget(date) {
+    const monday = startOfWeek(date);
+    return {
+      monday,
+      sunday:addDays(monday, 6),
+      week:isoWeek(monday),
+      owner:dateInfo(monday)
+    };
+  }
+
   async function getFile(repo, path, branch) {
     const response = await fetch(`https://api.github.com/repos/${OWNER}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(branch)}`, {
       headers:{ Accept:'application/vnd.github+json', Authorization:`Bearer ${token()}` },
@@ -137,6 +159,7 @@
       mutate:(text) => appendTaskliner(text, title, date)
     });
   }
+
   function headingLevel(line) {
     return String(line || '').match(/^(#{1,6})\s+/)?.[1].length || 0;
   }
@@ -197,14 +220,14 @@
     const info = dateInfo(date);
     const lines = ensureMonthBase(text, info);
     const dateStart = lines.findIndex((line) => targetDateHeading(line, info));
-    const taskLine = `- ${clean(title)}`;
+    const itemLine = `- ${clean(title)}`;
 
     if (dateStart >= 0) {
       const end = nextHeading(lines, dateStart);
       if (hasTitle(lines, dateStart + 1, end, title)) return { duplicate:true };
       let insertAt = end;
       while (insertAt > dateStart + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
-      lines.splice(insertAt, 0, taskLine);
+      lines.splice(insertAt, 0, itemLine);
       return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:date };
     }
 
@@ -224,7 +247,7 @@
       if (existingDate && existingDate > date) { insertAt = i; break; }
     }
     while (insertAt > start && !clean(lines[insertAt - 1])) insertAt -= 1;
-    const block = [`## ${info.month}月${info.day}日(${info.weekday})`, '', taskLine, ''];
+    const block = [`## ${info.month}月${info.day}日(${info.weekday})`, '', itemLine, ''];
     if (insertAt > 0 && clean(lines[insertAt - 1])) block.unshift('');
     lines.splice(insertAt, 0, ...block);
     return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:date };
@@ -241,13 +264,13 @@
     const firstWeek = lines.findIndex((line) => weekNumberFromHeading(line) !== null);
     const boundary = firstWeek >= 0 ? firstWeek : lines.length;
     const heading = findUndatedHeading(lines, 0, boundary);
-    const taskLine = `- ${clean(title)}`;
+    const itemLine = `- ${clean(title)}`;
 
     if (heading < 0) {
       let insertAt = lines.findIndex((line) => /^#\s+/.test(line));
       insertAt = insertAt >= 0 ? insertAt + 1 : 0;
       while (insertAt < lines.length && !clean(lines[insertAt])) insertAt += 1;
-      lines.splice(insertAt, 0, '', '### 日付未定', taskLine, '');
+      lines.splice(insertAt, 0, '', '### 日付未定', itemLine, '');
       return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`${info.year}-${String(info.month).padStart(2, '0')}` };
     }
 
@@ -255,46 +278,47 @@
     if (hasTitle(lines, heading + 1, end, title)) return { duplicate:true };
     let insertAt = end;
     while (insertAt > heading + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
-    lines.splice(insertAt, 0, taskLine);
+    lines.splice(insertAt, 0, itemLine);
     return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`${info.year}-${String(info.month).padStart(2, '0')}` };
   }
 
   function appendWeekUndated(text, title, date) {
-    const info = dateInfo(date);
-    const week = isoWeek(date);
+    const target = weekTarget(date);
+    const info = target.owner;
+    const week = target.week;
     const lines = ensureMonthBase(text, info);
     const weeks = lines.map((line, index) => ({ index, week:weekNumberFromHeading(line) })).filter((entry) => entry.week !== null);
     const current = weeks.find((entry) => entry.week === week);
-    const taskLine = `- ${clean(title)}`;
+    const itemLine = `- ${clean(title)}`;
+    const detail = `week${week}（${target.monday}〜${target.sunday}）`;
 
     if (!current) {
-      const later = weeks.find((entry) => entry.week > week);
-      const insertAt = later?.index ?? lines.length;
-      const block = [`## week${week}`, '### 日付未定', taskLine, ''];
+      const insertAt = lines.length;
+      const block = [`## week${week}`, '### 日付未定', itemLine, ''];
       if (insertAt > 0 && clean(lines[insertAt - 1])) block.unshift('');
       lines.splice(insertAt, 0, ...block);
-      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail };
     }
 
     const weekEnd = weeks.find((entry) => entry.index > current.index)?.index ?? lines.length;
     const heading = findUndatedHeading(lines, current.index + 1, weekEnd);
     if (heading < 0) {
-      lines.splice(current.index + 1, 0, '### 日付未定', taskLine);
-      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+      lines.splice(current.index + 1, 0, '### 日付未定', itemLine);
+      return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail };
     }
 
     const end = sectionEnd(lines, heading, 3);
-    if (hasTitle(lines, heading + 1, Math.min(end, weekEnd), title)) return { duplicate:true };
+    if (hasTitle(lines, heading + 1, Math.min(end, weekEnd), title)) return { duplicate:true, detail };
     let insertAt = Math.min(end, weekEnd);
     while (insertAt > heading + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
-    lines.splice(insertAt, 0, taskLine);
-    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
+    lines.splice(insertAt, 0, itemLine);
+    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail };
   }
 
   async function sendToTecho({ title, date, mode }) {
-    const info = dateInfo(date);
+    const routeInfo = mode === 'week' ? weekTarget(date).owner : dateInfo(date);
     const target = source('techo', { repo:'mynotebook', dir:'02_techo' });
-    const path = pathJoin(target.dir, `${info.year}-${String(info.month).padStart(2, '0')}.md`);
+    const path = pathJoin(target.dir, `${routeInfo.year}-${String(routeInfo.month).padStart(2, '0')}.md`);
     const mutate = mode === 'date' ? (text) => appendDatedTecho(text, title, date)
       : mode === 'week' ? (text) => appendWeekUndated(text, title, date)
       : mode === 'month' ? (text) => appendMonthUndated(text, title, date)
@@ -370,7 +394,7 @@
     const panel = document.createElement('div');
     panel.className = 'onhand-route-panel';
     panel.hidden = true;
-    panel.innerHTML = `<div class="onhand-route-choices"><button type="button" class="onhand-route-btn" data-onhand-route="today">今日</button><button type="button" class="onhand-route-btn" data-onhand-route="date">日付</button><button type="button" class="onhand-route-btn" data-onhand-route="week">週未定</button><button type="button" class="onhand-route-btn" data-onhand-route="month">月未定</button></div><div class="onhand-date-form" hidden><input type="date" data-onhand-date value="${jstDate()}"><button type="button" class="onhand-route-btn" data-onhand-date-save>登録</button><button type="button" class="onhand-route-btn" data-onhand-date-cancel>×</button></div><span class="onhand-route-status" aria-live="polite"></span>`;
+    panel.innerHTML = `<div class="onhand-route-choices"><button type="button" class="onhand-route-btn" data-onhand-route="today">今日</button><button type="button" class="onhand-route-btn" data-onhand-route="date">日付</button><button type="button" class="onhand-route-btn" data-onhand-route="week">週未定</button><button type="button" class="onhand-route-btn" data-onhand-route="month">月未定</button></div><div class="onhand-date-form" hidden data-onhand-route-mode="date"><input type="date" data-onhand-date value="${jstDate()}"><button type="button" class="onhand-route-btn" data-onhand-date-save>登録</button><button type="button" class="onhand-route-btn" data-onhand-date-cancel>×</button></div><span class="onhand-route-status" aria-live="polite"></span>`;
     info.body.appendChild(panel);
   }
 
@@ -392,6 +416,17 @@
     if (!info || info.checkbox.checked || info.checkbox.disabled) return;
     info.checkbox.checked = true;
     info.checkbox.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+
+  function openTargetForm(dateForm, mode) {
+    const input = dateForm.querySelector('[data-onhand-date]');
+    if (!input) return;
+    dateForm.dataset.onhandRouteMode = mode;
+    input.type = mode === 'month' ? 'month' : 'date';
+    input.value = mode === 'month' ? jstDate().slice(0, 7) : jstDate();
+    input.setAttribute('aria-label', mode === 'date' ? '送る日付' : mode === 'week' ? '送る週に含まれる日付' : '送る月');
+    dateForm.hidden = false;
+    input.focus();
   }
 
   async function completeSend(row, operation, successText) {
@@ -427,29 +462,24 @@
       return;
     }
     if (control.matches('[data-onhand-date-save]')) {
-      const date = dateForm.querySelector('[data-onhand-date]')?.value || '';
-      await completeSend(row, () => sendToTecho({ ...info, date, mode:'date' }), () => `${date} のTechoへ送りました`);
+      const mode = dateForm.dataset.onhandRouteMode || 'date';
+      const value = dateForm.querySelector('[data-onhand-date]')?.value || '';
+      const date = mode === 'month' ? `${value}-01` : value;
+      await completeSend(
+        row,
+        () => sendToTecho({ ...info, date, mode }),
+        (result) => mode === 'date' ? `${result.detail} のTechoへ送りました` : `${result.detail} の日付未定へ送りました`
+      );
       return;
     }
 
     const mode = control.dataset.onhandRoute;
-    if (mode === 'date') {
-      dateForm.hidden = false;
-      dateForm.querySelector('[data-onhand-date]')?.focus();
-      return;
-    }
     if (mode === 'today') {
       await completeSend(row, () => sendTodayToTaskliner(info), () => '今日のTaskLinerへ送りました');
       return;
     }
-    if (mode === 'week') {
-      const date = jstDate();
-      await completeSend(row, () => sendToTecho({ ...info, date, mode:'week' }), (result) => `${result.detail} の日付未定へ送りました`);
-      return;
-    }
-    if (mode === 'month') {
-      const date = jstDate();
-      await completeSend(row, () => sendToTecho({ ...info, date, mode:'month' }), (result) => `${result.detail} の日付未定へ送りました`);
+    if (mode === 'date' || mode === 'week' || mode === 'month') {
+      openTargetForm(dateForm, mode);
     }
   });
 
@@ -463,6 +493,8 @@
     sendTodayToTaskliner,
     sendToTecho,
     defaultDate:jstDate,
-    isoWeek
+    isoWeek,
+    startOfWeek,
+    weekTarget
   });
 })();
