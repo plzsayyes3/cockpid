@@ -1,16 +1,18 @@
 (() => {
   'use strict';
 
-  const GRID = 2;
-  const FRAME_MS = 1000 / 60;
+  // Deliberately coarse game tick: movement advances only 10 times per second.
+  // The artwork still uses a 2px source-pixel scale, but positions snap to a
+  // 4px movement grid so actors read like old console sprites instead of DOM.
+  const GRID = 4;
+  const TICK_MS = 100;
   const DEFAULT_MOVE_MS = 900;
   const room = document.getElementById('projectRoom');
   if (!room) return;
 
   const states = new WeakMap();
   const live = new Set();
-  let rafId = 0;
-  let lastStepAt = 0;
+  let tickId = 0;
 
   const snap = (value) => Math.round(value / GRID) * GRID;
   const snapUp = (value) => Math.max(GRID, Math.ceil(value / GRID) * GRID);
@@ -86,6 +88,8 @@
     const actor = worker.querySelector('.character-actor');
     if (actor && targetX !== state.x) actor.dataset.direction = targetX < state.x ? 'left' : 'right';
 
+    // project-town-v2 writes a percentage destination. Restore the current
+    // snapped pixel position immediately, then walk to that destination.
     applyPosition(worker, state);
 
     const rawMoveMs = parseFloat(worker.style.getPropertyValue('--move-ms'));
@@ -100,8 +104,10 @@
       return;
     }
 
-    const frames = Math.max(1, Math.floor(moveMs / FRAME_MS));
-    state.step = snapUp(distance / frames);
+    // Keep the controller's existing travel duration, but quantize the route
+    // into a small number of visibly discrete 4px-aligned game ticks.
+    const ticks = Math.max(1, Math.floor(moveMs / TICK_MS));
+    state.step = snapUp(distance / ticks);
     state.axis = targetX !== state.x ? 'x' : 'y';
     state.moving = true;
   }
@@ -122,6 +128,8 @@
       const state = states.get(worker);
       if (!state?.moving) return;
 
+      // Never interpolate both axes in one tick. Old-console movement reads
+      // much more naturally as horizontal first, then vertical.
       if (state.axis === 'x') {
         state.x = stepAxis(state.x, state.targetX, state.step);
         if (state.x === state.targetX) state.axis = 'y';
@@ -135,16 +143,6 @@
         state.moving = false;
       }
     });
-  }
-
-  function tick(time) {
-    if (!lastStepAt) lastStepAt = time;
-    const elapsed = time - lastStepAt;
-    if (elapsed + 0.5 >= FRAME_MS) {
-      lastStepAt = time - (elapsed % FRAME_MS);
-      advanceWorkers();
-    }
-    rafId = requestAnimationFrame(tick);
   }
 
   const styleObserver = new MutationObserver((records) => {
@@ -209,9 +207,12 @@
     window.addEventListener('resize', resnapForResize, { passive: true });
   }
 
-  rafId = requestAnimationFrame(tick);
+  tickId = window.setInterval(() => {
+    if (!document.hidden) advanceWorkers();
+  }, TICK_MS);
+
   window.addEventListener('pagehide', () => {
-    cancelAnimationFrame(rafId);
+    window.clearInterval(tickId);
     roomObserver.disconnect();
     styleObserver.disconnect();
   }, { once: true });
