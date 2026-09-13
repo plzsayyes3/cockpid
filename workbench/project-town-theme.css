@@ -1,0 +1,529 @@
+/* Project Town canonical visual layer
+   Final appearance = tile assets + 2px world pixels + 4px/10Hz motion grid + NES/Famicom palette.
+   Structural layout stays in project-town.css / project-town-activity.css / project-town-ui.css. */
+
+:root{
+  --pt-world-pixel:2px;
+  --pt-motion-grid:4px;
+
+  --fc-black:#000000;
+  --fc-dark-gray:#7c7c7c;
+  --fc-light-gray:#bcbcbc;
+  --fc-white:#f8f8f8;
+  --fc-dark-blue:#004058;
+  --fc-blue:#0058f8;
+  --fc-sky:#3cbcfc;
+  --fc-dark-green:#005800;
+  --fc-green:#58d854;
+  --fc-dark-brown:#503000;
+  --fc-brown:#881400;
+  --fc-orange:#e45c10;
+  --fc-red:#a80020;
+  --fc-skin:#f0d0b0;
+  --fc-cream:#fce0a8;
+  --fc-yellow:#f8d878;
+}
+
+/* ---------- Stage ---------- */
+
+html,body{
+  background:var(--fc-dark-blue)!important;
+  color:var(--fc-black)!important;
+}
+
+.town-app,
+.mobile-ui .town-app{
+  background:linear-gradient(var(--fc-dark-blue) 0 28%,var(--fc-dark-brown) 28% 100%)!important;
+}
+
+.town-topbar{
+  background:var(--fc-blue)!important;
+  color:var(--fc-white)!important;
+  border-color:var(--fc-black)!important;
+  box-shadow:4px 4px 0 var(--fc-black)!important;
+  filter:none!important;
+}
+
+.town-summary{
+  background:var(--fc-yellow)!important;
+  color:var(--fc-black)!important;
+  border-color:var(--fc-dark-brown)!important;
+}
+
+.pixel-button{
+  background:var(--fc-white)!important;
+  border-color:var(--fc-black)!important;
+  box-shadow:3px 3px 0 var(--fc-black)!important;
+  color:var(--fc-black)!important;
+}
+
+.studio{
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:6px 6px 0 var(--fc-black)!important;
+  background-color:var(--fc-dark-brown)!important;
+  background-image:url("assets/project-town/tiles/wood-dark.png");
+  background-repeat:repeat;
+  background-size:16px 16px;
+  image-rendering:pixelated;
+}
+
+.skyline{
+  background:var(--fc-dark-blue)!important;
+  border-color:var(--fc-dark-brown)!important;
+}
+
+.skyline i{
+  background:var(--fc-dark-gray)!important;
+  border-color:var(--fc-blue)!important;
+}
+
+.studio-sign{
+  background:var(--fc-light-gray)!important;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:3px 3px 0 var(--fc-black)!important;
+  color:var(--fc-black)!important;
+}
+
+/* ---------- Room tiles + furniture ---------- */
+
+.room.town-shared-room{
+  background-color:var(--fc-light-gray)!important;
+  background-image:url("assets/project-town/tiles/floor-01.png");
+  background-repeat:repeat;
+  background-size:48px 48px;
+  background-blend-mode:multiply!important;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  box-shadow:inset 0 0 0 4px var(--fc-dark-brown)!important;
+}
+
+.room.town-shared-room::after{
+  border-top-width:4px;
+  border-top-color:var(--fc-dark-brown)!important;
+  opacity:1!important;
+}
+
+.room.town-shared-room::before{
+  content:"";
+  position:absolute;
+  left:3%;
+  bottom:4%;
+  width:96px;
+  height:64px;
+  background:var(--fc-dark-green) url("assets/project-town/tiles/rug-green.png") repeat;
+  background-size:32px 32px;
+  border:4px solid var(--fc-black)!important;
+  box-shadow:4px 4px 0 var(--fc-dark-brown)!important;
+  pointer-events:none;
+  z-index:2;
+  image-rendering:pixelated;
+}
+
+.town-zone-label{
+  background:var(--fc-light-gray)!important;
+  border:2px solid var(--fc-dark-brown)!important;
+  box-shadow:2px 2px 0 var(--fc-dark-brown)!important;
+  color:var(--fc-black)!important;
+  padding:4px 6px;
+  filter:none!important;
+}
+
+.town-work-desk{
+  width:144px;
+  height:56px;
+  background-color:var(--fc-orange)!important;
+  background-image:url("assets/project-town/tiles/wood-light.png");
+  background-repeat:repeat;
+  background-size:16px 16px;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:4px 4px 0 var(--fc-dark-brown)!important;
+  image-rendering:pixelated;
+  filter:none!important;
+}
+
+.town-work-desk::before{
+  left:20px;
+  top:-36px;
+  width:52px;
+  height:32px;
+  background:var(--fc-dark-blue)!important;
+  border-color:var(--fc-black)!important;
+  box-shadow:4px 4px 0 var(--fc-dark-brown)!important;
+}
+
+.town-work-desk::after{
+  left:30px;
+  top:-26px;
+  width:32px;
+  height:16px;
+  background:var(--fc-sky)!important;
+  box-shadow:inset 0 0 0 2px var(--fc-blue)!important;
+}
+
+.town-shelf{
+  width:128px;
+  height:152px;
+  background-color:var(--fc-dark-brown)!important;
+  background-image:url("assets/project-town/tiles/wood-dark.png");
+  background-repeat:repeat;
+  background-size:16px 16px;
+  border-width:4px;
+  border-color:var(--fc-black)!important;
+  box-shadow:4px 4px 0 var(--fc-black)!important;
+  image-rendering:pixelated;
+  filter:none!important;
+}
+
+.town-shelf::before{
+  inset:8px;
+  background:var(--fc-light-gray)!important;
+  border:4px solid var(--fc-dark-brown)!important;
+  color:var(--fc-blue)!important;
+  line-height:40px;
+  text-shadow:none!important;
+}
+
+.town-review-counter{
+  width:160px;
+  height:56px;
+  background:var(--fc-orange) url("assets/project-town/tiles/wood-light.png") repeat!important;
+  background-size:16px 16px!important;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:4px 4px 0 var(--fc-dark-brown)!important;
+  image-rendering:pixelated;
+  filter:none!important;
+}
+
+.town-review-counter::before{
+  background:var(--fc-light-gray)!important;
+  border:2px solid var(--fc-dark-brown)!important;
+  padding:2px 6px;
+  box-shadow:2px 2px 0 var(--fc-dark-brown)!important;
+  color:var(--fc-black)!important;
+}
+
+.town-wait-spot{
+  width:74px;
+  height:38px;
+  background:var(--fc-dark-gray)!important;
+  border-color:var(--fc-light-gray)!important;
+}
+
+.town-wait-spot::before{
+  color:var(--fc-white)!important;
+}
+
+.town-rest-sofa{
+  width:112px;
+  height:44px;
+  background:var(--fc-brown)!important;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:inset 0 12px 0 var(--fc-orange),4px 4px 0 var(--fc-dark-brown)!important;
+  image-rendering:pixelated;
+  filter:none!important;
+}
+
+/* ---------- Character sprites ---------- */
+
+.character-sprite{
+  background-image:var(--character-sprite,url("assets/project-town/character.png"));
+}
+
+.town-shared-room .worker{
+  width:64px;
+  min-height:80px;
+  height:80px;
+  transition:none!important;
+  will-change:auto;
+}
+
+.town-shared-room .character-actor{
+  left:8px!important;
+  bottom:20px!important;
+  width:48px!important;
+  height:48px!important;
+  transition:none!important;
+  transform:none!important;
+  will-change:auto!important;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+
+.town-shared-room .character-sprite{
+  width:48px!important;
+  height:48px!important;
+  background-size:400% 400%;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  filter:none!important;
+  animation-timing-function:step-end!important;
+}
+
+.town-shared-room .character-sprite[data-action="idle"]{animation-duration:2.4s!important}
+.town-shared-room .character-sprite[data-action="walk"]{animation-duration:.8s!important}
+.town-shared-room .character-sprite[data-action="work"]{animation-duration:.8s!important}
+.town-shared-room .character-sprite[data-action="rest"]{animation-duration:3.2s!important}
+
+.town-shared-room .worker.active{
+  outline-width:2px;
+  outline-offset:2px;
+  outline-color:var(--fc-yellow)!important;
+  background:transparent!important;
+}
+
+.town-shared-room .worker-state,
+.town-shared-room .worker-name{
+  background:var(--fc-light-gray)!important;
+  color:var(--fc-black)!important;
+  border-color:var(--fc-black)!important;
+}
+
+.town-shared-room .worker-name{
+  bottom:-16px;
+  border-width:2px;
+  padding:2px 4px;
+}
+
+.town-shared-room .bubble{
+  top:-12px;
+  right:-40px;
+  background:var(--fc-black)!important;
+  color:var(--fc-white)!important;
+  border:2px solid var(--fc-white)!important;
+  box-shadow:none!important;
+  transition:none!important;
+}
+
+.town-shared-room .bubble::after{
+  background:var(--fc-black)!important;
+  border-right-width:2px;
+  border-bottom-width:2px;
+  border-color:var(--fc-white)!important;
+}
+
+.town-shared-room .momentum-badge{
+  top:-10px;
+  min-width:22px;
+}
+
+.town-shared-room .character-effect{
+  min-width:20px;
+  height:20px;
+}
+
+.town-shared-room .momentum-badge,
+.town-shared-room .character-effect{
+  background:var(--fc-yellow)!important;
+  color:var(--fc-black)!important;
+  border-color:var(--fc-black)!important;
+}
+
+.town-shared-room .worker[data-momentum="surging"] .momentum-badge{
+  animation:townSurgePixel .8s steps(2,end) infinite;
+}
+
+@keyframes townSurgePixel{
+  0%,49%{margin-top:0}
+  50%,100%{margin-top:-4px}
+}
+
+html.pt-character-32-test .town-shared-room .character-actor,
+html.pt-character-32-test .town-shared-room .character-sprite{
+  width:64px!important;
+  height:64px!important;
+}
+
+html.pt-character-32-test .town-shared-room .character-actor{
+  left:0!important;
+}
+
+html.pt-character-32-test .town-shared-room .character-sprite{
+  background-size:400% 400%!important;
+}
+
+/* ---------- Panels / detail ---------- */
+
+.pixel-panel{
+  background:var(--fc-light-gray)!important;
+  border-color:var(--fc-blue)!important;
+  box-shadow:5px 5px 0 var(--fc-black)!important;
+  filter:none!important;
+}
+
+.panel-title{
+  background:var(--fc-blue)!important;
+  color:var(--fc-white)!important;
+  border-color:var(--fc-black)!important;
+}
+
+.project-row{
+  background:var(--fc-light-gray)!important;
+  border-color:var(--fc-dark-gray)!important;
+  color:var(--fc-black)!important;
+}
+
+.project-row.active,
+.project-row:hover{
+  background:var(--fc-yellow)!important;
+}
+
+.state-chip,
+.momentum-chip,
+.big-status{
+  border-color:var(--fc-black)!important;
+  color:var(--fc-black)!important;
+}
+
+.state-chip[data-activity="working"],
+.big-status[data-activity="working"]{background:var(--fc-sky)!important}
+
+.state-chip[data-activity="researching"],
+.big-status[data-activity="researching"]{background:var(--fc-light-gray)!important}
+
+.state-chip[data-activity="review"],
+.state-chip[data-activity="review_wait"],
+.big-status[data-activity="review"],
+.big-status[data-activity="review_wait"]{background:var(--fc-yellow)!important}
+
+.state-chip[data-activity="paused"],
+.big-status[data-activity="paused"]{
+  background:var(--fc-dark-gray)!important;
+  color:var(--fc-white)!important;
+}
+
+.state-chip[data-activity="external_wait"],
+.big-status[data-activity="external_wait"]{background:var(--fc-green)!important}
+
+.momentum-chip{background:var(--fc-white)!important}
+.momentum-chip[data-momentum="rising"]{
+  background:var(--fc-orange)!important;
+  color:var(--fc-white)!important;
+}
+.momentum-chip[data-momentum="surging"]{background:var(--fc-yellow)!important}
+
+.meter{
+  border-color:var(--fc-black)!important;
+  background:var(--fc-dark-gray)!important;
+}
+
+.meter span{background:var(--fc-blue)!important}
+
+.decision-card{
+  background:var(--fc-yellow)!important;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:3px 3px 0 var(--fc-dark-brown)!important;
+}
+
+.decision-card.is-passive{
+  background:var(--fc-light-gray)!important;
+  border-color:var(--fc-dark-gray)!important;
+}
+
+.handoff-button{
+  background:var(--fc-blue)!important;
+  border-color:var(--fc-black)!important;
+  box-shadow:3px 3px 0 var(--fc-black)!important;
+  color:var(--fc-white)!important;
+}
+
+.town-message{
+  background:var(--fc-light-gray)!important;
+  border-color:var(--fc-dark-brown)!important;
+  box-shadow:5px 5px 0 var(--fc-black)!important;
+  color:var(--fc-black)!important;
+  filter:none!important;
+}
+
+/* ---------- Responsive furniture sizes ---------- */
+
+@media(max-width:820px){
+  .room.town-shared-room::before{
+    width:72px;
+    height:48px;
+    left:2%;
+    bottom:3%;
+  }
+
+  .town-work-desk{
+    left:3%;
+    width:120px;
+    height:48px;
+    transform:none!important;
+  }
+  .town-work-desk::before{left:16px;top:-30px;width:44px;height:28px}
+  .town-work-desk::after{left:24px;top:-22px;width:28px;height:12px}
+
+  .town-shelf{
+    right:2%;
+    width:104px;
+    height:128px;
+    transform:none!important;
+  }
+  .town-shelf::before{font-size:20px;line-height:32px}
+
+  .town-rest-sofa{
+    left:2%;
+    width:96px;
+    height:40px;
+    transform:none!important;
+  }
+
+  .town-review-counter{width:136px;height:52px}
+
+  .town-wait-spot{
+    right:20%;
+    width:64px;
+    height:32px;
+    transform:none!important;
+  }
+}
+
+@media (orientation:landscape) and (min-width:760px){
+  .room.town-shared-room::before{width:64px;height:40px}
+
+  .town-shared-room .worker{width:64px;height:80px}
+  .town-shared-room .character-actor{
+    left:8px!important;
+    bottom:20px!important;
+    width:48px!important;
+    height:48px!important;
+  }
+  .town-shared-room .character-sprite{width:48px!important;height:48px!important}
+
+  .town-work-desk{
+    left:5%;
+    top:34%;
+    width:104px;
+    height:42px;
+    transform:none!important;
+  }
+  .town-work-desk::before{left:14px;top:-28px;width:40px;height:24px}
+  .town-work-desk::after{left:22px;top:-20px;width:24px;height:10px}
+
+  .town-shelf{
+    right:4%;
+    top:18%;
+    width:88px;
+    height:108px;
+    transform:none!important;
+  }
+  .town-shelf::before{font-size:16px;line-height:26px}
+
+  .town-rest-sofa{
+    left:3%;
+    bottom:7%;
+    width:80px;
+    height:34px;
+    transform:none!important;
+  }
+
+  .town-wait-spot{
+    right:20%;
+    bottom:10%;
+    width:56px;
+    height:30px;
+    transform:none!important;
+  }
+
+  .town-review-counter{width:128px;height:46px}
+}
