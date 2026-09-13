@@ -8,6 +8,7 @@
   const AUDIT_NAME = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})-work-home-task-audit\.json$/;
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
   const MODES = new Set(['do', 'check', 'keep']);
+  const WEEKLY_SKIP_TYPES = new Set(['idea', 'theme', 'hypothesis']);
   const buckets = ['do', 'check', 'keep'];
   const targets = {
     do: { count: document.getElementById('fullDoCount'), list: document.getElementById('fullDoItems') },
@@ -18,6 +19,7 @@
   const pools = { do: [], check: [], keep: [] };
   let filter = 'all';
   let history = readHistory();
+  let feedbackTimer = null;
 
   const token = () => localStorage.getItem(TOKEN_KEY) || '';
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -35,8 +37,8 @@
     return r.json();
   }
 
-  function jstParts() {
-    const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+  function jstParts(date = new Date()) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(date);
     const get = (t) => Number(p.find((x) => x.type === t)?.value || 0);
     return { year:get('year'), month:get('month'), day:get('day') };
   }
@@ -47,6 +49,21 @@
     return { year:x.getUTCFullYear(), month:x.getUTCMonth() + 1, day:x.getUTCDate() };
   }
 
+  function jstMidnightIso(parts) {
+    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, -9, 0, 0)).toISOString();
+  }
+
+  function skipPlan(bucket, item, from = new Date()) {
+    const parts = jstParts(from);
+    const weekly = bucket === 'keep' || WEEKLY_SKIP_TYPES.has(item?._type);
+    if (weekly) {
+      const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+      const daysUntilSunday = weekday === 0 ? 7 : 7 - weekday;
+      return { until:jstMidnightIso(shift(parts, daysUntilSunday)), feedback:'日曜 00:00 に再表示' };
+    }
+    return { until:jstMidnightIso(shift(parts, 1)), feedback:'明日 00:00 に再表示' };
+  }
+
   const today = key(jstParts());
   const start = key(shift(jstParts(), -6));
 
@@ -54,8 +71,15 @@
     const out = {};
     if (!raw || typeof raw !== 'object') return out;
     Object.entries(raw).forEach(([id, v]) => {
-      if (v?.status === 'done' || v?.status === 'skip') out[id] = v;
-      else if (v?.checked_at) out[id] = { status:'done', at:v.checked_at };
+      if (v?.status === 'done' || v?.status === 'skip') {
+        out[id] = {
+          status:v.status,
+          at:v.at || v.checked_at || '',
+          title_key:v.title_key,
+          recurring:Boolean(v.recurring),
+          ...(v.status === 'skip' && v.skip_until ? { skip_until:v.skip_until } : {})
+        };
+      } else if (v?.checked_at) out[id] = { status:'done', at:v.checked_at, title_key:v.title_key, recurring:Boolean(v.recurring) };
     });
     return out;
   }
@@ -71,6 +95,23 @@
   }
 
   function writeHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+
+  function isExpiredSkip(state, now = Date.now()) {
+    if (state?.status !== 'skip' || !state.skip_until) return false;
+    const until = Date.parse(state.skip_until);
+    return Number.isFinite(until) && now >= until;
+  }
+
+  function expireHistorySkips() {
+    let changed = false;
+    Object.entries(history).forEach(([id, state]) => {
+      if (!isExpiredSkip(state)) return;
+      delete history[id];
+      changed = true;
+    });
+    if (changed) writeHistory();
+    return changed;
+  }
 
   function hashId(seed) {
     let hash = 2166136261;
@@ -130,26 +171,73 @@
   }
 
   const unique = (items) => mergeByPriority(items);
-  const statusOf = (item) => history[itemId(item)]?.status || 'open';
-  const matchFilter = (item) => filter === 'all' || statusOf(item) === filter;
+  const statusOf = (item) => {
+    const state = history[itemId(item)];
+    return isExpiredSkip(state) ? 'open' : (state?.status || 'open');
+  };
+  const matchFilter = (item) => {
+    const status = statusOf(item);
+    if (filter === 'all') return status !== 'skip';
+    return status === filter;
+  };
 
   function timeOf(v) {
     try { return v ? new Date(v).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : ''; }
     catch (_) { return ''; }
   }
 
+  function skipUntilText(v) {
+    if (!v) return '';
+    try {
+      return new Date(v).toLocaleString('ja-JP', {
+        timeZone:'Asia/Tokyo', weekday:'short', month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false
+      });
+    } catch (_) { return ''; }
+  }
+
+  function showSkipFeedback(message) {
+    let node = document.getElementById('onhandSkipFeedback');
+    if (!node) {
+      node = document.createElement('div');
+      node.id = 'onhandSkipFeedback';
+      node.className = 'skip-feedback';
+      node.setAttribute('role', 'status');
+      node.setAttribute('aria-live', 'polite');
+      document.body.appendChild(node);
+    }
+    node.textContent = message;
+    node.classList.add('is-visible');
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => node.classList.remove('is-visible'), 2400);
+  }
+
   const itemById = (bucket, id) => pools[bucket].find((item) => itemId(item) === id) || null;
   const bucketForId = (id) => buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
+
+  function ensureSkipDeadlines() {
+    let changed = false;
+    buckets.forEach((bucket) => pools[bucket].forEach((item) => {
+      const id = itemId(item);
+      const state = history[id];
+      if (state?.status !== 'skip' || (state.skip_until && Number.isFinite(Date.parse(state.skip_until)))) return;
+      const from = state.at && Number.isFinite(Date.parse(state.at)) ? new Date(state.at) : new Date();
+      state.skip_until = skipPlan(bucket, item, from).until;
+      changed = true;
+    }));
+    if (changed) writeHistory();
+    expireHistorySkips();
+  }
 
   function row(bucket, item) {
     const id = itemId(item);
     const state = history[id] || null;
-    const status = state?.status || 'open';
+    const status = statusOf(item);
     const title = item.title || item.summary || 'Untitled';
     const time = timeOf(state?.at);
+    const skipUntil = status === 'skip' ? skipUntilText(state?.skip_until) : '';
     return `<div class="item${status === 'done' ? ' is-done' : ''}${status === 'skip' ? ' is-skip' : ''}" data-row-id="${id}">
       <input type="checkbox" class="done-box" data-id="${id}" data-bucket="${bucket}" ${status === 'done' ? 'checked' : ''} ${status === 'skip' ? 'disabled' : ''} aria-label="Done">
-      <div class="item-main"><span class="item-title">${esc(title)}</span><div class="item-meta"><span>[${esc(item._type)}]</span><span>${esc(item._date)}</span>${status !== 'open' ? `<span class="status ${status}">${status.toUpperCase()}${time ? ` ${esc(time)}` : ''}</span>` : ''}</div></div>
+      <div class="item-main"><span class="item-title">${esc(title)}</span><div class="item-meta"><span>[${esc(item._type)}]</span><span>${esc(item._date)}</span>${status !== 'open' ? `<span class="status ${status}">${status.toUpperCase()}${time ? ` ${esc(time)}` : ''}</span>` : ''}${skipUntil ? `<span class="skip-until">再表示 ${esc(skipUntil)}</span>` : ''}</div></div>
       <button class="skip-btn" data-id="${id}" data-bucket="${bucket}" ${status === 'done' ? 'disabled' : ''}>${status === 'skip' ? 'UNDO' : 'SKIP'}</button>
     </div>`;
   }
@@ -162,12 +250,19 @@
     targets[bucket].list.innerHTML = shown.length ? shown.map((item) => row(bucket, item)).join('') : '<div class="empty">該当する項目はありません。</div>';
   }
 
-  const renderAll = () => buckets.forEach(renderBucket);
+  const renderAll = () => {
+    expireHistorySkips();
+    buckets.forEach(renderBucket);
+  };
 
   function setStatus(bucket, id, status) {
     const item = itemById(bucket, id);
-    if (status === 'done' || status === 'skip') {
+    if (status === 'done') {
       history[id] = { status, at:new Date().toISOString(), title_key:item ? titleKey(item) : undefined, recurring:Boolean(item?._isRecurring) };
+    } else if (status === 'skip') {
+      const plan = skipPlan(bucket, item);
+      history[id] = { status, at:new Date().toISOString(), skip_until:plan.until, title_key:item ? titleKey(item) : undefined, recurring:Boolean(item?._isRecurring) };
+      showSkipFeedback(plan.feedback);
     } else delete history[id];
     writeHistory();
     renderBucket(bucket);
@@ -275,6 +370,7 @@
     migrateHistoryForItems(items);
     buckets.forEach((bucket) => { pools[bucket].length = 0; });
     items.forEach((item) => pools[classify(item._type, item)].push(item));
+    ensureSkipDeadlines();
     sourceRange.textContent = `${start} – ${today}${audit.loaded ? ' + 3 MONTH AUDIT' : ''}${week.curated ? ' · CURATED' : ''}`;
     renderAll();
   }
@@ -299,6 +395,7 @@
     if (event.key !== HISTORY_KEY) return;
     const previous = historyFromText(event.oldValue);
     history = historyFromText(event.newValue);
+    ensureSkipDeadlines();
     const changed = new Set([...Object.keys(previous), ...Object.keys(history)].filter((id) => JSON.stringify(previous[id] || null) !== JSON.stringify(history[id] || null)));
     const affected = new Set([...changed].map(bucketForId).filter(Boolean));
     affected.forEach(renderBucket);

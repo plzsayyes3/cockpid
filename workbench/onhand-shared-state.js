@@ -53,7 +53,8 @@
           status: value.status,
           at: value.at || value.checked_at || '',
           title_key: value.title_key,
-          recurring: Boolean(value.recurring)
+          recurring: Boolean(value.recurring),
+          ...(value.status === 'skip' && value.skip_until ? { skip_until:value.skip_until } : {})
         };
       } else if (value?.checked_at) {
         out[id] = {
@@ -80,14 +81,24 @@
       if (status === 'done') status = 'handled';
       if (status === 'skip') status = 'skipped';
       if (!['open', 'handled', 'skipped'].includes(status)) return;
-      const at = value?.at || '';
+      let at = value?.at || '';
       const parsedAt = Date.parse(at);
       if (Number.isFinite(parsedAt) && parsedAt < RESET_CUTOFF_MS) return;
+
+      let skipUntil = value?.skip_until || '';
+      const parsedSkipUntil = Date.parse(skipUntil);
+      if (status === 'skipped' && Number.isFinite(parsedSkipUntil) && Date.now() >= parsedSkipUntil) {
+        status = 'open';
+        at = new Date(parsedSkipUntil).toISOString();
+        skipUntil = '';
+      }
+
       out[id] = {
         status,
         at,
         title_key: value?.title_key,
-        recurring: Boolean(value?.recurring)
+        recurring: Boolean(value?.recurring),
+        ...(status === 'skipped' && skipUntil ? { skip_until:skipUntil } : {})
       };
     });
     return out;
@@ -106,7 +117,13 @@
     const out = {};
     groups.forEach((group) => {
       Object.entries(normalizeSharedItems(group)).forEach(([id, value]) => {
-        if (!out[id] || itemTime(value) >= itemTime(out[id])) out[id] = value;
+        if (!out[id]) {
+          out[id] = value;
+          return;
+        }
+        const nextTime = itemTime(value);
+        const currentTime = itemTime(out[id]);
+        if (nextTime > currentTime || (nextTime === currentTime && (value.skip_until || !out[id].skip_until))) out[id] = value;
       });
     });
     return out;
@@ -119,7 +136,8 @@
         status: value.status === 'skip' ? 'skipped' : 'handled',
         at: value.at || nowIso(),
         title_key: value.title_key,
-        recurring: Boolean(value.recurring)
+        recurring: Boolean(value.recurring),
+        ...(value.status === 'skip' && value.skip_until ? { skip_until:value.skip_until } : {})
       };
     });
     return out;
@@ -133,7 +151,8 @@
         status: value.status === 'skipped' ? 'skip' : 'done',
         at: value.at,
         title_key: value.title_key,
-        recurring: Boolean(value.recurring)
+        recurring: Boolean(value.recurring),
+        ...(value.status === 'skipped' && value.skip_until ? { skip_until:value.skip_until } : {})
       };
     });
     return out;
@@ -388,7 +407,8 @@
           status: after.status === 'skip' ? 'skipped' : 'handled',
           at: after.at || nowIso(),
           title_key: after.title_key,
-          recurring: Boolean(after.recurring)
+          recurring: Boolean(after.recurring),
+          ...(after.status === 'skip' && after.skip_until ? { skip_until:after.skip_until } : {})
         };
       } else {
         const cached = readCacheItems()[id] || before || {};

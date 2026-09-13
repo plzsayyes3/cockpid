@@ -3,6 +3,7 @@
 
   const TYPES = ['action', 'question', 'idea', 'theme', 'hypothesis'];
   const MODES = new Set(['do', 'check', 'keep']);
+  const WEEKLY_SKIP_TYPES = new Set(['idea', 'theme', 'hypothesis']);
   const HISTORY_KEY = 'cockpid.today-movement.checked.v1';
   const AUDIT_NAME = /^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})-work-home-task-audit\.json$/;
   const DISPLAY_LIMIT = 2;
@@ -21,6 +22,7 @@
   const pools = { do: [], check: [], keep: [] };
   const queues = { do: [], check: [], keep: [] };
   let history = readHistory();
+  let skipFeedbackTimer = null;
 
   function jstDateParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -39,6 +41,21 @@
     return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
   }
 
+  function jstMidnightIso(parts) {
+    return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, -9, 0, 0)).toISOString();
+  }
+
+  function skipPlan(bucket, item, from = new Date()) {
+    const parts = jstDateParts(from);
+    const weekly = bucket === 'keep' || WEEKLY_SKIP_TYPES.has(item?._type);
+    if (weekly) {
+      const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+      const daysUntilSunday = weekday === 0 ? 7 : 7 - weekday;
+      return { until: jstMidnightIso(shiftDays(parts, daysUntilSunday)), feedback: '日曜 00:00 に再表示' };
+    }
+    return { until: jstMidnightIso(shiftDays(parts, 1)), feedback: '明日 00:00 に再表示' };
+  }
+
   const todayKey = dateKey(jstDateParts());
   const weekStartKey = dateKey(shiftDays(jstDateParts(), -6));
 
@@ -46,8 +63,15 @@
     const out = {};
     if (!raw || typeof raw !== 'object') return out;
     Object.entries(raw).forEach(([id, value]) => {
-      if (value?.status === 'done' || value?.status === 'skip') out[id] = value;
-      else if (value?.checked_at) out[id] = { status: 'done', at: value.checked_at };
+      if (value?.status === 'done' || value?.status === 'skip') {
+        out[id] = {
+          status: value.status,
+          at: value.at || value.checked_at || '',
+          title_key: value.title_key,
+          recurring: Boolean(value.recurring),
+          ...(value.status === 'skip' && value.skip_until ? { skip_until: value.skip_until } : {})
+        };
+      } else if (value?.checked_at) out[id] = { status: 'done', at: value.checked_at, title_key: value.title_key, recurring: Boolean(value.recurring) };
     });
     return out;
   }
@@ -63,6 +87,23 @@
   }
 
   function writeHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+
+  function isExpiredSkip(state, now = Date.now()) {
+    if (state?.status !== 'skip' || !state.skip_until) return false;
+    const until = Date.parse(state.skip_until);
+    return Number.isFinite(until) && now >= until;
+  }
+
+  function expireHistorySkips() {
+    let changed = false;
+    Object.entries(history).forEach(([id, state]) => {
+      if (!isExpiredSkip(state)) return;
+      delete history[id];
+      changed = true;
+    });
+    if (changed) writeHistory();
+    return changed;
+  }
 
   function hashId(seed) {
     let hash = 2166136261;
@@ -133,9 +174,33 @@
   }
 
   const poolItems = (bucket) => unique(pools[bucket]);
-  const openItems = (bucket) => poolItems(bucket).filter((item) => !history[itemId(item)]);
+  const openItems = (bucket) => poolItems(bucket).filter((item) => !history[itemId(item)] || isExpiredSkip(history[itemId(item)]));
   const itemById = (bucket, id) => poolItems(bucket).find((item) => itemId(item) === id) || null;
   const bucketForId = (id) => buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
+
+  function ensureSkipDeadlines() {
+    let changed = false;
+    buckets.forEach((bucket) => pools[bucket].forEach((item) => {
+      const id = itemId(item);
+      const state = history[id];
+      if (state?.status !== 'skip' || (state.skip_until && Number.isFinite(Date.parse(state.skip_until)))) return;
+      const from = state.at && Number.isFinite(Date.parse(state.at)) ? new Date(state.at) : new Date();
+      state.skip_until = skipPlan(bucket, item, from).until;
+      changed = true;
+    }));
+    if (changed) writeHistory();
+    expireHistorySkips();
+  }
+
+  function showSkipFeedback(message) {
+    if (!source) return;
+    const previous = source.textContent;
+    source.textContent = message;
+    clearTimeout(skipFeedbackTimer);
+    skipFeedbackTimer = setTimeout(() => {
+      if (source.textContent === message) source.textContent = previous;
+    }, 2400);
+  }
 
   function splitOpenBySource(bucket) {
     const primary = [];
@@ -180,7 +245,7 @@
     const id = itemId(item);
     const state = history[id] || null;
     const title = item.title || item.summary || 'Untitled';
-    const status = state?.status || '';
+    const status = isExpiredSkip(state) ? '' : (state?.status || '');
     const time = formatTime(state?.at);
     const isDone = status === 'done';
     const isSkip = status === 'skip';
@@ -195,6 +260,7 @@
   function renderBucket(bucket) {
     const target = targets[bucket];
     target.list.classList.remove('movement-loading');
+    expireHistorySkips();
     syncQueue(bucket);
     target.count.textContent = String(openItems(bucket).length);
     const visible = queues[bucket].slice(0, DISPLAY_LIMIT).map((id) => itemById(bucket, id)).filter(Boolean);
@@ -214,9 +280,14 @@
 
   function setStatus(bucket, id, status) {
     const item = itemById(bucket, id);
-    if (status === 'done' || status === 'skip') {
+    if (status === 'done') {
       history[id] = { status, at: new Date().toISOString(), title_key: item ? titleKey(item) : undefined, recurring: Boolean(item?._isRecurring) };
       queues[bucket] = queues[bucket].filter((queuedId) => queuedId !== id);
+    } else if (status === 'skip') {
+      const plan = skipPlan(bucket, item);
+      history[id] = { status, at: new Date().toISOString(), skip_until: plan.until, title_key: item ? titleKey(item) : undefined, recurring: Boolean(item?._isRecurring) };
+      queues[bucket] = queues[bucket].filter((queuedId) => queuedId !== id);
+      showSkipFeedback(plan.feedback);
     } else {
       delete history[id];
       if (!queues[bucket].includes(id)) queues[bucket].push(id);
@@ -330,6 +401,7 @@
     migrateHistoryForItems(items);
     buckets.forEach((bucket) => { pools[bucket].length = 0; queues[bucket].length = 0; });
     items.forEach((item) => pools[classify(item._type, item)].push(item));
+    ensureSkipDeadlines();
     renderAll({ randomize: true });
     const range = `${weekStartKey.slice(5).replace('-', '.')}–${todayKey.slice(5).replace('-', '.')}`;
     const auditLabel = audit.loaded ? ' + 3M' : '';
@@ -357,6 +429,7 @@
     if (event.key !== HISTORY_KEY) return;
     const previous = historyFromText(event.oldValue);
     history = historyFromText(event.newValue);
+    ensureSkipDeadlines();
     const changed = new Set([...Object.keys(previous), ...Object.keys(history)].filter((id) => JSON.stringify(previous[id] || null) !== JSON.stringify(history[id] || null)));
     const affected = new Set([...changed].map(bucketForId).filter(Boolean));
     affected.forEach(renderBucket);
