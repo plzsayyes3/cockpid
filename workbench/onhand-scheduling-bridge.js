@@ -3,7 +3,7 @@
 
   const OWNER = 'plzsayyes3';
   const TOKEN_KEY = 'zen-note-github-token';
-  const TASK_BRANCH = 'task-data';
+  const TASK_BRANCH = 'main';
   const TECHO_BRANCH = 'main';
   const MAX_RETRIES = 3;
 
