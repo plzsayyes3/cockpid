@@ -137,7 +137,6 @@
       mutate:(text) => appendTaskliner(text, title, date)
     });
   }
-
   function headingLevel(line) {
     return String(line || '').match(/^(#{1,6})\s+/)?.[1].length || 0;
   }
@@ -198,7 +197,7 @@
     const info = dateInfo(date);
     const lines = ensureMonthBase(text, info);
     const dateStart = lines.findIndex((line) => targetDateHeading(line, info));
-    const taskLine = `- [ ] ${clean(title)}`;
+    const taskLine = `- ${clean(title)}`;
 
     if (dateStart >= 0) {
       const end = nextHeading(lines, dateStart);
@@ -242,7 +241,7 @@
     const firstWeek = lines.findIndex((line) => weekNumberFromHeading(line) !== null);
     const boundary = firstWeek >= 0 ? firstWeek : lines.length;
     const heading = findUndatedHeading(lines, 0, boundary);
-    const taskLine = `- [ ] ${clean(title)}`;
+    const taskLine = `- ${clean(title)}`;
 
     if (heading < 0) {
       let insertAt = lines.findIndex((line) => /^#\s+/.test(line));
@@ -266,7 +265,7 @@
     const lines = ensureMonthBase(text, info);
     const weeks = lines.map((line, index) => ({ index, week:weekNumberFromHeading(line) })).filter((entry) => entry.week !== null);
     const current = weeks.find((entry) => entry.week === week);
-    const taskLine = `- [ ] ${clean(title)}`;
+    const taskLine = `- ${clean(title)}`;
 
     if (!current) {
       const later = weeks.find((entry) => entry.week > week);
