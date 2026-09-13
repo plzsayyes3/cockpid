@@ -95,33 +95,35 @@
     throw new Error('保存競合を解消できませんでした');
   }
 
-  function tasklinerTitleFromRow(line) {
-    const cells = line.split('|').slice(1, -1).map((cell) => clean(cell));
-    return cells.length >= 2 ? cells[1].replace(/｜/g, '|') : '';
+  function tasklinerTitle(line) {
+    const match = String(line || '').match(/^\s*-\s+(?:\[[ xX/>]\]\s+)?(.+?)\s*$/);
+    if (!match) return '';
+    let value = match[1]
+      .replace(/\s*【[^】]*】\s*$/, '')
+      .replace(/\s*(?:\(\s*\d+\s*m\s*\)|⏳\s*\d+\s*m)\s*$/, '');
+    return clean(value);
   }
 
   function appendTaskliner(text, title, date) {
-    const wanted = clean(title).replace(/｜/g, '|');
-    const lines = String(text || '').replace(/\r/g, '').split('\n');
-    if (lines.some((line) => /^\s*\|/.test(line) && clean(tasklinerTitleFromRow(line)) === wanted)) return { duplicate:true };
+    const wanted = clean(title);
+    let lines = String(text || '').replace(/\r/g, '').split('\n');
+    if (lines.some((line) => tasklinerTitle(line) === wanted)) return { duplicate:true };
+    if (!lines.some((line) => clean(line))) lines = [`# ${date}`];
 
-    const safeTitle = clean(title).replace(/\|/g, '｜');
-    const header = '| ✓ | Task | Planned | Actual Start | Actual End | Actual | Status |';
-    const divider = '|---|---|---|---|---|---|---|';
-    const row = `| □ | ${safeTitle} |  |  |  | 0m |  |`;
-    let base = String(text || '').replace(/\s+$/, '');
-    if (!base) base = `# TaskLiner ${date}`;
-
-    const existing = base.split('\n');
-    const headerIndex = existing.findIndex((line) => clean(line) === clean(header));
-    if (headerIndex >= 0) {
-      let insertAt = headerIndex + 1;
-      if (/^\s*\|[-:| ]+\|\s*$/.test(existing[insertAt] || '')) insertAt += 1;
-      while (insertAt < existing.length && /^\s*\|/.test(existing[insertAt])) insertAt += 1;
-      existing.splice(insertAt, 0, row);
-      return { text:`${existing.join('\n').replace(/\s+$/, '')}\n` };
+    const row = `- [ ] ${wanted}`;
+    const firstSection = lines.findIndex((line) => /^##\s+/.test(line));
+    if (firstSection >= 0) {
+      let insertAt = firstSection;
+      while (insertAt > 0 && !clean(lines[insertAt - 1])) insertAt -= 1;
+      const block = [row, ''];
+      if (insertAt > 0 && clean(lines[insertAt - 1])) block.unshift('');
+      lines.splice(insertAt, 0, ...block);
+    } else {
+      while (lines.length && !clean(lines[lines.length - 1])) lines.pop();
+      if (lines.length && clean(lines[lines.length - 1])) lines.push('');
+      lines.push(row);
     }
-    return { text:`${base}\n\n${header}\n${divider}\n${row}\n` };
+    return { text:`${lines.join('\n').replace(/\s+$/, '')}\n` };
   }
 
   async function sendTodayToTaskliner({ title }) {
@@ -145,6 +147,11 @@
       const next = headingLevel(lines[i]);
       if (next && next <= level) return i;
     }
+    return lines.length;
+  }
+
+  function nextHeading(lines, start) {
+    for (let i = start + 1; i < lines.length; i += 1) if (headingLevel(lines[i])) return i;
     return lines.length;
   }
 
@@ -194,8 +201,7 @@
     const taskLine = `- [ ] ${clean(title)}`;
 
     if (dateStart >= 0) {
-      const level = headingLevel(lines[dateStart]);
-      const end = sectionEnd(lines, dateStart, level);
+      const end = nextHeading(lines, dateStart);
       if (hasTitle(lines, dateStart + 1, end, title)) return { duplicate:true };
       let insertAt = end;
       while (insertAt > dateStart + 1 && !clean(lines[insertAt - 1])) insertAt -= 1;
@@ -208,7 +214,6 @@
     const exactWeek = weekStarts.find((entry) => entry.week === targetWeek);
     let start = exactWeek ? exactWeek.index + 1 : 0;
     let end = exactWeek ? (weekStarts.find((entry) => entry.index > exactWeek.index)?.index ?? lines.length) : lines.length;
-
     if (!exactWeek && weekStarts.length) {
       const later = weekStarts.find((entry) => entry.week > targetWeek);
       if (later) end = later.index;
@@ -236,7 +241,7 @@
     const lines = ensureMonthBase(text, info);
     const firstWeek = lines.findIndex((line) => weekNumberFromHeading(line) !== null);
     const boundary = firstWeek >= 0 ? firstWeek : lines.length;
-    let heading = findUndatedHeading(lines, 0, boundary);
+    const heading = findUndatedHeading(lines, 0, boundary);
     const taskLine = `- [ ] ${clean(title)}`;
 
     if (heading < 0) {
@@ -260,7 +265,7 @@
     const week = isoWeek(date);
     const lines = ensureMonthBase(text, info);
     const weeks = lines.map((line, index) => ({ index, week:weekNumberFromHeading(line) })).filter((entry) => entry.week !== null);
-    let current = weeks.find((entry) => entry.week === week);
+    const current = weeks.find((entry) => entry.week === week);
     const taskLine = `- [ ] ${clean(title)}`;
 
     if (!current) {
@@ -273,7 +278,7 @@
     }
 
     const weekEnd = weeks.find((entry) => entry.index > current.index)?.index ?? lines.length;
-    let heading = findUndatedHeading(lines, current.index + 1, weekEnd);
+    const heading = findUndatedHeading(lines, current.index + 1, weekEnd);
     if (heading < 0) {
       lines.splice(current.index + 1, 0, '### 日付未定', taskLine);
       return { text:`${lines.join('\n').replace(/\s+$/, '')}\n`, detail:`week${week}` };
@@ -394,7 +399,7 @@
     setBusy(row, true, '送信中…');
     try {
       const result = await operation();
-      toast(result.duplicate ? `登録済み · ON HAND処理済み` : successText(result));
+      toast(result.duplicate ? '登録済み · ON HAND処理済み' : successText(result));
       markHandled(row);
     } catch (error) {
       console.error('ON HAND scheduling bridge failed', error);
