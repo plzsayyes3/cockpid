@@ -98,10 +98,14 @@ a { font: inherit; }
     20% 7%
   );
   box-shadow: 0 0 8px var(--eye-glow);
-  transform: translateY(var(--eye-y));
+  transform: translate(
+    calc(var(--pupil-x) / 2),
+    calc(var(--eye-y) + (var(--pupil-y) / 2))
+  );
   transform-origin: center;
   image-rendering: pixelated;
   transition: filter 120ms linear;
+  will-change: transform;
 }
 
 .eye::after {
@@ -148,8 +152,8 @@ a { font: inherit; }
     18% 6%
   );
   transform: translate(
-    calc(-50% + var(--pupil-x)),
-    calc(-50% + var(--pupil-y))
+    calc(-50% + (var(--pupil-x) / 2)),
+    calc(-50% + (var(--pupil-y) / 2))
   );
   will-change: transform;
 }
@@ -167,13 +171,22 @@ a { font: inherit; }
 
 @keyframes stan-blink {
   0%, 16%, 84%, 100% {
-    transform: translateY(var(--eye-y)) scaleY(1);
+    transform: translate(
+      calc(var(--pupil-x) / 2),
+      calc(var(--eye-y) + (var(--pupil-y) / 2))
+    ) scaleY(1);
   }
   17%, 36%, 64%, 83% {
-    transform: translateY(var(--eye-y)) scaleY(.42);
+    transform: translate(
+      calc(var(--pupil-x) / 2),
+      calc(var(--eye-y) + (var(--pupil-y) / 2))
+    ) scaleY(.42);
   }
   37%, 63% {
-    transform: translateY(var(--eye-y)) scaleY(.07);
+    transform: translate(
+      calc(var(--pupil-x) / 2),
+      calc(var(--eye-y) + (var(--pupil-y) / 2))
+    ) scaleY(.07);
   }
 }
 
