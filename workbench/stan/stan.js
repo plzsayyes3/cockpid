@@ -21,6 +21,9 @@ const cameraState = document.getElementById('cameraState');
 const cameraDot = document.getElementById('cameraDot');
 const mood = document.getElementById('stanMood');
 const video = document.getElementById('cameraFeed');
+const speechBox = document.getElementById('stanSpeech');
+const speechLabel = document.getElementById('stanSpeechLabel');
+const speechTranscript = document.getElementById('stanTranscript');
 const menu = document.getElementById('stanMenu');
 const menuBackdrop = document.getElementById('stanMenuBackdrop');
 const menuClose = document.getElementById('stanMenuClose');
@@ -29,6 +32,7 @@ const quickActionStatus = document.getElementById('quickActionStatus');
 const saveQuickActionButton = document.getElementById('saveQuickAction');
 const runQuickActionButton = document.getElementById('runQuickAction');
 const clearQuickActionButton = document.getElementById('clearQuickAction');
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
 
 let quickActionMemory = '';
 
@@ -67,7 +71,13 @@ const state = {
   lastTapAt: 0,
   lastTapX: 0,
   lastTapY: 0,
-  singleTapTimer: null
+  speechRecognition: null,
+  speechStarting: false,
+  speechListening: false,
+  speechSuppressError: false,
+  speechFinalText: '',
+  speechInterimText: '',
+  speechErrorMessage: ''
 };
 
 function setMood(text) {
@@ -85,7 +95,9 @@ function setCameraUi(label, mode = 'idle') {
   cameraButton.dataset.mode = mode;
   cameraButton.setAttribute('aria-pressed', state.cameraEnabled ? 'true' : 'false');
   cameraDot.dataset.mode = mode;
-  if (!state.menuOpen) setMood(moodForMode(mode));
+  if (!state.menuOpen && !state.speechStarting && !state.speechListening) {
+    setMood(moodForMode(mode));
+  }
 }
 
 function cameraPreference() {
@@ -191,13 +203,165 @@ function syncQuickActionUi(message = '') {
 }
 
 function clearPendingTap() {
-  clearTimeout(state.singleTapTimer);
-  state.singleTapTimer = null;
   state.lastTapAt = 0;
+}
+
+function setSpeechUi(label, text = '') {
+  speechBox.hidden = false;
+  speechLabel.textContent = label;
+  speechTranscript.textContent = text;
+}
+
+function speechErrorMessage(error) {
+  if (error === 'not-allowed' || error === 'service-not-allowed') return 'マイクを許可してください';
+  if (error === 'audio-capture') return 'マイクを使えません';
+  if (error === 'network') return '音声認識に接続できません';
+  if (error === 'no-speech') return '聞き取れませんでした';
+  return '音声認識エラー';
+}
+
+function ensureSpeechRecognition() {
+  if (!SpeechRecognitionCtor) return null;
+  if (state.speechRecognition) return state.speechRecognition;
+
+  const recognition = new SpeechRecognitionCtor();
+  recognition.lang = 'ja-JP';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    state.speechStarting = false;
+    state.speechListening = true;
+    state.speechErrorMessage = '';
+    stage.classList.add('is-listening');
+    setSpeechUi('聞いてる…', '');
+    if (!state.menuOpen) setMood('聞いてる…');
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const transcript = event.results[index]?.[0]?.transcript?.trim() || '';
+      if (!transcript) continue;
+
+      if (event.results[index].isFinal) {
+        state.speechFinalText = `${state.speechFinalText} ${transcript}`.trim();
+      } else {
+        interim = `${interim} ${transcript}`.trim();
+      }
+    }
+
+    state.speechInterimText = interim;
+    const displayText = [state.speechFinalText, state.speechInterimText].filter(Boolean).join(' ');
+    setSpeechUi(state.speechInterimText ? '聞いてる…' : '聞いたよ', displayText);
+  };
+
+  recognition.onerror = (event) => {
+    state.speechStarting = false;
+
+    if (event.error === 'aborted' && state.speechSuppressError) return;
+
+    const message = speechErrorMessage(event.error);
+    state.speechErrorMessage = message;
+    setSpeechUi(message, state.speechFinalText || state.speechInterimText);
+    if (!state.menuOpen) setMood('もう一度？');
+  };
+
+  recognition.onend = () => {
+    const wasSuppressed = state.speechSuppressError;
+    state.speechStarting = false;
+    state.speechListening = false;
+    state.speechSuppressError = false;
+    stage.classList.remove('is-listening');
+
+    if (wasSuppressed || state.menuOpen) return;
+    if (state.speechErrorMessage) return;
+
+    const text = (state.speechFinalText || state.speechInterimText).trim();
+    if (text) {
+      setSpeechUi('聞いたよ', text);
+      setMood('聞いたよ');
+      window.setTimeout(() => {
+        if (!state.menuOpen && !state.speechListening && !state.speechStarting) {
+          setMood(moodForMode(cameraButton.dataset.mode));
+        }
+      }, 1200);
+    } else {
+      setSpeechUi('もう一度どうぞ', '');
+      setMood('もう一度？');
+    }
+  };
+
+  state.speechRecognition = recognition;
+  return recognition;
+}
+
+function startSpeechRecognition() {
+  if (!SpeechRecognitionCtor) {
+    setSpeechUi('音声認識未対応', 'このブラウザではブラウザ音声認識を使えません');
+    openMenu({ message: 'このブラウザでは音声認識未対応です' });
+    return false;
+  }
+
+  if (state.speechStarting || state.speechListening) return true;
+
+  const recognition = ensureSpeechRecognition();
+  if (!recognition) return false;
+
+  state.speechFinalText = '';
+  state.speechInterimText = '';
+  state.speechErrorMessage = '';
+  state.speechSuppressError = false;
+  state.speechStarting = true;
+  setSpeechUi('準備中…', '');
+  setMood('聞くよ');
+
+  try {
+    recognition.start();
+    return true;
+  } catch (error) {
+    state.speechStarting = false;
+    console.warn('[Stan] Speech recognition could not start:', error);
+    setSpeechUi('開始できません', 'もう一度タップしてください');
+    setMood('もう一度？');
+    return false;
+  }
+}
+
+function stopSpeechRecognition({ abort = false, silent = false } = {}) {
+  const recognition = state.speechRecognition;
+  if (!recognition || (!state.speechStarting && !state.speechListening)) return;
+
+  if (silent) state.speechSuppressError = true;
+
+  try {
+    if (abort) {
+      recognition.abort();
+    } else {
+      recognition.stop();
+    }
+  } catch (error) {
+    console.warn('[Stan] Speech recognition could not stop:', error);
+    state.speechStarting = false;
+    state.speechListening = false;
+    stage.classList.remove('is-listening');
+  }
+}
+
+function toggleSpeechRecognition() {
+  if (state.speechStarting || state.speechListening) {
+    stopSpeechRecognition();
+    return true;
+  }
+
+  return startSpeechRecognition();
 }
 
 function openMenu({ focusInput = false, message = '' } = {}) {
   clearPendingTap();
+  stopSpeechRecognition({ abort: true, silent: true });
   state.menuOpen = true;
   stage.classList.add('is-menu-open');
   menu.setAttribute('aria-hidden', 'false');
@@ -249,7 +413,7 @@ function runQuickAction() {
   const normalized = normalizeQuickActionUrl(quickActionValue());
 
   if (!normalized) {
-    openMenu({ focusInput: true, message: 'シングルタップ先を設定してください' });
+    openMenu({ focusInput: true, message: 'クイックアクションを設定してください' });
     return false;
   }
 
@@ -618,6 +782,7 @@ function endStagePress(event) {
 
   if (isDoubleTap) {
     clearPendingTap();
+    stopSpeechRecognition({ abort: true, silent: true });
     openMenu();
     return;
   }
@@ -625,12 +790,7 @@ function endStagePress(event) {
   state.lastTapAt = now;
   state.lastTapX = event.clientX;
   state.lastTapY = event.clientY;
-  clearTimeout(state.singleTapTimer);
-  state.singleTapTimer = window.setTimeout(() => {
-    state.singleTapTimer = null;
-    state.lastTapAt = 0;
-    if (!state.menuOpen) runQuickAction();
-  }, DOUBLE_TAP_MS);
+  toggleSpeechRecognition();
 }
 
 cameraButton.addEventListener('click', toggleCamera);
@@ -660,9 +820,13 @@ stage.addEventListener('contextmenu', (event) => {
   if (!event.target.closest('.stan-control, .stan-menu')) event.preventDefault();
 });
 
-window.addEventListener('pagehide', () => stopCamera({ preservePreference: true }));
+window.addEventListener('pagehide', () => {
+  stopSpeechRecognition({ abort: true, silent: true });
+  stopCamera({ preservePreference: true });
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    stopSpeechRecognition({ abort: true, silent: true });
     state.stream?.getVideoTracks().forEach((track) => { track.enabled = false; });
   } else if (state.cameraEnabled && state.stream) {
     state.stream.getVideoTracks().forEach((track) => { track.enabled = true; });
