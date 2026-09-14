@@ -15,6 +15,10 @@
   .desk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
 @media(max-width:720px){
+  .desk{grid-template-columns:1fr}
+  .calendar-news-grid>.today-object{grid-column:1;grid-row:2}
+  .desk>.movement-object{grid-column:1;grid-row:3}
+  .calendar-news-grid>.news-object{grid-column:1;grid-row:4}
   .dock{left:8px;right:8px;bottom:8px;transform:none;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(2,32px);gap:8px;overflow:visible;padding:0}
   .app-btn{width:100%;min-width:0;height:32px;flex:initial;border-radius:6px;padding:0 8px;gap:6px}
   .app-btn b{font-size:12px}.app-btn span{font-size:6.5px}
