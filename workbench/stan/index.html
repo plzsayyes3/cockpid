@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#071019">
+  <title>Stan — Standby</title>
+  <link rel="stylesheet" href="stan.css">
+</head>
+<body>
+  <main class="stan-stage" id="stanStage" aria-label="スタンちゃん">
+    <a class="stan-control stan-back" href="../" aria-label="作業台へ戻る" title="Workbench">←</a>
+
+    <button class="stan-control camera-toggle" id="cameraToggle" type="button" aria-pressed="false" title="カメラ認識を切り替える">
+      <span class="camera-dot" id="cameraDot" data-mode="idle" aria-hidden="true"></span>
+      <span class="camera-state" id="cameraState">CAM · OFF</span>
+    </button>
+
+    <section class="stan-face" id="stanFace" aria-hidden="true">
+      <div class="eye eye-left"><span class="pupil"></span></div>
+      <div class="eye eye-right"><span class="pupil"></span></div>
+    </section>
+
+    <p class="stan-hint">STAN / STANDBY</p>
+    <video class="camera-feed" id="cameraFeed" playsinline muted></video>
+  </main>
+
+  <script type="module" src="stan.js"></script>
+</body>
+</html>
