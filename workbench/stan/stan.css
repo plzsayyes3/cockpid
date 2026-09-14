@@ -467,7 +467,7 @@ input { font: inherit; }
   .stan-menu { width: min(42vw, 320px); }
 }
 
-@media (max-width: 420px) and (orientation: portrait) {
+@media (max-width: 600px) and (orientation: portrait) {
   .stan-face {
     gap: clamp(18px, 6vw, 26px);
   }
