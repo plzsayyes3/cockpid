@@ -1,188 +1,197 @@
-# COCKPID
+# 作業台 / Workbench
 
-Personal Thinking Cockpit.
+Repository: `plzsayyes3/cockpid`  
+Former user-facing name: `COCKPID`
+
+作業台は、個人の記録・Knowledge Systemそのものではなく、必要な道具や状態へ入るための **display / interaction layer** です。
+
+- 方針の正本: [`DIRECTION.md`](./DIRECTION.md)
+- 現在の実装棚卸し: [`SURFACES.md`](./SURFACES.md)
+- Projectの正本: `plzsayyes3/my-storage-note/objects/projects/cockpid.md`
+
+このREADMEは2026-09-15に現行Workbenchへ合わせて更新しました。旧Mission Control時代の詳細はGit履歴に残っています。
 
 ## Architecture
 
-COCKPID is the **display / exploration layer**, not the source of truth and not the analysis engine.
-
 ```text
 SOURCE
-  mynotebook
-      ↓
-ANALYSIS DATA
-  my-storage-note
-      ↓
-DISPLAY / EXPLORATION
-  cockpid
+  plzsayyes3/mynotebook
+       │
+       ▼
+AI KNOWLEDGE SYSTEM
+  plzsayyes3/my-storage-note
+  ├─ brain
+  ├─ objects
+  ├─ memory
+  └─ views
+       │
+       ▼
+DISPLAY / INTERACTION
+  plzsayyes3/cockpid
+  └─ workbench/
 ```
 
-### 1. SOURCE
-`plzsayyes3/mynotebook` contains the original daily notes and personal thinking records.
+### `mynotebook`
 
-- `01_Daily/YYYY-MM-DD.md` — daily notes
-- `02_techo/YYYY-MM.md` — My System Techo monthly Markdown; the source of truth for `calendar.html`
-- `00_inbox/` — where cockpid writes (ZEN memos, deck exports)
-- `09_taskchute/YYYY-MM-DD.md` — the day's TaskChute list; cockpid reads the
-  `- [/]` (in-progress) lines from it for the header's NOW readout
+人間の一次記録の正本です。
 
-### 2. ANALYSIS DATA
-`plzsayyes3/my-storage-note` contains the structured outputs produced from the source data, including:
+主な利用先:
 
-- `memory/extracted/theme/YYYY-MM-DD.json`
-- `memory/extracted/idea/YYYY-MM-DD.json`
-- `memory/extracted/action/YYYY-MM-DD.json`
-- `memory/connections/semantic.json`
-- `memory/state/completed_actions.json` — written by cockpid itself (not the analysis pipeline): a map of `{action id: completion timestamp}`, updated when a user marks an action complete from the ACTIONS list. Kept separate from the `memory/extracted/` tree so the analysis pipeline can keep regenerating those files without clobbering completion state.
+- `01_Daily/YYYY-MM-DD.md` — Daily Note
+- `02_techo/` — My System Techo
+- `00_inbox/` — Memo / Stan Voice Memo等の入口
+- `09_taskchute/` — TaskLiner / TaskChute系データ
 
-The normal cockpit cycle is **previous-day first**, because the source/analysis pipeline does not need to be queried repeatedly during the same day.
+### `my-storage-note`
 
-### 3. DISPLAY
-`cockpid` turns analysis results into a cockpit-style interface.
+AIが整理したKnowledge Systemの正本です。
 
-Core interaction:
+主な利用先:
 
-- dates are the primary navigation unit
-- `昨日 → 一昨日 → ...` is presented as an accordion
-- Ideas / Themes / Actions use the same expandable model
-- Serendipity / Connections explains why two records are related
-- source → analysis → display traceability remains visible
-- the interface is optimized for scanning first and opening details only when needed
+- `brain/` — rules / coordination
+- `objects/` — Canonical Project / Assignment / Task / Idea / Reference
+- `memory/` — derived data / state
+- `views/` — Cockpit等が読むread model
+- `advice/` — daily advice
 
-#### NOW / 着手中 (header readout)
+Project表示は原則 `views/` を利用し、Canonical Project MarkdownをCockpit側へ複製しません。
 
-Beside the clock, `index.html` shows the task currently being worked on: the first
-`- [/]` line in `mynotebook/09_taskchute/YYYY-MM-DD.md`, with `+N` when more than one
-line is marked in progress (the full list is in the element's tooltip).
+### `cockpid`
 
-This is the one place that deliberately reads **today**, not the previous day. The
-previous-day policy exists to spare the analysis pipeline repeated processing; an
-in-progress task is live state and is worthless a day late. It is a direct read of a
-source file — no analysis layer involved — polled once a minute and again whenever the
-tab regains focus.
+表示・操作層です。HOMEへすべての機能を詰め込まず、独立Appへ入るための静かな作業台として扱います。
 
-Both `.md` and an extensionless path are tried on the first fetch, and whichever
-answers is remembered, so later polls cost one request. It writes to its own element,
-never to the shared status readout (see the pitfall about status writers below).
+## Live entry point
 
-## Current entry points
+GitHub Pagesのroot `index.html` は `./workbench/` へリダイレクトします。
 
-- `index.html` — GitHub Pages root / primary cockpit
-- `calendar.html` — My System Techo month calendar; reads `mynotebook/02_techo/YYYY-MM.md` directly through the GitHub Contents API
-- `board.html` — Deck Board 16×16 / カードを並べて深く考える独立ページ (linked from the cockpit toolbar)
-- `index-00.html` — UI gallery and pattern launcher
-- `main.html` — dynamic Mission Control build
-- `pattern-01.html` — Mission Control
-- `pattern-02.html` — Temporal Lineage
-- `pattern-03.html` — Neural Network
-- `pattern-04.html` — Tactical Matrix
-- `pattern-05.html` — Hybrid Command Deck
-- `prototype-common.js` — shared GitHub API/data access and the shared `zen-note-github-token` localStorage key
+現行HOME:
 
-## My System Techo Calendar (`calendar.html`)
+- `workbench/index.html`
 
-The calendar is deliberately a **display / exploration layer only**. It does not copy,
-materialize, or regenerate Techo event data inside `cockpid`.
+Runtime routingの正本:
+
+- `workbench/app-routing.js`
+
+現在のDock / routing:
+
+| Key | App | Route / behavior |
+|---|---|---|
+| 1 | Calendar | `workbench/calendar.html` |
+| 2 | Tasks | `workbench/taskliner-bridge.html` → external TaskLiner |
+| 3 | Zen | external `zen-note` |
+| 4 | News | external `My_Internet_place` |
+| — | Advice | Dock外。Mail Statusから `workbench/advice.html` |
+| 5 | On Hand | `workbench/onhand.html` |
+| 6 | Board | `workbench/board.js` / Workbench Board |
+| 7 | Backstage | `workbench/backstage.html` |
+| 8 | Project Town | `workbench/project-town.html` |
+| 9 | Stan | `workbench/stan/` |
+| 0 | Secret Desk | local easter egg |
+
+`5=On Hand / 6=Board / 7=Backstage / 8=Project Town / 9=Stan` が現在値です。
+
+## HOME principle
+
+HOMEは「全部を監視するMission Control」ではなく、必要な道具を必要なときだけ出す作業面です。
+
+- HOMEへ各Appの詳細機能を重複実装しない
+- 今日・今・入口として意味のある情報だけを置く
+- Projectの正本をCockpitへ複製しない
+- 各Appは必要に応じて直接URLでも開ける
+- スマートフォンでは独立Appを全画面で扱える構造を基本とする
+
+## Project surfaces
+
+### Backstage
+
+Projectの棚です。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。
+
+Canonical Projectは `my-storage-note/objects/projects/` です。
+
+### Project Town
+
+Projectのactivity / momentum等をピクセル表現で眺める画面です。Project read modelはBackstageと同じKnowledge Systemを基準にします。
+
+## Stan / スタンちゃん
+
+`workbench/stan/` は9番から開く独立全画面のstandby surfaceです。
+
+現在実装済み:
+
+- ピクセル風の両目
+- 自律視線・微細な動き・不規則な瞬き
+- 任意のフロントカメラ
+- MediaPipe Face Detectorによる顔位置検出と視線追従
+- カメラOFF / 拒否 / 失敗時の自律フォールバック
+- シングルタップでWeb Speech Recognition開始
+- 最大60秒の音声セッション
+- `end` / `no-speech` 後、期限内なら認識再開を試みるsession wrapper
+- 残り時間メーター
+- 再タップで途中終了
+- 認識文を画面に保持
+- `送る` で `mynotebook/00_inbox` へMarkdown保存
+- ダブルタップでStan menu
+
+音声メモのファイル名はJSTの `YYYYMMDDHHMMSSmmm.md` とし、同一秒内の送信衝突を避けます。
+
+iPhone Safariで長めの無音区間を挟んだ際にSpeech Recognitionが実際に再開できるかは、コード上の仕組みはありますが実機確認項目です。
+
+## Authentication
+
+Workbenchと関連Appは、同一GitHub Pages origin上で共通のbrowser-side token keyを利用します。
 
 ```text
-mynotebook/02_techo/YYYY-MM.md
-        ↓ GitHub Contents API
-calendar.js
-        ↓
-browser month calendar
+localStorage['zen-note-github-token']
 ```
 
-The Markdown file remains the source of truth. Every month change fetches that month's
-file from `plzsayyes3/mynotebook` and parses it in the browser.
+トークン自体をこのRepositoryへ保存しません。
 
-Initial scope:
+利用機能に応じて、fine-grained PATには `mynotebook` / `my-storage-note` のContents権限が必要です。MemoやStanからInboxへ書く場合は `mynotebook` のwrite権限が必要です。
 
-- Monday-first month grid
-- previous month / next month / today navigation
-- `## M月D日(...)` day headings and their `- ` items
-- optional leading times such as `15:00` and `19:30-20:30`
-- task syntax (`- [ ]`, `- [x]`, `- [/]`) without editing it
-- month-level `### 日付未定`
-- Obsidian wikilinks rendered as readable text
-- no week view, day view, or editing yet
+GitHub APIでは、fine-grained PATのアクセス不足が `403` ではなく `404` に見える場合があります。`404 = ファイルが存在しない` と即断しないでください。
 
-`calendar.html` reuses `prototype-common.js` for GitHub access and therefore uses the
-same browser token as the rest of the cockpit: `localStorage['zen-note-github-token']`.
-No token is written into this repository.
+## Standalone / legacy root files
 
-A GitHub `404` is intentionally reported as either “month file missing” or “token does
-not have access to `mynotebook`”, because fine-grained PAT access failures can also appear
-as `404`.
+Workbenchへの移行前のroot-level実装が一部残っています。**現在のWorkbench仕様を判断するときはrootの旧画面ではなく `workbench/`、`DIRECTION.md`、`SURFACES.md` を基準にします。**
+
+主な扱い:
+
+- `calendar.html` / `calendar.js` / `calendar.css` — Workbench Calendarにsupersedeされた旧実装
+- `main.html` — 旧Mission Control UI。現行HOMEではない
+- `index-00.html`, `pattern-*`, `prototype-*`, `refined.html` — 旧UI検討・参照系。現行entry pointではない
+- `board.html` — Workbenchの6 / Boardとは別物の、独立したDeck Board 16×16
+
+削除・archiveの可否はファイルごとに異なるため、単に古いという理由では削除しません。詳細な生存判定は `SURFACES.md` を参照してください。
 
 ## Deck Board 16×16 (`board.html`)
 
-The cockpit is optimized for *scanning*. The board is the opposite mode: a separate,
-self-contained page for **placing a small number of cards deliberately and thinking slowly**.
-`index.html` is unchanged apart from the toolbar link that opens it.
+rootの `board.html` はWorkbench Boardとは別の独立ツールです。
 
-### Model
+- 少数のカードを16×16 lattice上へ配置して考える
+- deck stateはbrowser `localStorage` を利用
+- extracted dataからカードを読み込める
+- export時は `mynotebook/00_inbox` へ戻せる
 
-```text
-LIBRARY            DECK                     LATTICE 16×16
-memory/extracted/*.json → JSON cards (snapshot) → cards are 4×4 cells
-(fetched)          localStorage             the offset is the meaning
-```
-
-- **Card** — an idea/theme/action normalized into a JSON object
-  (`id`, `type`, `title`, `summary`, `date`, `source`). `source` keeps the
-  `repo / path / index` of the extracted record, so a card on the board is still traceable
-  back to the analysis layer. 自作カード (`type: note`) use the same shape with `source: null`.
-- **Deck** — a named set of cards plus their arrangement (`pos: {cardId: {x, y}}`).
-  Adding a card **snapshots its JSON into the deck**, so a deck stays readable without
-  re-fetching. Decks can be created, renamed, duplicated, deleted and switched.
-- **Lattice** — 16×16 cells. A card occupies **4×4** of them, so four cards fit across,
-  but a card can sit at any cell: two neighbours can be staggered by **0, 1, 2 or 3 cells**
-  — a quarter of a card at a time. That stagger is the expressive dimension.
-  Cards may not overlap; a drop that would overlap previews red and is refused.
-
-### Why a lattice instead of free placement
-
-Free placement made tidying the board the work, not thinking. Snapping removes that cost
-without flattening it into fixed slots. The bold gridlines mark whole-card boundaries and
-the faint ones mark the quarter-card offsets, so the drawing itself states what is
-adjustable. The four axis labels per side (default: 種 / 育つ / 形 / 動く ×
-強い引力 / 気になる / 様子見 / 保留) are editable and deliberately soft — where a card sits
-relative to its neighbours carries more than the label does.
-
-### State and I/O
-
-- decks live only in `localStorage` under `cockpid.deck.v2`; the board never writes
-  analysis data back to `my-storage-note`. Old 4×4-slot decks are migrated on load
-  (`r{row}c{col}` → `x = col*4, y = row*4`)
-- `JSON` panel shows the active deck as JSON and can import one back — the backup/restore path
-- `⇪ 書き出す` posts the deck as one memo into `mynotebook/00_inbox`: every placed card with
-  its `x/y`, its axis labels and its offset within the card grid, plus the bench and a
-  card-provenance list. A synthesis session therefore re-enters the pipeline as source
-  material (same write channel as ZEN V2)
-
-It shares `index.html`'s token key, so a token entered on either page works on both.
-
-## Design direction
-
-The intended feeling is **a personal mission-control cockpit**, not a generic dashboard.
-
-The UI should expose signals, state, lineage and connections without becoming visually noisy. Cards and panels are secondary to the information hierarchy. Accordion interaction is preferred for historical context and detail because the cockpit should remain compact at rest.
-
-Pattern 01 / Mission Control is currently the closest visual direction, while the other patterns remain comparison references.
+同名のWorkBench Board (`workbench/board.js`) と混同しないでください。
 
 ## Security
 
-The repository must not contain personal source notes or GitHub tokens. The browser-side token, when required for private analysis data, is entered locally and stored in `localStorage`; it is not committed to the repository.
+- personal source notesをこのRepositoryへコピーしない
+- GitHub tokenをcommitしない
+- token値が見えるスクリーンショットを共有しない
+- tokenを露出した場合はGitHubでrevoke / regenerateする
+- browser-side tokenのキーを機能ごとに増殖させず、既存の共有キーとの整合を確認する
 
-Never share a screenshot that shows the actual token value (e.g. a DevTools Network tab with the `Authorization` header expanded). If a token is ever exposed this way, treat it as compromised and revoke/regenerate it on GitHub immediately, regardless of whether the exposure looks accidental or low-risk.
+## Maintenance rules
 
-## Known pitfalls (learned the hard way)
+実装変更後は、次の順で整合を確認します。
 
-- **One token key, one input field.** Current cockpit pages and `prototype-common.js` use the same `localStorage` key: `zen-note-github-token`. Do not reintroduce a second token key. `board.html`, `calendar.html`, `index.html`, and pages using `prototype-common.js` are expected to see the same token on the same GitHub Pages origin.
-- **A GitHub fine-grained PAT returns `404`, not `403`, for a repository outside its granted access.** This is deliberate (GitHub avoids leaking whether the repo exists), but it means a naive "404 = no data for this day" fetch strategy can silently misreport "repo access denied" as "empty". `index.html`'s `loadAnalysis()` probes `memory/extracted/` once before the per-day scan specifically to distinguish these two cases — keep that probe if the fetch strategy changes. The Techo calendar reports both possibilities because the target month itself may legitimately not exist.
-- **The GitHub Contents API can 404 on a bare/empty path with a trailing slash** (`.../contents/`) even when the token has valid read access to the repo. Always probe a real, non-empty subpath (e.g. `extracted`), never `''`.
-- **A fine-grained PAT's repository list must be re-verified after every edit.** Adding a repo to "Repository access" on GitHub's token settings page can, in practice, require re-confirming the rest of the list — a repo you thought was still selected can silently drop off. After editing a token's scope, re-check the full list, not just the repo you meant to add.
-- **Both `mynotebook` and `my-storage-note` need Contents: Read *and* Write on the token for the full cockpit.** The calendar itself only reads `mynotebook`, but `mynotebook` also needs Write because the ZEN feature posts new files into `00_inbox`. `my-storage-note` needs Write because marking an action complete writes to `memory/state/completed_actions.json` there. A token scoped read-only on either repo will silently lose that repo's write feature while read-only surfaces may continue to work.
-- **Don't let independent async status writers share the same DOM element.** An earlier bug had `loadDay()` and `loadAnalysis()` both write to the same header status text without coordination; whichever finished last silently overwrote the other's (possibly more important) error message. If you add another concurrent status source, route it through a single combining function (see `refreshStatus()` in `index.html`) rather than writing directly.
-- **A debounce that resets on every action can defer a save indefinitely.** `board.html` saves deck state on a 250ms debounce; because every drag and placement reset the timer, continuous editing never actually reached the write. It now force-flushes when more than 2s has passed since the last real write — keep that guarantee if the save path changes.
-- **The board's status readout has several independent async writers** (library load, deck save, placement refusal). A "placement refused" message was being overwritten by the `SAVED` that landed just behind it, so the refusal looked like a success. `setStatus(text, sticky)` now protects an explicit message for 1.6s. This is the same class of bug as the `refreshStatus()` note above — check it whenever a new status source is added.
+1. 実コード
+2. `SURFACES.md` — 実装棚卸し
+3. `DIRECTION.md` — 方針との整合
+4. `my-storage-note/objects/projects/cockpid.md` — Canonical Project Current / Next / History
+5. 必要なら関連Project（例: `voice-capture.md`）
+6. `my-storage-note/brain/coordination/cockpid-board.md` — worker / lock / handoffの現在値
+7. `views/projects.json` — `objects/**` 更新後のBuild Viewsで再生成されることを確認
+
+実装済みなのにProjectログが「未実装」のまま、または古いLOCKが`WORKING`のまま残る状態を避けます。
