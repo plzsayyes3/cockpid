@@ -2,7 +2,7 @@ const CAMERA_PREF_KEY = 'cockpid.stan.camera.enabled.v1';
 const MEDIAPIPE_VERSION = '1.0.1';
 const DETECT_INTERVAL_MS = 220;
 const FACE_HOLD_MS = 1200;
-const BLINK_MS = 160;
+const BLINK_MS = 150;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const randomBetween = (min, max) => min + Math.random() * (max - min);
@@ -74,38 +74,39 @@ function saveCameraPreference(enabled) {
 
 function scheduleAutoLook() {
   clearTimeout(state.autoTimer);
-  const delay = randomBetween(1900, 4800);
+  const delay = randomBetween(2000, 5200);
+
   state.autoTimer = setTimeout(() => {
-    const returnNearCenter = Math.random() < 0.36;
+    const returnNearCenter = Math.random() < 0.44;
 
     if (returnNearCenter) {
-      state.autoX = randomBetween(-0.045, 0.045);
-      state.autoY = randomBetween(-0.025, 0.025);
+      state.autoX = randomBetween(-0.055, 0.055);
+      state.autoY = randomBetween(-0.035, 0.035);
     } else {
-      const biggerMove = Math.random() < 0.16;
-      const spreadX = biggerMove ? 0.66 : 0.28;
-      const spreadY = biggerMove ? 0.20 : 0.11;
+      const biggerMove = Math.random() < 0.14;
+      const spreadX = biggerMove ? 0.78 : 0.34;
+      const spreadY = biggerMove ? 0.24 : 0.12;
       state.autoX = randomBetween(-spreadX, spreadX);
       state.autoY = randomBetween(-spreadY, spreadY);
 
-      if (biggerMove && Math.random() < 0.55) {
+      if (biggerMove && Math.random() < 0.45) {
         const direction = Math.sign(state.autoX) || 1;
         window.setTimeout(() => {
           if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
-            state.autoX = clamp(state.autoX + direction * randomBetween(-0.04, 0.07), -0.72, 0.72);
-            state.autoY = clamp(state.autoY + randomBetween(-0.025, 0.025), -0.22, 0.22);
+            state.autoX = clamp(state.autoX + direction * randomBetween(-0.035, 0.055), -0.82, 0.82);
+            state.autoY = clamp(state.autoY + randomBetween(-0.025, 0.025), -0.25, 0.25);
           }
-        }, randomBetween(180, 330));
+        }, randomBetween(180, 320));
       }
     }
 
-    if (Math.random() < 0.15) {
+    if (Math.random() < 0.18) {
       window.setTimeout(() => {
         if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
-          state.autoX *= 0.16;
-          state.autoY *= 0.16;
+          state.autoX *= 0.15;
+          state.autoY *= 0.15;
         }
-      }, randomBetween(760, 1400));
+      }, randomBetween(800, 1450));
     }
 
     scheduleAutoLook();
@@ -121,11 +122,11 @@ function scheduleBlink() {
   clearTimeout(state.blinkTimer);
   state.blinkTimer = setTimeout(() => {
     blinkOnce();
-    if (Math.random() < 0.1) {
-      window.setTimeout(blinkOnce, randomBetween(190, 275));
+    if (Math.random() < 0.11) {
+      window.setTimeout(blinkOnce, randomBetween(190, 270));
     }
     scheduleBlink();
-  }, randomBetween(2800, 7200));
+  }, randomBetween(2900, 7400));
 }
 
 function normalizedFacePosition(detection) {
@@ -285,23 +286,25 @@ function render(now) {
   }
 
   const lifeSeconds = (now - state.aliveStartedAt) / 1000;
-  const microX = Math.sin(lifeSeconds * 0.73) * 0.011 + Math.sin(lifeSeconds * 1.57) * 0.006;
-  const microY = Math.cos(lifeSeconds * 0.53) * 0.007;
+  const microX = Math.sin(lifeSeconds * 0.43) * 0.055 + Math.sin(lifeSeconds * 0.91) * 0.025;
+  const microY = Math.cos(lifeSeconds * 0.38) * 0.035;
 
   if (hasFace) {
-    state.targetX = state.cameraX * 0.92 + microX * 0.16;
-    state.targetY = state.cameraY * 0.62 + microY * 0.16;
+    state.targetX = state.cameraX * 0.86 + microX * 0.12;
+    state.targetY = state.cameraY * 0.48 + microY * 0.12;
   } else {
     state.targetX = state.autoX + microX;
     state.targetY = state.autoY + microY;
   }
 
-  const factor = hasFace ? 0.10 : 0.052;
+  const factor = hasFace ? 0.075 : 0.038;
   state.lookX = ease(state.lookX, state.targetX, factor);
   state.lookY = ease(state.lookY, state.targetY, factor);
 
-  face.style.setProperty('--pupil-x', `${(state.lookX * 95).toFixed(2)}%`);
-  face.style.setProperty('--pupil-y', `${(state.lookY * 58).toFixed(2)}%`);
+  const pupilX = Math.round(clamp(state.lookX, -1, 1) * 8);
+  const pupilY = Math.round(clamp(state.lookY, -0.75, 0.75) * 5);
+  face.style.setProperty('--pupil-x', `${pupilX}px`);
+  face.style.setProperty('--pupil-y', `${pupilY}px`);
   face.classList.toggle('is-aware', hasFace);
 
   requestAnimationFrame(render);
@@ -322,13 +325,13 @@ stage.addEventListener('pointerdown', (event) => {
   const rect = stage.getBoundingClientRect();
   const x = clamp(((event.clientX - rect.left) / rect.width - 0.5) * 2, -1, 1);
   const y = clamp(((event.clientY - rect.top) / rect.height - 0.5) * 2, -0.65, 0.65);
-  state.autoX = x * 0.68;
-  state.autoY = y * 0.34;
+  state.autoX = x * 0.72;
+  state.autoY = y * 0.42;
   setMood('ん？');
   window.setTimeout(() => {
     if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
-      state.autoX *= 0.18;
-      state.autoY *= 0.18;
+      state.autoX *= 0.16;
+      state.autoY *= 0.16;
     }
     setMood(moodForMode(cameraButton.dataset.mode));
   }, 850);
