@@ -29,7 +29,8 @@ body {
 }
 
 button,
-a { font: inherit; }
+a,
+input { font: inherit; }
 
 .stan-stage {
   position: relative;
@@ -38,6 +39,8 @@ a { font: inherit; }
   display: grid;
   place-items: center;
   isolation: isolate;
+  user-select: none;
+  -webkit-touch-callout: none;
   background:
     radial-gradient(circle at 50% 47%, rgba(11, 25, 34, .08), transparent 34%),
     #000102;
@@ -300,6 +303,154 @@ a { font: inherit; }
   pointer-events: none;
 }
 
+.stan-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(0, 0, 0, .42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.stan-menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 6;
+  width: min(82vw, 320px);
+  height: 100%;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    18px;
+  color: rgba(235, 247, 252, .88);
+  background: rgba(4, 9, 13, .94);
+  border-left: 1px solid rgba(196, 231, 246, .10);
+  box-shadow: -18px 0 42px rgba(0, 0, 0, .28);
+  transform: translateX(105%);
+  transition: transform 170ms ease;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+.stan-stage.is-menu-open .stan-menu-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.stan-stage.is-menu-open .stan-menu {
+  transform: translateX(0);
+}
+
+.stan-menu-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(196, 231, 246, .08);
+}
+
+.stan-menu-header div {
+  display: grid;
+  gap: 4px;
+}
+
+.stan-menu-header strong {
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+
+.stan-menu-header span {
+  color: rgba(183, 207, 219, .38);
+  font-size: 8px;
+  letter-spacing: .10em;
+}
+
+.stan-menu-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  color: rgba(230, 243, 250, .48);
+  background: transparent;
+  cursor: pointer;
+}
+
+.stan-menu-body {
+  display: grid;
+  gap: 14px;
+  padding-top: 20px;
+}
+
+.stan-field {
+  display: grid;
+  gap: 8px;
+}
+
+.stan-field > span {
+  color: rgba(213, 232, 241, .58);
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.stan-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid rgba(196, 231, 246, .12);
+  border-radius: 0;
+  outline: none;
+  color: rgba(241, 250, 253, .92);
+  background: rgba(0, 2, 4, .70);
+  font-size: 11px;
+  user-select: text;
+}
+
+.stan-field input:focus {
+  border-color: rgba(196, 231, 246, .30);
+}
+
+.stan-menu-note,
+.stan-menu-status {
+  margin: 0;
+  color: rgba(183, 207, 219, .36);
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+.stan-menu-status {
+  min-height: 1.7em;
+  color: rgba(213, 232, 241, .54);
+}
+
+.stan-menu-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+}
+
+.stan-menu-actions button {
+  min-height: 38px;
+  border: 1px solid rgba(196, 231, 246, .10);
+  color: rgba(225, 240, 247, .62);
+  background: rgba(10, 20, 27, .42);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.stan-menu-actions button:disabled {
+  opacity: .28;
+  cursor: default;
+}
+
+.stan-menu-actions button:focus-visible,
+.stan-menu-close:focus-visible {
+  outline: 1px solid rgba(196, 231, 246, .38);
+  outline-offset: 2px;
+}
+
 .stan-hint { display: none; }
 
 @media (orientation: landscape) {
@@ -313,6 +464,7 @@ a { font: inherit; }
   }
 
   .stan-presence { top: 71%; }
+  .stan-menu { width: min(42vw, 320px); }
 }
 
 @media (max-width: 420px) and (orientation: portrait) {
@@ -325,4 +477,6 @@ a { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .pupil { transition: none; }
   .stan-stage::before { opacity: .008; }
+  .stan-menu,
+  .stan-menu-backdrop { transition: none; }
 }
