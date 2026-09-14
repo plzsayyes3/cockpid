@@ -82,7 +82,8 @@
 
   function stamp(date = new Date()) {
     const p = jstParts(date);
-    return `${p.year}${p.month}${p.day}${p.hour}${p.minute}${p.second}`;
+    const millis = String(date.getMilliseconds()).padStart(3, '0');
+    return `${p.year}${p.month}${p.day}${p.hour}${p.minute}${p.second}${millis}`;
   }
 
   function encodeUtf8(value) {
