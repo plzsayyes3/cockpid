@@ -174,7 +174,10 @@ function normalizedFacePosition(detection) {
 
   const centerX = (box.originX + box.width / 2) / video.videoWidth;
   const centerY = (box.originY + box.height / 2) / video.videoHeight;
-  let x = clamp((centerX - 0.5) * 2, -1, 1);
+
+  // User-facing camera frames behave like a non-mirrored photo. Flip X so
+  // Stan looks toward the person's physical direction like a mirror would.
+  let x = clamp((0.5 - centerX) * 2, -1, 1);
   let y = clamp((centerY - 0.5) * 2, -1, 1);
 
   const deadZoneX = 0.07;
