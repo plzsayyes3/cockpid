@@ -74,20 +74,40 @@ function saveCameraPreference(enabled) {
 
 function scheduleAutoLook() {
   clearTimeout(state.autoTimer);
-  const delay = randomBetween(2200, 5200);
+  const delay = randomBetween(1900, 4800);
   state.autoTimer = setTimeout(() => {
-    const biggerMove = Math.random() < 0.12;
-    const spreadX = biggerMove ? 0.52 : 0.22;
-    const spreadY = biggerMove ? 0.18 : 0.10;
-    state.autoX = randomBetween(-spreadX, spreadX);
-    state.autoY = randomBetween(-spreadY, spreadY);
+    const returnNearCenter = Math.random() < 0.36;
 
-    if (Math.random() < 0.18) {
-      setTimeout(() => {
-        state.autoX *= 0.22;
-        state.autoY *= 0.22;
-      }, randomBetween(650, 1250));
+    if (returnNearCenter) {
+      state.autoX = randomBetween(-0.045, 0.045);
+      state.autoY = randomBetween(-0.025, 0.025);
+    } else {
+      const biggerMove = Math.random() < 0.16;
+      const spreadX = biggerMove ? 0.66 : 0.28;
+      const spreadY = biggerMove ? 0.20 : 0.11;
+      state.autoX = randomBetween(-spreadX, spreadX);
+      state.autoY = randomBetween(-spreadY, spreadY);
+
+      if (biggerMove && Math.random() < 0.55) {
+        const direction = Math.sign(state.autoX) || 1;
+        window.setTimeout(() => {
+          if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
+            state.autoX = clamp(state.autoX + direction * randomBetween(-0.04, 0.07), -0.72, 0.72);
+            state.autoY = clamp(state.autoY + randomBetween(-0.025, 0.025), -0.22, 0.22);
+          }
+        }, randomBetween(180, 330));
+      }
     }
+
+    if (Math.random() < 0.15) {
+      window.setTimeout(() => {
+        if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
+          state.autoX *= 0.16;
+          state.autoY *= 0.16;
+        }
+      }, randomBetween(760, 1400));
+    }
+
     scheduleAutoLook();
   }, delay);
 }
@@ -105,7 +125,7 @@ function scheduleBlink() {
       window.setTimeout(blinkOnce, randomBetween(190, 275));
     }
     scheduleBlink();
-  }, randomBetween(3000, 7800));
+  }, randomBetween(2800, 7200));
 }
 
 function normalizedFacePosition(detection) {
@@ -265,18 +285,18 @@ function render(now) {
   }
 
   const lifeSeconds = (now - state.aliveStartedAt) / 1000;
-  const microX = Math.sin(lifeSeconds * 0.79) * 0.012 + Math.sin(lifeSeconds * 1.61) * 0.006;
-  const microY = Math.cos(lifeSeconds * 0.57) * 0.008;
+  const microX = Math.sin(lifeSeconds * 0.73) * 0.011 + Math.sin(lifeSeconds * 1.57) * 0.006;
+  const microY = Math.cos(lifeSeconds * 0.53) * 0.007;
 
   if (hasFace) {
-    state.targetX = state.cameraX * 0.92 + microX * 0.18;
-    state.targetY = state.cameraY * 0.62 + microY * 0.18;
+    state.targetX = state.cameraX * 0.92 + microX * 0.16;
+    state.targetY = state.cameraY * 0.62 + microY * 0.16;
   } else {
     state.targetX = state.autoX + microX;
     state.targetY = state.autoY + microY;
   }
 
-  const factor = hasFace ? 0.095 : 0.045;
+  const factor = hasFace ? 0.10 : 0.052;
   state.lookX = ease(state.lookX, state.targetX, factor);
   state.lookY = ease(state.lookY, state.targetY, factor);
 
