@@ -267,8 +267,8 @@ function render(now) {
   state.lookX = ease(state.lookX, state.targetX, factor);
   state.lookY = ease(state.lookY, state.targetY, factor);
 
-  face.style.setProperty('--look-x', state.lookX.toFixed(4));
-  face.style.setProperty('--look-y', state.lookY.toFixed(4));
+  face.style.setProperty('--pupil-x', `${(state.lookX * 49).toFixed(2)}%`);
+  face.style.setProperty('--pupil-y', `${(state.lookY * 31).toFixed(2)}%`);
   face.classList.toggle('is-aware', hasFace);
 
   requestAnimationFrame(render);
