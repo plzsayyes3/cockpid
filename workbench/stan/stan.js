@@ -5,7 +5,8 @@ const DETECT_INTERVAL_MS = 220;
 const FACE_HOLD_MS = 1350;
 const BLINK_MIN_MS = 3200;
 const BLINK_MAX_MS = 7900;
-const LONG_PRESS_MS = 650;
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_DISTANCE = 36;
 const POINTER_CANCEL_DISTANCE = 14;
 const BLOCKED_QUICK_ACTION_PROTOCOLS = new Set(['javascript:', 'data:', 'vbscript:', 'file:', 'blob:']);
 
@@ -62,9 +63,11 @@ const state = {
   pointerId: null,
   pressStartX: 0,
   pressStartY: 0,
-  longPressTimer: null,
-  longPressTriggered: false,
-  pressCancelled: false
+  pressCancelled: false,
+  lastTapAt: 0,
+  lastTapX: 0,
+  lastTapY: 0,
+  singleTapTimer: null
 };
 
 function setMood(text) {
@@ -187,7 +190,14 @@ function syncQuickActionUi(message = '') {
   quickActionStatus.textContent = message || (saved ? '設定済み' : '未設定');
 }
 
+function clearPendingTap() {
+  clearTimeout(state.singleTapTimer);
+  state.singleTapTimer = null;
+  state.lastTapAt = 0;
+}
+
 function openMenu({ focusInput = false, message = '' } = {}) {
+  clearPendingTap();
   state.menuOpen = true;
   stage.classList.add('is-menu-open');
   menu.setAttribute('aria-hidden', 'false');
@@ -239,7 +249,7 @@ function runQuickAction() {
   const normalized = normalizeQuickActionUrl(quickActionValue());
 
   if (!normalized) {
-    openMenu({ focusInput: true, message: '長押し先を設定してください' });
+    openMenu({ focusInput: true, message: 'ダブルタップ先を設定してください' });
     return false;
   }
 
@@ -564,15 +574,8 @@ function render(now) {
   requestAnimationFrame(render);
 }
 
-function clearLongPressTimer() {
-  clearTimeout(state.longPressTimer);
-  state.longPressTimer = null;
-}
-
 function resetPressState() {
-  clearLongPressTimer();
   state.pointerId = null;
-  state.longPressTriggered = false;
   state.pressCancelled = false;
 }
 
@@ -584,41 +587,50 @@ function beginStagePress(event) {
   state.pointerId = event.pointerId;
   state.pressStartX = event.clientX;
   state.pressStartY = event.clientY;
-  state.longPressTriggered = false;
   state.pressCancelled = false;
   setLookTowardPoint(event.clientX, event.clientY);
-  clearLongPressTimer();
-
-  state.longPressTimer = window.setTimeout(() => {
-    state.longPressTriggered = true;
-    runQuickAction();
-  }, LONG_PRESS_MS);
 }
 
 function moveStagePress(event) {
-  if (state.pointerId !== event.pointerId || state.longPressTriggered) return;
+  if (state.pointerId !== event.pointerId) return;
   const distance = Math.hypot(event.clientX - state.pressStartX, event.clientY - state.pressStartY);
 
   if (distance > POINTER_CANCEL_DISTANCE) {
     state.pressCancelled = true;
-    clearLongPressTimer();
   }
 }
 
 function endStagePress(event) {
   if (state.pointerId !== event.pointerId) return;
 
-  const wasLongPress = state.longPressTriggered;
   const wasCancelled = state.pressCancelled;
-  clearLongPressTimer();
-  state.pointerId = null;
-  state.longPressTriggered = false;
-  state.pressCancelled = false;
+  resetPressState();
 
-  if (wasLongPress || wasCancelled || state.menuOpen) return;
+  if (wasCancelled || state.menuOpen) return;
 
   setLookTowardPoint(event.clientX, event.clientY);
-  openMenu();
+  const now = performance.now();
+  const timeSinceLastTap = now - state.lastTapAt;
+  const distanceFromLastTap = Math.hypot(event.clientX - state.lastTapX, event.clientY - state.lastTapY);
+  const isDoubleTap = state.lastTapAt > 0
+    && timeSinceLastTap <= DOUBLE_TAP_MS
+    && distanceFromLastTap <= DOUBLE_TAP_DISTANCE;
+
+  if (isDoubleTap) {
+    clearPendingTap();
+    runQuickAction();
+    return;
+  }
+
+  state.lastTapAt = now;
+  state.lastTapX = event.clientX;
+  state.lastTapY = event.clientY;
+  clearTimeout(state.singleTapTimer);
+  state.singleTapTimer = window.setTimeout(() => {
+    state.singleTapTimer = null;
+    state.lastTapAt = 0;
+    if (!state.menuOpen) openMenu();
+  }, DOUBLE_TAP_MS);
 }
 
 cameraButton.addEventListener('click', toggleCamera);
@@ -641,6 +653,9 @@ stage.addEventListener('pointerdown', beginStagePress);
 stage.addEventListener('pointermove', moveStagePress);
 stage.addEventListener('pointerup', endStagePress);
 stage.addEventListener('pointercancel', resetPressState);
+stage.addEventListener('dblclick', (event) => {
+  if (!event.target.closest('.stan-control, .stan-menu')) event.preventDefault();
+});
 stage.addEventListener('contextmenu', (event) => {
   if (!event.target.closest('.stan-control, .stan-menu')) event.preventDefault();
 });
