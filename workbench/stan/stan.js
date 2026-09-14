@@ -2,6 +2,7 @@ const CAMERA_PREF_KEY = 'cockpid.stan.camera.enabled.v1';
 const MEDIAPIPE_VERSION = '1.0.1';
 const DETECT_INTERVAL_MS = 220;
 const FACE_HOLD_MS = 1200;
+const BLINK_MS = 160;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const randomBetween = (min, max) => min + Math.random() * (max - min);
@@ -12,6 +13,7 @@ const face = document.getElementById('stanFace');
 const cameraButton = document.getElementById('cameraToggle');
 const cameraState = document.getElementById('cameraState');
 const cameraDot = document.getElementById('cameraDot');
+const mood = document.getElementById('stanMood');
 const video = document.getElementById('cameraFeed');
 
 const state = {
@@ -36,11 +38,22 @@ const state = {
   aliveStartedAt: performance.now()
 };
 
+function setMood(text) {
+  if (mood && mood.textContent !== text) mood.textContent = text;
+}
+
+function moodForMode(mode) {
+  if (mode === 'found') return 'みつけた';
+  if (mode === 'on' || mode === 'loading') return 'みてるよ';
+  return '待ってるよ';
+}
+
 function setCameraUi(label, mode = 'idle') {
   cameraState.textContent = label;
   cameraButton.dataset.mode = mode;
   cameraButton.setAttribute('aria-pressed', state.cameraEnabled ? 'true' : 'false');
   cameraDot.dataset.mode = mode;
+  setMood(moodForMode(mode));
 }
 
 function cameraPreference() {
@@ -61,19 +74,19 @@ function saveCameraPreference(enabled) {
 
 function scheduleAutoLook() {
   clearTimeout(state.autoTimer);
-  const delay = randomBetween(1700, 4300);
+  const delay = randomBetween(2200, 5200);
   state.autoTimer = setTimeout(() => {
-    const biggerMove = Math.random() < 0.18;
-    const spreadX = biggerMove ? 0.75 : 0.34;
-    const spreadY = biggerMove ? 0.35 : 0.18;
+    const biggerMove = Math.random() < 0.12;
+    const spreadX = biggerMove ? 0.52 : 0.22;
+    const spreadY = biggerMove ? 0.18 : 0.10;
     state.autoX = randomBetween(-spreadX, spreadX);
     state.autoY = randomBetween(-spreadY, spreadY);
 
-    if (Math.random() < 0.15) {
+    if (Math.random() < 0.18) {
       setTimeout(() => {
-        state.autoX *= 0.25;
-        state.autoY *= 0.25;
-      }, randomBetween(550, 1050));
+        state.autoX *= 0.22;
+        state.autoY *= 0.22;
+      }, randomBetween(650, 1250));
     }
     scheduleAutoLook();
   }, delay);
@@ -81,18 +94,18 @@ function scheduleAutoLook() {
 
 function blinkOnce() {
   face.classList.add('is-blinking');
-  window.setTimeout(() => face.classList.remove('is-blinking'), 118);
+  window.setTimeout(() => face.classList.remove('is-blinking'), BLINK_MS);
 }
 
 function scheduleBlink() {
   clearTimeout(state.blinkTimer);
   state.blinkTimer = setTimeout(() => {
     blinkOnce();
-    if (Math.random() < 0.12) {
-      window.setTimeout(blinkOnce, randomBetween(170, 250));
+    if (Math.random() < 0.1) {
+      window.setTimeout(blinkOnce, randomBetween(190, 275));
     }
     scheduleBlink();
-  }, randomBetween(2600, 6500));
+  }, randomBetween(3000, 7800));
 }
 
 function normalizedFacePosition(detection) {
@@ -237,7 +250,7 @@ function detectFace(now) {
     state.faceSeenAt = now;
     state.cameraX = ease(state.cameraX, point.x, 0.38);
     state.cameraY = ease(state.cameraY, point.y, 0.32);
-    setCameraUi('CAM · FOUND YOU', 'found');
+    if (cameraButton.dataset.mode !== 'found') setCameraUi('CAM · FOUND YOU', 'found');
   } catch (error) {
     console.warn('[Stan] Face detection failed:', error);
   }
@@ -252,23 +265,23 @@ function render(now) {
   }
 
   const lifeSeconds = (now - state.aliveStartedAt) / 1000;
-  const microX = Math.sin(lifeSeconds * 0.83) * 0.016 + Math.sin(lifeSeconds * 1.73) * 0.008;
-  const microY = Math.cos(lifeSeconds * 0.62) * 0.012;
+  const microX = Math.sin(lifeSeconds * 0.79) * 0.012 + Math.sin(lifeSeconds * 1.61) * 0.006;
+  const microY = Math.cos(lifeSeconds * 0.57) * 0.008;
 
   if (hasFace) {
-    state.targetX = state.cameraX * 0.92 + microX * 0.25;
-    state.targetY = state.cameraY * 0.68 + microY * 0.2;
+    state.targetX = state.cameraX * 0.92 + microX * 0.18;
+    state.targetY = state.cameraY * 0.62 + microY * 0.18;
   } else {
     state.targetX = state.autoX + microX;
     state.targetY = state.autoY + microY;
   }
 
-  const factor = hasFace ? 0.11 : 0.055;
+  const factor = hasFace ? 0.095 : 0.045;
   state.lookX = ease(state.lookX, state.targetX, factor);
   state.lookY = ease(state.lookY, state.targetY, factor);
 
-  face.style.setProperty('--pupil-x', `${(state.lookX * 49).toFixed(2)}%`);
-  face.style.setProperty('--pupil-y', `${(state.lookY * 31).toFixed(2)}%`);
+  face.style.setProperty('--pupil-x', `${(state.lookX * 95).toFixed(2)}%`);
+  face.style.setProperty('--pupil-y', `${(state.lookY * 58).toFixed(2)}%`);
   face.classList.toggle('is-aware', hasFace);
 
   requestAnimationFrame(render);
@@ -289,14 +302,16 @@ stage.addEventListener('pointerdown', (event) => {
   const rect = stage.getBoundingClientRect();
   const x = clamp(((event.clientX - rect.left) / rect.width - 0.5) * 2, -1, 1);
   const y = clamp(((event.clientY - rect.top) / rect.height - 0.5) * 2, -0.65, 0.65);
-  state.autoX = x * 0.78;
-  state.autoY = y * 0.48;
+  state.autoX = x * 0.68;
+  state.autoY = y * 0.34;
+  setMood('ん？');
   window.setTimeout(() => {
     if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
-      state.autoX *= 0.22;
-      state.autoY *= 0.22;
+      state.autoX *= 0.18;
+      state.autoY *= 0.18;
     }
-  }, 900);
+    setMood(moodForMode(cameraButton.dataset.mode));
+  }, 850);
 });
 
 scheduleAutoLook();
@@ -304,8 +319,6 @@ scheduleBlink();
 requestAnimationFrame(render);
 
 if (cameraPreference()) {
-  // Re-enable only after the page has settled. Browsers may still require a user gesture
-  // if permission was not granted previously; failure simply leaves Stan autonomous.
   window.setTimeout(startCamera, 450);
 } else {
   setCameraUi('CAM · OFF', 'idle');
