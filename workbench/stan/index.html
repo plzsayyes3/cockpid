@@ -26,6 +26,34 @@
       <span id="stanMood">待ってるよ</span>
     </div>
 
+    <div class="stan-menu-backdrop" id="stanMenuBackdrop" aria-hidden="true"></div>
+
+    <aside class="stan-menu" id="stanMenu" aria-hidden="true" aria-label="スタンちゃんメニュー">
+      <header class="stan-menu-header">
+        <div>
+          <strong>STAN</strong>
+          <span>QUICK ACTION</span>
+        </div>
+        <button class="stan-menu-close" id="stanMenuClose" type="button" aria-label="メニューを閉じる">×</button>
+      </header>
+
+      <div class="stan-menu-body">
+        <label class="stan-field" for="quickActionUrl">
+          <span>長押しで開く場所</span>
+          <input id="quickActionUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://...">
+        </label>
+
+        <p class="stan-menu-note">画面を長押しすると、ここに設定したURLを開きます。</p>
+        <p class="stan-menu-status" id="quickActionStatus" aria-live="polite">未設定</p>
+
+        <div class="stan-menu-actions">
+          <button id="saveQuickAction" type="button">保存</button>
+          <button id="runQuickAction" type="button">開く</button>
+          <button id="clearQuickAction" type="button">消去</button>
+        </div>
+      </div>
+    </aside>
+
     <p class="stan-hint">STAN / STANDBY</p>
     <video class="camera-feed" id="cameraFeed" playsinline muted></video>
   </main>
