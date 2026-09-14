@@ -1,4 +1,5 @@
 .calendar-news-grid{display:contents}
+.desk{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
 .desk>.movement-object{grid-column:2;grid-row:2;min-width:0}
 .calendar-news-grid>.today-object{grid-column:1;grid-row:2;min-width:0}
 .calendar-news-grid>.news-object{grid-column:1/-1;grid-row:3;min-width:0}
@@ -11,9 +12,7 @@
 .shell{padding-bottom:128px}
 .pet{bottom:122px}
 @media(max-width:900px){
-  .desk>.movement-object{grid-column:1;grid-row:3}
-  .calendar-news-grid>.today-object{grid-column:1;grid-row:2}
-  .calendar-news-grid>.news-object{grid-column:1;grid-row:4}
+  .desk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
 @media(max-width:720px){
   .dock{left:8px;right:8px;bottom:8px;transform:none;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(2,32px);gap:8px;overflow:visible;padding:0}
