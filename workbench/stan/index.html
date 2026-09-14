@@ -26,6 +26,11 @@
       <span id="stanMood">待ってるよ</span>
     </div>
 
+    <div class="stan-speech" id="stanSpeech" aria-live="polite" hidden>
+      <span class="stan-speech-label" id="stanSpeechLabel">聞いてる…</span>
+      <p class="stan-transcript" id="stanTranscript"></p>
+    </div>
+
     <div class="stan-menu-backdrop" id="stanMenuBackdrop" aria-hidden="true"></div>
 
     <aside class="stan-menu" id="stanMenu" aria-hidden="true" aria-label="スタンちゃんメニュー">
@@ -39,11 +44,11 @@
 
       <div class="stan-menu-body">
         <label class="stan-field" for="quickActionUrl">
-          <span>シングルタップで開く場所</span>
+          <span>メニューから開く場所</span>
           <input id="quickActionUrl" type="text" inputmode="url" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://... / shortcuts://...">
         </label>
 
-        <p class="stan-menu-note">シングルタップで設定先を開き、画面をダブルタップするとこのメニューを開きます。Web URLや shortcuts://・obsidian:// などのURIも使えます。</p>
+        <p class="stan-menu-note">シングルタップで音声入力を開始・終了します。ダブルタップでこのメニューを開きます。保存したWeb URLやURIは「開く」ボタンから実行できます。</p>
         <p class="stan-menu-status" id="quickActionStatus" aria-live="polite">未設定</p>
 
         <div class="stan-menu-actions">
