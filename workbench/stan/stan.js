@@ -1,9 +1,12 @@
 const CAMERA_PREF_KEY = 'cockpid.stan.camera.enabled.v1';
+const QUICK_ACTION_URL_KEY = 'cockpid.stan.quick-action-url.v1';
 const MEDIAPIPE_VERSION = '1.0.1';
 const DETECT_INTERVAL_MS = 220;
 const FACE_HOLD_MS = 1350;
 const BLINK_MIN_MS = 3200;
 const BLINK_MAX_MS = 7900;
+const LONG_PRESS_MS = 650;
+const POINTER_CANCEL_DISTANCE = 14;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const randomBetween = (min, max) => min + Math.random() * (max - min);
@@ -16,6 +19,14 @@ const cameraState = document.getElementById('cameraState');
 const cameraDot = document.getElementById('cameraDot');
 const mood = document.getElementById('stanMood');
 const video = document.getElementById('cameraFeed');
+const menu = document.getElementById('stanMenu');
+const menuBackdrop = document.getElementById('stanMenuBackdrop');
+const menuClose = document.getElementById('stanMenuClose');
+const quickActionInput = document.getElementById('quickActionUrl');
+const quickActionStatus = document.getElementById('quickActionStatus');
+const saveQuickActionButton = document.getElementById('saveQuickAction');
+const runQuickActionButton = document.getElementById('runQuickAction');
+const clearQuickActionButton = document.getElementById('clearQuickAction');
 
 const state = {
   lookX: 0,
@@ -43,7 +54,14 @@ const state = {
   blinkTimer: null,
   returnTimer: null,
   blinking: false,
-  lastBlinkAt: -10000
+  lastBlinkAt: -10000,
+  menuOpen: false,
+  pointerId: null,
+  pressStartX: 0,
+  pressStartY: 0,
+  longPressTimer: null,
+  longPressTriggered: false,
+  pressCancelled: false
 };
 
 function setMood(text) {
@@ -61,7 +79,7 @@ function setCameraUi(label, mode = 'idle') {
   cameraButton.dataset.mode = mode;
   cameraButton.setAttribute('aria-pressed', state.cameraEnabled ? 'true' : 'false');
   cameraDot.dataset.mode = mode;
-  setMood(moodForMode(mode));
+  if (!state.menuOpen) setMood(moodForMode(mode));
 }
 
 function cameraPreference() {
@@ -78,6 +96,107 @@ function saveCameraPreference(enabled) {
   } catch {
     // localStorage can be unavailable in private/restricted contexts.
   }
+}
+
+function quickActionValue() {
+  try {
+    return localStorage.getItem(QUICK_ACTION_URL_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function saveQuickActionValue(value) {
+  try {
+    if (value) {
+      localStorage.setItem(QUICK_ACTION_URL_KEY, value);
+    } else {
+      localStorage.removeItem(QUICK_ACTION_URL_KEY);
+    }
+  } catch {
+    // Keep Stan usable even when storage is unavailable.
+  }
+}
+
+function normalizeQuickActionUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const url = new URL(raw, window.location.href);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+function syncQuickActionUi(message = '') {
+  const saved = quickActionValue();
+  quickActionInput.value = saved;
+  runQuickActionButton.disabled = !saved;
+  clearQuickActionButton.disabled = !saved;
+  quickActionStatus.textContent = message || (saved ? '設定済み' : '未設定');
+}
+
+function openMenu({ focusInput = false, message = '' } = {}) {
+  state.menuOpen = true;
+  stage.classList.add('is-menu-open');
+  menu.setAttribute('aria-hidden', 'false');
+  menuBackdrop.setAttribute('aria-hidden', 'false');
+  syncQuickActionUi(message);
+  setMood('どうする？');
+
+  if (focusInput) {
+    requestAnimationFrame(() => quickActionInput.focus());
+  }
+}
+
+function closeMenu() {
+  if (!state.menuOpen) return;
+  state.menuOpen = false;
+  stage.classList.remove('is-menu-open');
+  menu.setAttribute('aria-hidden', 'true');
+  menuBackdrop.setAttribute('aria-hidden', 'true');
+  setMood(moodForMode(cameraButton.dataset.mode));
+}
+
+function saveQuickAction() {
+  const normalized = normalizeQuickActionUrl(quickActionInput.value);
+
+  if (normalized === null) {
+    quickActionStatus.textContent = 'http / https のURLを入力してください';
+    return;
+  }
+
+  saveQuickActionValue(normalized);
+  syncQuickActionUi(normalized ? '保存しました' : '未設定にしました');
+}
+
+function clearQuickAction() {
+  saveQuickActionValue('');
+  syncQuickActionUi('未設定にしました');
+}
+
+function runQuickAction() {
+  const normalized = normalizeQuickActionUrl(quickActionValue());
+
+  if (!normalized) {
+    openMenu({ focusInput: true, message: '長押し先を設定してください' });
+    return false;
+  }
+
+  setMood('いってらっしゃい');
+  window.location.assign(normalized);
+  return true;
+}
+
+function setLookTowardPoint(clientX, clientY) {
+  const rect = stage.getBoundingClientRect();
+  const x = clamp(((clientX - rect.left) / rect.width - 0.5) * 2, -1, 1);
+  const y = clamp(((clientY - rect.top) / rect.height - 0.5) * 2, -0.65, 0.65);
+  state.autoX = x * 0.58;
+  state.autoY = y * 0.28;
 }
 
 function scheduleAutoLook() {
@@ -381,7 +500,94 @@ function render(now) {
   requestAnimationFrame(render);
 }
 
+function clearLongPressTimer() {
+  clearTimeout(state.longPressTimer);
+  state.longPressTimer = null;
+}
+
+function resetPressState() {
+  clearLongPressTimer();
+  state.pointerId = null;
+  state.longPressTriggered = false;
+  state.pressCancelled = false;
+}
+
+function beginStagePress(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+  if (event.target.closest('.stan-control, .stan-menu, .stan-menu-backdrop')) return;
+  if (state.menuOpen) return;
+
+  state.pointerId = event.pointerId;
+  state.pressStartX = event.clientX;
+  state.pressStartY = event.clientY;
+  state.longPressTriggered = false;
+  state.pressCancelled = false;
+  setLookTowardPoint(event.clientX, event.clientY);
+  clearLongPressTimer();
+
+  state.longPressTimer = window.setTimeout(() => {
+    state.longPressTriggered = true;
+    const normalized = normalizeQuickActionUrl(quickActionValue());
+
+    if (normalized) {
+      setMood('いってらっしゃい');
+      window.location.assign(normalized);
+    } else {
+      openMenu({ focusInput: true, message: '長押し先を設定してください' });
+    }
+  }, LONG_PRESS_MS);
+}
+
+function moveStagePress(event) {
+  if (state.pointerId !== event.pointerId || state.longPressTriggered) return;
+  const distance = Math.hypot(event.clientX - state.pressStartX, event.clientY - state.pressStartY);
+
+  if (distance > POINTER_CANCEL_DISTANCE) {
+    state.pressCancelled = true;
+    clearLongPressTimer();
+  }
+}
+
+function endStagePress(event) {
+  if (state.pointerId !== event.pointerId) return;
+
+  const wasLongPress = state.longPressTriggered;
+  const wasCancelled = state.pressCancelled;
+  clearLongPressTimer();
+  state.pointerId = null;
+  state.longPressTriggered = false;
+  state.pressCancelled = false;
+
+  if (wasLongPress || wasCancelled || state.menuOpen) return;
+
+  setLookTowardPoint(event.clientX, event.clientY);
+  openMenu();
+}
+
 cameraButton.addEventListener('click', toggleCamera);
+menuClose.addEventListener('click', closeMenu);
+menuBackdrop.addEventListener('click', closeMenu);
+saveQuickActionButton.addEventListener('click', saveQuickAction);
+clearQuickActionButton.addEventListener('click', clearQuickAction);
+runQuickActionButton.addEventListener('click', runQuickAction);
+quickActionInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    saveQuickAction();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    closeMenu();
+  }
+});
+
+stage.addEventListener('pointerdown', beginStagePress);
+stage.addEventListener('pointermove', moveStagePress);
+stage.addEventListener('pointerup', endStagePress);
+stage.addEventListener('pointercancel', resetPressState);
+stage.addEventListener('contextmenu', (event) => {
+  if (!event.target.closest('.stan-control, .stan-menu')) event.preventDefault();
+});
+
 window.addEventListener('pagehide', () => stopCamera({ preservePreference: true }));
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
@@ -390,26 +596,11 @@ document.addEventListener('visibilitychange', () => {
     state.stream.getVideoTracks().forEach((track) => { track.enabled = true; });
   }
 });
-
-stage.addEventListener('pointerdown', (event) => {
-  if (event.target.closest('.stan-control')) return;
-
-  const rect = stage.getBoundingClientRect();
-  const x = clamp(((event.clientX - rect.left) / rect.width - 0.5) * 2, -1, 1);
-  const y = clamp(((event.clientY - rect.top) / rect.height - 0.5) * 2, -0.65, 0.65);
-  state.autoX = x * 0.58;
-  state.autoY = y * 0.28;
-  setMood('ん？');
-
-  window.setTimeout(() => {
-    if (performance.now() - state.faceSeenAt > FACE_HOLD_MS) {
-      state.autoX *= 0.16;
-      state.autoY *= 0.16;
-    }
-    setMood(moodForMode(cameraButton.dataset.mode));
-  }, 900);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && state.menuOpen) closeMenu();
 });
 
+syncQuickActionUi();
 scheduleAutoLook();
 scheduleMicroLook();
 scheduleBlink();
