@@ -249,7 +249,7 @@ function runQuickAction() {
   const normalized = normalizeQuickActionUrl(quickActionValue());
 
   if (!normalized) {
-    openMenu({ focusInput: true, message: 'ダブルタップ先を設定してください' });
+    openMenu({ focusInput: true, message: 'シングルタップ先を設定してください' });
     return false;
   }
 
@@ -618,7 +618,7 @@ function endStagePress(event) {
 
   if (isDoubleTap) {
     clearPendingTap();
-    runQuickAction();
+    openMenu();
     return;
   }
 
@@ -629,7 +629,7 @@ function endStagePress(event) {
   state.singleTapTimer = window.setTimeout(() => {
     state.singleTapTimer = null;
     state.lastTapAt = 0;
-    if (!state.menuOpen) openMenu();
+    if (!state.menuOpen) runQuickAction();
   }, DOUBLE_TAP_MS);
 }
 
