@@ -59,6 +59,7 @@ a { font: inherit; }
   --pupil-x: 0px;
   --pupil-y: 0px;
   --face-y: -5vh;
+  --blink-ms: 142ms;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -159,20 +160,20 @@ a { font: inherit; }
 .stan-face.is-aware .eye { filter: brightness(1.025); }
 
 .stan-face.is-blinking .eye {
-  animation: stan-blink 150ms steps(1, end) both;
+  animation: stan-blink var(--blink-ms) steps(1, end) both;
 }
 
 .stan-face.is-blinking .pupil { opacity: 0; }
 
 @keyframes stan-blink {
-  0%, 14%, 86%, 100% {
+  0%, 16%, 84%, 100% {
     transform: translateY(var(--eye-y)) scaleY(1);
   }
-  15%, 36%, 64%, 85% {
-    transform: translateY(var(--eye-y)) scaleY(.38);
+  17%, 36%, 64%, 83% {
+    transform: translateY(var(--eye-y)) scaleY(.42);
   }
   37%, 63% {
-    transform: translateY(var(--eye-y)) scaleY(.08);
+    transform: translateY(var(--eye-y)) scaleY(.07);
   }
 }
 
