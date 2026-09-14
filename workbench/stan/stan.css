@@ -56,8 +56,8 @@ a { font: inherit; }
 }
 
 .stan-face {
-  --look-x: 0;
-  --look-y: 0;
+  --pupil-x: 0%;
+  --pupil-y: 0%;
   width: min(78vw, 680px);
   display: flex;
   align-items: center;
@@ -96,8 +96,8 @@ a { font: inherit; }
   background: var(--pupil);
   clip-path: polygon(18% 0, 82% 0, 100% 13%, 100% 87%, 82% 100%, 18% 100%, 0 87%, 0 13%);
   transform: translate(
-    calc(-50% + var(--look-x) * 49%),
-    calc(-50% + var(--look-y) * 31%)
+    calc(-50% + var(--pupil-x)),
+    calc(-50% + var(--pupil-y))
   );
   transition: width 220ms ease, height 220ms ease, opacity 80ms linear;
   will-change: transform;
