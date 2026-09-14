@@ -11,16 +11,19 @@
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
-    advice: { key: '5', title: '5 / AI ADVICE', type: 'iframe', src: 'advice.html' },
-    onhand: { key: '6', title: '6 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    board: { key: '7', title: '7 / BOARD', type: 'board' },
-    backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
-    projecttown: { key: '9', title: '9 / PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
+    advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
+    onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
+    board: { key: '6', title: '6 / BOARD', type: 'board' },
+    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
+    projecttown: { key: '8', title: '8 / PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
+    stan: { key: '9', title: '9 / STAN', type: 'page', src: 'stan/' },
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
 
   const keyToApp = Object.freeze(Object.fromEntries(
-    Object.entries(apps).map(([name, app]) => [app.key, name])
+    Object.entries(apps)
+      .filter(([, app]) => app.key)
+      .map(([name, app]) => [app.key, name])
   ));
 
   function dockButton(key) {
@@ -28,27 +31,38 @@
       .find((button) => button.querySelector('b')?.textContent?.trim() === String(key));
   }
 
-  function configureDockButton(key, appName, label) {
-    let button = dockButton(key);
-    if (!button) {
-      button = document.createElement('button');
+  function rebuildDockTail() {
+    const dock = document.querySelector('.dock');
+    if (!dock) return;
+
+    const tailKeys = new Set(['5', '6', '7', '8', '9']);
+    [...dock.querySelectorAll('.app-btn')].forEach((button) => {
+      const key = button.querySelector('b')?.textContent?.trim();
+      if (tailKeys.has(key)) button.remove();
+    });
+
+    const zero = dockButton('0');
+    const entries = [
+      ['5', 'onhand', 'On Hand'],
+      ['6', 'board', 'Board'],
+      ['7', 'backstage', 'Backstage'],
+      ['8', 'projecttown', 'Project Town'],
+      ['9', 'stan', 'Stan']
+    ];
+
+    entries.forEach(([key, appName, label]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
       button.className = 'app-btn';
-      button.innerHTML = `<b>${key}</b><span></span>`;
-      const slot9 = dockButton('9');
-      slot9?.parentNode?.insertBefore(button, slot9);
-    }
-    if (!button) return;
-    button.disabled = false;
-    button.classList.remove('app-slot');
-    button.dataset.app = appName;
-    button.setAttribute('aria-label', label);
-    const text = button.querySelector('span');
-    if (text) text.textContent = label;
+      button.dataset.app = appName;
+      button.setAttribute('aria-label', label);
+      button.innerHTML = `<b>${key}</b><span>${label}</span>`;
+      if (zero) dock.insertBefore(button, zero);
+      else dock.appendChild(button);
+    });
   }
 
-  configureDockButton('7', 'board', 'Board');
-  configureDockButton('8', 'backstage', 'Backstage');
-  configureDockButton('9', 'projecttown', 'Project Town');
+  rebuildDockTail();
 
   let boardLoader = null;
   function ensureBoardModule() {
@@ -88,6 +102,11 @@
   function openApp(name) {
     const app = apps[name];
     if (!app) return false;
+
+    if (app.type === 'page') {
+      window.location.assign(app.src);
+      return true;
+    }
 
     appTitle.textContent = app.title;
     if (app.type === 'iframe') {
