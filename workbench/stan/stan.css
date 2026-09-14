@@ -468,8 +468,14 @@ input { font: inherit; }
 }
 
 @media (max-width: 420px) and (orientation: portrait) {
-  .stan-face { gap: clamp(36px, 10.8vw, 48px); }
-  .eye { width: clamp(48px, 13.8vw, 58px); }
+  .stan-face {
+    gap: clamp(18px, 6vw, 26px);
+  }
+
+  .eye {
+    width: clamp(138px, 38vw, 160px);
+  }
+
   .camera-state { display: none; }
   .camera-toggle { width: 38px; padding: 0; justify-content: center; }
 }
