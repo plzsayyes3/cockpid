@@ -70,31 +70,31 @@ a { font: inherit; }
 .eye {
   --eye-y: 0px;
   position: relative;
-  width: clamp(54px, 15vw, 72px);
-  aspect-ratio: .72;
+  width: clamp(56px, 15.5vw, 76px);
+  aspect-ratio: .84;
   overflow: hidden;
   background: var(--eye);
   clip-path: polygon(
-    25% 0,
-    75% 0,
-    75% 6%,
-    88% 6%,
-    88% 13%,
-    100% 13%,
-    100% 87%,
-    88% 87%,
-    88% 94%,
-    75% 94%,
-    75% 100%,
-    25% 100%,
-    25% 94%,
-    12% 94%,
-    12% 87%,
-    0 87%,
-    0 13%,
-    12% 13%,
-    12% 6%,
-    25% 6%
+    20% 0,
+    80% 0,
+    80% 5%,
+    90% 5%,
+    90% 12%,
+    100% 12%,
+    100% 88%,
+    90% 88%,
+    90% 95%,
+    80% 95%,
+    80% 100%,
+    20% 100%,
+    20% 95%,
+    10% 95%,
+    10% 88%,
+    0 88%,
+    0 12%,
+    10% 12%,
+    10% 5%,
+    20% 5%
   );
   box-shadow: 0 0 8px var(--eye-glow);
   transform: translateY(var(--eye-y));
@@ -287,7 +287,7 @@ a { font: inherit; }
   }
 
   .eye {
-    width: clamp(56px, 9vw, 76px);
+    width: clamp(58px, 9.3vw, 80px);
   }
 
   .stan-presence { top: 71%; }
@@ -295,7 +295,7 @@ a { font: inherit; }
 
 @media (max-width: 420px) and (orientation: portrait) {
   .stan-face { gap: clamp(44px, 13vw, 56px); }
-  .eye { width: clamp(52px, 15vw, 62px); }
+  .eye { width: clamp(54px, 15.5vw, 66px); }
   .camera-state { display: none; }
   .camera-toggle { width: 38px; padding: 0; justify-content: center; }
 }
