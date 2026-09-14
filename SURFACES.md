@@ -1,4 +1,4 @@
-# SURFACES.md — What's actually implemented (verified 2026-09-12)
+# SURFACES.md — What's actually implemented (verified 2026-09-15)
 
 > **Purpose**: `DIRECTION.md` is a policy document (what the workbench should be and why).
 > This document is the opposite: an exhaustive, code-verified inventory of what actually
@@ -11,9 +11,9 @@
 >
 > **Important correction to the brief this document was written from**: `DIRECTION.md` was
 > assumed to be 16 days stale (last update 2026-08-27). It is not — it was rewritten twice
-> today (`ee4712f` 13:28, `f821e4c` 23:00 JST) and is now consistent with the implementation
-> described here. See "DIRECTION.md accuracy check" below for the one place it still
-> disagrees with the code.
+> on 2026-09-12 (`ee4712f` 13:28, `f821e4c` 23:00 JST) and is consistent with the workbench
+> direction described here. This file is the implementation inventory and should be updated
+> when runtime routing or surfaces change.
 
 ---
 
@@ -35,38 +35,36 @@
 | **NEWS** | A short list/teaser, opens the News app on click | reads → external: `https://plzsayyes3.github.io/My_Internet_place/data/latest.json` |
 | **Resident** (the little pet in the corner) | Cosmetic companion; its speech bubble text is scraped from other panels' already-rendered DOM (`.movement-item-title` etc.), plus one direct fetch of `my-storage-note/memory/extracted/idea` | position persisted in `localStorage: cockpid.workbench.pet.position.v1` |
 | **Memo drawer** (CAPTURE / INBOX tabs) | CAPTURE writes a new note; INBOX is read-only, looks for the `#### ショートメモ` heading specifically | `mynotebook/00_inbox` (write), `mynotebook/00_inbox` (read, view-only) |
-| **Settings modal** | General / Paths·Data / GitHub / Notifications / Apps tabs. Paths tab is informational only (shows which folders are/aren't wired up); GitHub tab is where the token lives | see §6 |
+| **Settings modal** | General / Paths·Data / GitHub / Notifications / Apps tabs. Paths tab is informational only (shows which folders are/aren't wired up); GitHub tab is where the token lives | see §4 |
 
-Bottom **dock** is the app launcher (see §3). It is not a settings screen and not a menu —
-each button opens one app full-screen-in-an-overlay (`app-window`).
+Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-overlay
+(`app-window`); Stan is intentionally a separate full-page route under `workbench/stan/`.
 
 ---
 
 ## 3. The apps
 
-`workbench/app-routing.js` is the single source of truth for what apps exist. Ten are
-registered; the static HTML dock only shows some of them by default, and JS reconfigures
-three dock slots at load time — **read the dock's live behavior from the JS, not the raw
-HTML**, they disagree:
+`workbench/app-routing.js` is the runtime source of truth for app routing. Eleven entries are
+registered: ten keyed launchers (`1`–`9`, `0`) plus Advice, which has no numeric key. At
+load time `rebuildDockTail()` rebuilds keys `5`–`9`, so the runtime mapping below is the
+canonical dock behavior even if older static markup or screenshots show previous numbers.
 
 | Key | Name | Dock button? | Type | Source |
 |---|---|---|---|---|
-| 1 | Calendar | ✅ static HTML | iframe → `calendar.html` | own implementation, see §3.1 |
-| 2 | Tasks | ✅ static HTML | iframe → `taskliner-bridge.html` | redirects to an **external** app, see §3.2 |
-| 3 | Zen | ✅ static HTML | iframe → external `https://plzsayyes3.github.io/zen-note/` | separate repo/site entirely |
-| 4 | News | ✅ static HTML | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
-| 5 | Advice | ❌ **no dock button at all** | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable only via the header Mail icon or the `5` keyboard shortcut — deliberate, see §3.3 |
-| 6 | On Hand | ✅ static HTML | iframe → `onhand.html` | same source as the Home ON HAND panel, full history instead of 7 days |
-| 7 | Board | ✅ (JS-configured at load; static HTML has this key as a disabled slot) | special (`board.js`, loaded lazily) | `my-storage-note/brain/coordination/cockpid-board.md` — see §3.4, **not the same thing as the root `board.html`** |
-| 8 | Backstage | ✅ (JS *reassigns* this key — static HTML labels position 8 "Board", JS renames it "Backstage" at runtime) | iframe → `backstage.html` | Project data, see §3.5 |
-| 9 | Project Town | ✅ (JS-configured; static HTML has this key as a disabled slot) | iframe → `project-town.html` | pixel-art project visualization — only lightly verified, see §3.6 |
-| 0 | ??? (secret) | ✅ static HTML | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
+| 1 | Calendar | ✅ | iframe → `calendar.html` | own implementation, see §3.1 |
+| 2 | Tasks | ✅ | iframe → `taskliner-bridge.html` | redirects to an **external** app, see §3.2 |
+| 3 | Zen | ✅ | iframe → external `https://plzsayyes3.github.io/zen-note/` | separate repo/site entirely |
+| 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
+| — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
+| 5 | On Hand | ✅ | iframe → `onhand.html` | same source as the Home ON HAND panel, full history instead of 7 days |
+| 6 | Board | ✅ | special (`board.js`, loaded lazily) | `my-storage-note/brain/coordination/cockpid-board.md` — see §3.4, **not the same thing as the root `board.html`** |
+| 7 | Backstage | ✅ | iframe → `backstage.html` | Project data, see §3.5 |
+| 8 | Project Town | ✅ | iframe → `project-town.html` | pixel-art project visualization, see §3.6 |
+| 9 | Stan | ✅ | page → `stan/` | full-screen standby character / voice capture surface, see §3.7 |
+| 0 | ??? (secret) | ✅ | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
 
-**Discrepancy worth knowing**: the static dock markup and the JS's `configureDockButton`
-calls disagree about which key is "Board" (7 vs 8). The JS runs after the DOM loads and
-wins, so the *actual* rendered dock is 1/2/3/4/6/7=Board/8=Backstage/9=Project Town/0 — but
-anyone editing `index.html`'s dock markup by hand should know the static labels are
-misleading for keys 7–9.
+Runtime dock tail is therefore `5=On Hand / 6=Board / 7=Backstage / 8=Project Town /
+9=Stan`, followed by `0=Secret Desk`. Advice stays outside the numeric dock.
 
 ### 3.1 Calendar
 
@@ -94,7 +92,7 @@ Mail badge. This is intentionally **not** in the app dock — `index.html`'s own
 copy says so explicitly: "AdviceはMENUから外し、Mail Statusから既存画面を開きます" (Advice
 is deliberately treated as a notification, not a peer app).
 
-### 3.4 Board (workbench's own, key 7)
+### 3.4 Board (workbench's own, key 6)
 
 Reads a single file: `my-storage-note/brain/coordination/cockpid-board.md`, rendered
 through a small hand-rolled Markdown→HTML renderer (headings, bullets, and a fixed set of
@@ -104,7 +102,7 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 `secretary-ai-overview/BOARD.md` — all three serve a similar "who's doing what" purpose but
 are separate files with separate audiences; don't conflate them.
 
-### 3.5 Backstage
+### 3.5 Backstage (key 7)
 
 `backstage.js`'s own constants say `REPO = 'gpts'`, `PROJECT_DIR = 'projects'` — this looks
 like it's reading the *legacy*, about-to-be-frozen `gpts` repository directly, which would
@@ -118,13 +116,41 @@ paths; its *runtime behavior* reads the new canonical view. This exact pattern i
 out by name in `my-storage-note/MIGRATION_MAP.md` ("Cockpid Project screens may still
 contain old gpts/projects labels/constants for compatibility adapters").
 
-### 3.6 Project Town
+### 3.6 Project Town (key 8)
 
 A pixel-art visualization (`project-town.js`/`project-town-v2.js`/`project-town-characters.js`,
 plus sprite assets under `workbench/assets/project-town/`) that represents projects as
 characters in a town. Per `BRIEF.md` this is "開発中" (in development). Not deeply verified
 beyond confirming its files exist and it's wired into the dock — treat anything beyond that
 as unconfirmed.
+
+### 3.7 Stan (key 9)
+
+`workbench/stan/` is a separate full-screen standby surface rather than an `app-window`
+iframe. The current implementation consists of `index.html`, `stan.css`, `stan.js`,
+`stan-speech-session.js`, and `stan-github.js`.
+
+The visual core is a dark standby screen with pixel-style eyes. `stan.js` provides idle eye
+motion, blinking, tap interaction, optional front-camera capture, and MediaPipe Face
+Detector-based gaze following. The camera feed itself is hidden; only face position is used
+for gaze. Camera off, permission denial, or detector failure falls back to autonomous eye
+motion.
+
+Interaction is currently:
+
+- single tap: start voice recognition immediately; another single tap ends it early
+- voice session: up to 60 seconds, with a visible remaining-time meter
+- `stan-speech-session.js`: wraps Web Speech recognition and retries recognition after an
+  early `end`/`no-speech` while the 60-second session deadline remains
+- recognized text: stays on screen until the user presses `送る`
+- `送る`: `stan-github.js` writes a new Markdown file to `mynotebook/00_inbox`
+- double tap: open the Stan menu / quick-action URL settings
+
+Stan uses the shared `zen-note-github-token` for the Inbox write. Voice memo filenames use
+JST timestamp plus milliseconds (`YYYYMMDDHHMMSSmmm.md`) to avoid same-second path
+collisions. iPhone Safari behavior across a long silent interval and recognition restart is
+still a real-device validation item; the code path exists, but that device behavior should
+not be marked verified until tested.
 
 ---
 
@@ -133,10 +159,9 @@ as unconfirmed.
 One shared `localStorage` key across the *entire* workbench and its apps:
 `zen-note-github-token` (a GitHub fine-grained PAT). Verified: `token-settings.js` owns
 reading/writing/clearing it, and every app checked (`onhand.js`, `board.js`, `backstage.js`,
-etc.) reads the same key directly — no key-mismatch found this pass (this was a real,
-documented bug in the pre-workbench era; it appears to have been fixed by consolidating on
-one shared module). The token needs read (and, for the capture/memo write paths, write)
-access to `plzsayyes3/my-storage-note` and `plzsayyes3/mynotebook`.
+etc.) reads the same key directly. Stan's `stan-github.js` uses the same key for voice memo
+writes to `plzsayyes3/mynotebook/00_inbox`. The token needs read access where required and
+write access for capture/memo/Stan Inbox paths.
 
 ---
 
@@ -165,19 +190,19 @@ access to `plzsayyes3/my-storage-note` and `plzsayyes3/mynotebook`.
   glassmorphism. Subtle dot-grid background pattern on `body`.
 - Responsive breakpoints at 900px and 720px; dock becomes a horizontally-scrolling strip on
   narrow screens.
+- Stan is intentionally visually separate from the light Workbench shell: it is a dark,
+  low-distraction standby surface centered on the character's eyes.
 
 **This is a complete departure from `DIRECTION.md`'s old "dark mission-control" description**
-— which, as of today, `DIRECTION.md` itself no longer claims (see the correction at the top
-of this document).
+— which, as of 2026-09-12, `DIRECTION.md` itself no longer claims.
 
 ---
 
-## 6. `my-storage-note`'s current layout (as of today's migration)
+## 6. `my-storage-note`'s current layout (as of the 2026-09 migration)
 
 This isn't cockpid's own structure, but every cockpid surface above depends on it, so it's
-worth stating precisely — it changed substantially after 2026-09-06 and this document's
-author (the 司書/`my-storage-note` maintainer) was not tracking it until this investigation.
-See `my-storage-note/MIGRATION_MAP.md` for the full history; summary:
+worth stating precisely. See `my-storage-note/MIGRATION_MAP.md` for the full history;
+summary:
 
 ```
 my-storage-note/
@@ -208,6 +233,8 @@ the existing example of how to do this).
 - `system-settings.js`, `news-home.js`, `resident.js` — read for their key data-source
   constants, not for complete behavior.
 - Project Town (§3.6) — existence and wiring confirmed only.
+- Stan (§3.7) — implementation has been code-reviewed; long-silence/restart behavior still
+  requires iPhone Safari real-device validation.
 
 ---
 
@@ -249,8 +276,8 @@ commands used, not just the conclusion, so this can be re-verified later.
 
 - **`main.html`** ("COCKPID / Mission Control") — this is literally the old dark
   mission-control UI that the pre-today `DIRECTION.md` used to describe. Its data-fetching
-  code was updated to the new `memory/` paths in today's repo-wide migration sweep, so it
-  still runs, but it's reachable only through `index-00.html`'s gallery — not from the live
+  code was updated to the new `memory/` paths in the 2026-09 migration sweep, so it still
+  runs, but it's reachable only through `index-00.html`'s gallery — not from the live
   product. It may be intentionally kept as a reference/fallback view of the old design, or
   it may simply not have been cleaned up yet. **Recommend asking rather than assuming
   either way.**
@@ -268,7 +295,7 @@ commands used, not just the conclusion, so this can be re-verified later.
 `ai-message.js` is dead (see above) but `zen-memo.js` / `zen-memo.css` are genuinely loaded
 by `workbench/index.html` itself (`<script src="../zen-memo.js">`,
 `<link rel="stylesheet" href="../zen-memo.css">`) and actively maintained (`zen-memo.js`
-last touched today, "Use configured Short Memo destination"). Not stale.
+last touched on 2026-09-12, "Use configured Short Memo destination"). Not stale.
 
 ---
 
