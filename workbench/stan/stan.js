@@ -7,6 +7,7 @@ const BLINK_MIN_MS = 3200;
 const BLINK_MAX_MS = 7900;
 const LONG_PRESS_MS = 650;
 const POINTER_CANCEL_DISTANCE = 14;
+const BLOCKED_QUICK_ACTION_PROTOCOLS = new Set(['javascript:', 'data:', 'vbscript:', 'file:', 'blob:']);
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const randomBetween = (min, max) => min + Math.random() * (max - min);
@@ -27,6 +28,8 @@ const quickActionStatus = document.getElementById('quickActionStatus');
 const saveQuickActionButton = document.getElementById('saveQuickAction');
 const runQuickActionButton = document.getElementById('runQuickAction');
 const clearQuickActionButton = document.getElementById('clearQuickAction');
+
+let quickActionMemory = '';
 
 const state = {
   lookX: 0,
@@ -100,31 +103,76 @@ function saveCameraPreference(enabled) {
 
 function quickActionValue() {
   try {
-    return localStorage.getItem(QUICK_ACTION_URL_KEY) || '';
+    const saved = localStorage.getItem(QUICK_ACTION_URL_KEY);
+    if (saved) return saved;
   } catch {
-    return '';
+    // Try session storage below.
   }
+
+  try {
+    const saved = sessionStorage.getItem(QUICK_ACTION_URL_KEY);
+    if (saved) return saved;
+  } catch {
+    // Fall back to in-memory storage below.
+  }
+
+  return quickActionMemory;
 }
 
 function saveQuickActionValue(value) {
+  const nextValue = String(value || '');
+  quickActionMemory = nextValue;
+
   try {
-    if (value) {
-      localStorage.setItem(QUICK_ACTION_URL_KEY, value);
+    if (nextValue) {
+      localStorage.setItem(QUICK_ACTION_URL_KEY, nextValue);
     } else {
       localStorage.removeItem(QUICK_ACTION_URL_KEY);
     }
+
+    if ((localStorage.getItem(QUICK_ACTION_URL_KEY) || '') === nextValue) {
+      try {
+        sessionStorage.removeItem(QUICK_ACTION_URL_KEY);
+      } catch {
+        // Ignore cleanup failures.
+      }
+      return 'local';
+    }
   } catch {
-    // Keep Stan usable even when storage is unavailable.
+    // Fall back to session storage below.
   }
+
+  try {
+    if (nextValue) {
+      sessionStorage.setItem(QUICK_ACTION_URL_KEY, nextValue);
+    } else {
+      sessionStorage.removeItem(QUICK_ACTION_URL_KEY);
+    }
+
+    if ((sessionStorage.getItem(QUICK_ACTION_URL_KEY) || '') === nextValue) {
+      return 'session';
+    }
+  } catch {
+    // Keep the value in memory for the current page.
+  }
+
+  return 'memory';
 }
 
 function normalizeQuickActionUrl(value) {
-  const raw = String(value || '').trim();
+  let raw = String(value || '').trim();
   if (!raw) return '';
+
+  const hasExplicitScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw);
+  const isRelative = /^(?:\.{0,2}\/|[?#])/.test(raw);
+
+  if (!hasExplicitScheme && !isRelative) {
+    raw = `https://${raw}`;
+  }
 
   try {
     const url = new URL(raw, window.location.href);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (BLOCKED_QUICK_ACTION_PROTOCOLS.has(url.protocol.toLowerCase())) return null;
     return url.href;
   } catch {
     return null;
@@ -165,12 +213,21 @@ function saveQuickAction() {
   const normalized = normalizeQuickActionUrl(quickActionInput.value);
 
   if (normalized === null) {
-    quickActionStatus.textContent = 'http / https のURLを入力してください';
+    quickActionStatus.textContent = '有効なURL / URIを入力してください';
     return;
   }
 
-  saveQuickActionValue(normalized);
-  syncQuickActionUi(normalized ? '保存しました' : '未設定にしました');
+  const storageMode = saveQuickActionValue(normalized);
+
+  if (!normalized) {
+    syncQuickActionUi('未設定にしました');
+  } else if (storageMode === 'local') {
+    syncQuickActionUi('保存しました');
+  } else if (storageMode === 'session') {
+    syncQuickActionUi('このタブ内に保存しました');
+  } else {
+    syncQuickActionUi('この画面内に一時保存しました');
+  }
 }
 
 function clearQuickAction() {
@@ -187,8 +244,15 @@ function runQuickAction() {
   }
 
   setMood('いってらっしゃい');
-  window.location.assign(normalized);
-  return true;
+
+  try {
+    window.location.assign(normalized);
+    return true;
+  } catch (error) {
+    console.warn('[Stan] Quick action could not be opened:', error);
+    openMenu({ message: 'このリンクを開けませんでした' });
+    return false;
+  }
 }
 
 function setLookTowardPoint(clientX, clientY) {
@@ -527,14 +591,7 @@ function beginStagePress(event) {
 
   state.longPressTimer = window.setTimeout(() => {
     state.longPressTriggered = true;
-    const normalized = normalizeQuickActionUrl(quickActionValue());
-
-    if (normalized) {
-      setMood('いってらっしゃい');
-      window.location.assign(normalized);
-    } else {
-      openMenu({ focusInput: true, message: '長押し先を設定してください' });
-    }
+    runQuickAction();
   }, LONG_PRESS_MS);
 }
 
