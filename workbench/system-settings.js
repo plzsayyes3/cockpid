@@ -2,6 +2,7 @@
   'use strict';
 
   const READ_KEY = 'cockpid.advice.read.v1';
+  const REMOTE_PATH = 'app-state/cockpid/message-state.json';
   const systemOpen = document.getElementById('systemOpen');
   const mailOpen = document.getElementById('mailOpen');
   const mailUnread = document.getElementById('mailUnread');
@@ -184,6 +185,33 @@
     catch (_) { return new Set(); }
   }
 
+  function saveRead(set) {
+    localStorage.setItem(READ_KEY, JSON.stringify([...set].sort()));
+  }
+
+  function decodeUtf8Base64(value) {
+    const binary = atob(String(value || '').replace(/\n/g, ''));
+    return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+  }
+
+  async function readSharedReadSet() {
+    const response = await fetch(`https://api.github.com/repos/plzsayyes3/my-storage-note/contents/${REMOTE_PATH}?ref=main`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token()}`
+      },
+      cache: 'no-store'
+    });
+    if (response.status === 404) return readSet();
+    if (!response.ok) throw new Error(`message state ${response.status}`);
+    const payload = await response.json();
+    const data = JSON.parse(decodeUtf8Base64(payload.content) || '{}');
+    const remote = new Set(Array.isArray(data?.read) ? data.read : Object.keys(data?.read || {}));
+    const merged = new Set([...readSet(), ...remote]);
+    saveRead(merged);
+    return merged;
+  }
+
   function setMailState(unread, error = false) {
     if (!mailOpen || !mailUnread) return;
     const count = Math.max(0, Number(unread) || 0);
@@ -205,9 +233,11 @@
       return;
     }
     try {
-      const rows = await gh('advice', 'my-storage-note');
+      const [rows, read] = await Promise.all([
+        gh('advice', 'my-storage-note'),
+        readSharedReadSet()
+      ]);
       const files = (Array.isArray(rows) ? rows : []).filter((row) => row.type === 'file' && /\.md$/i.test(row.name));
-      const read = readSet();
       setMailState(files.filter((file) => !read.has(file.name)).length, false);
     } catch (error) {
       console.error('mail status', error);
@@ -224,6 +254,8 @@
   window.addEventListener('storage', (event) => {
     if (event.key === READ_KEY || event.key === 'zen-note-github-token') refreshMail();
   });
+  window.addEventListener('cockpid:advice-read-state', refreshMail);
+  window.addEventListener('online', refreshMail);
   window.addEventListener('focus', refreshMail);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshMail(); });
   setInterval(refreshMail, 60000);
