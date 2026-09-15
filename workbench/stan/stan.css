@@ -517,6 +517,20 @@ input { font: inherit; }
   .stan-menu { width: min(42vw, 320px); }
 }
 
+@media (max-width: 950px) and (max-height: 600px) and (orientation: landscape) {
+  .stan-face {
+    --face-y: -5vh;
+    gap: clamp(18px, 3vw, 26px);
+  }
+
+  .eye {
+    width: clamp(138px, 18vw, 160px);
+  }
+
+  .camera-state { display: none; }
+  .camera-toggle { width: 38px; padding: 0; justify-content: center; }
+}
+
 @media (max-width: 600px) and (orientation: portrait) {
   .stan-face {
     gap: clamp(18px, 6vw, 26px);
