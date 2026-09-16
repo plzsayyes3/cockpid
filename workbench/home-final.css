@@ -13,6 +13,7 @@
 .pet{bottom:122px}
 @media(max-width:900px){
   .desk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .capture-object{grid-column:1/-1}
 }
 @media(max-width:720px){
   .desk{grid-template-columns:1fr}
