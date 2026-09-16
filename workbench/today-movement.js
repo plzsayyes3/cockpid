@@ -159,6 +159,18 @@
     }
   }
 
+  function restoreAfterScheduling(input) {
+    input.checked = false;
+    input.disabled = false;
+    const rowNode = input.closest('.movement-item[data-movement-row]');
+    rowNode?.querySelectorAll('.onhand-send-btn,.onhand-route-btn,.movement-skip').forEach((button) => { button.disabled = false; });
+    const status = rowNode?.querySelector('.onhand-route-status');
+    if (status) {
+      status.textContent = '送信済み · Taskは未完了';
+      status.classList.remove('error');
+    }
+  }
+
   async function boot() {
     if (!core.hasToken()) {
       source.textContent = '7 DAYS · ANALYSIS OFF';
@@ -192,7 +204,7 @@
     if (!item) return;
     if (item._isCanonicalTask) {
       if (!event.isTrusted) {
-        input.checked = false;
+        restoreAfterScheduling(input);
         return;
       }
       if (input.checked) completeCanonical(bucket, item, input);
