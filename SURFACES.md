@@ -1,4 +1,4 @@
-# SURFACES.md — What's actually implemented (verified 2026-09-15)
+# SURFACES.md — What's actually implemented (verified 2026-09-16)
 
 > **Purpose**: `DIRECTION.md` is a policy document (what the workbench should be and why).
 > This document is the opposite: an exhaustive, code-verified inventory of what actually
@@ -30,12 +30,19 @@
 |---|---|---|
 | Header | Brand, 3 status icons (Techo/Analysis/System — decorative, not wired to live health checks as far as verified), Mail icon with unread badge, Settings button, live clock | — |
 | **PUT ANYTHING HERE** (capture box) | Freeform textarea, Ctrl/⌘+Enter saves | writes → `mynotebook/00_inbox` (new file) |
-| **ON HAND** | 3 columns: Do / Check / Keep, populated from the last 7 days | reads → `my-storage-note/memory/extracted/<type>/*.json`, filtered by each item's `mode` field (`do`/`check`/`keep`) and cached via `my-storage-note/memory/indexes/movement/<weekStart>_<today>.json` (`today-movement.js`) |
+| **ON HAND** | 3 columns: Task / Check / Keep. Canonical Shared Tasks are merged ahead of recent candidates; historical `mode: do` is read only as a legacy alias and normalized to Task | reads → `my-storage-note/views/tasks.json` + `my-storage-note/memory/extracted/<type>/*.json` / `memory/indexes/movement/*`; Shared Task completion writes → `my-storage-note/objects/tasks/current.yml`; candidate handled/SKIP state → `my-storage-note/memory/state/on-hand.json` via shared-state sync |
 | **CALENDAR / TODAY** | Today's schedule, prev/today/next date nav, link out to Google Calendar | reads → `mynotebook/02_techo` (routed through a compatibility adapter — see §7) |
 | **NEWS** | A short list/teaser, opens the News app on click | reads → external: `https://plzsayyes3.github.io/My_Internet_place/data/latest.json` |
 | **Resident** (the little pet in the corner) | Cosmetic companion; its speech bubble text is scraped from other panels' already-rendered DOM (`.movement-item-title` etc.), plus one direct fetch of `my-storage-note/memory/extracted/idea` | position persisted in `localStorage: cockpid.workbench.pet.position.v1` |
 | **Memo drawer** (CAPTURE / INBOX tabs) | CAPTURE writes a new note; INBOX is read-only, looks for the `#### ショートメモ` heading specifically | `mynotebook/00_inbox` (write), `mynotebook/00_inbox` (read, view-only) |
 | **Settings modal** | General / Paths·Data / GitHub / Notifications / Apps tabs. Paths tab is informational only (shows which folders are/aren't wired up); GitHub tab is where the token lives | see §4 |
+
+ON HAND's `Task` lane is the review surface for Canonical Shared Tasks and execution-shaped
+candidates. Checking a Canonical Shared Task updates its canonical `completed` field; checking
+a non-canonical candidate means ON HAND `handled`. Sending a Shared Task to TaskLiner/Techo
+schedules it but does **not** complete it. Sending a candidate successfully still marks that
+candidate handled. This distinction is implemented in `onhand-core.js`, `onhand.js`,
+`today-movement.js`, and `onhand-scheduling-bridge.js`.
 
 Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-overlay
 (`app-window`); Stan is intentionally a separate full-page route under `workbench/stan/`.
@@ -56,7 +63,7 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 3 | Zen | ✅ | iframe → external `https://plzsayyes3.github.io/zen-note/` | separate repo/site entirely |
 | 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
-| 5 | On Hand | ✅ | iframe → `onhand.html` | same source as the Home ON HAND panel, full history instead of 7 days |
+| 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
 | 6 | Board | ✅ | special (`board.js`, loaded lazily) | `my-storage-note/brain/coordination/cockpid-board.md` — see §3.4, **not the same thing as the root `board.html`** |
 | 7 | Backstage | ✅ | iframe → `backstage.html` | Project data, see §3.5 |
 | 8 | Project Town | ✅ | iframe → `project-town.html` | pixel-art project visualization, see §3.6 |
@@ -76,12 +83,16 @@ implementation).
 
 ### 3.2 Tasks
 
-`taskliner-bridge.html` is not a task app itself. It reads a configured `taskliner`
+`taskliner-bridge.html` is not the Canonical Shared Task store. It reads a configured `taskliner`
 source from `localStorage: cockpid.sources.v1`, writes it into
 `localStorage: taskliner_github_sync_config_v1` (the format the external app expects), and
-the actual UI lives at `https://plzsayyes3.github.io/taskliner_taskchute-line/` (a separate
-repo/site). `mynotebook/09_taskchute/` is the underlying data per `DIRECTION.md` §5 ("TaskLiner
-remains independent"), not verified further here.
+the actual execution UI lives at `https://plzsayyes3.github.io/taskliner_taskchute-line/`
+(a separate repo/site). `mynotebook/09_taskchute/` is the underlying execution data.
+
+Canonical Shared Tasks instead live in `my-storage-note/objects/tasks/current.yml` and are
+projected to `views/tasks.json`; ON HAND reads that view. In other words, ON HAND Task is the
+review/decision surface for Shared Task, while TaskLiner remains the independent execution
+surface for items chosen for today.
 
 ### 3.3 Advice
 
@@ -158,10 +169,11 @@ not be marked verified until tested.
 
 One shared `localStorage` key across the *entire* workbench and its apps:
 `zen-note-github-token` (a GitHub fine-grained PAT). Verified: `token-settings.js` owns
-reading/writing/clearing it, and every app checked (`onhand.js`, `board.js`, `backstage.js`,
-etc.) reads the same key directly. Stan's `stan-github.js` uses the same key for voice memo
-writes to `plzsayyes3/mynotebook/00_inbox`. The token needs read access where required and
-write access for capture/memo/Stan Inbox paths.
+reading/writing/clearing it, and the data clients checked (`onhand-core.js`,
+`onhand-scheduling-bridge.js`, `board.js`, `backstage.js`, etc.) use that same token. Stan's
+`stan-github.js` uses the same key for voice memo writes to `plzsayyes3/mynotebook/00_inbox`.
+The token needs read access where required and write access for capture/memo/Stan Inbox,
+Canonical Shared Task completion, ON HAND state, TaskLiner and Techo routing paths.
 
 ---
 
@@ -213,14 +225,14 @@ my-storage-note/
 │                 that compatibility path is now fully retired (root mirrors deleted).
 ├─ brain/        rules, interests, chat-modes, review queue, coordination (incl. cockpid-board.md)
 ├─ objects/      canonical human-facing objects: projects/assignments/tasks/ideas/references
-├─ views/        regenerated read-models for UI consumers (e.g. views/projects.json)
+├─ views/        regenerated read-models for UI consumers (e.g. views/projects.json, views/tasks.json)
 └─ advice/       daily advice output (secretary-log's daily_advice.py)
 ```
 
 Any future cockpid work that reads warehouse data (extracted items, entities, connections)
-must use `memory/...` paths. Any future work that reads Project data should go through
-`views/...`, not `objects/projects/*.md` directly (Backstage's adapter pattern in §3.5 is
-the existing example of how to do this).
+must use `memory/...` paths. Any future work that reads Project or Shared Task data should go
+through `views/...` for display and write the corresponding canonical Object only when a
+semantic mutation is required (for example, completing a Shared Task).
 
 ---
 
@@ -228,6 +240,9 @@ the existing example of how to do this).
 
 - The exact mapping of `mynotebook/02_techo` reads through `calendar-source-adapter.js`'s
   compatibility layer was traced structurally but not exercised end-to-end.
+- ON HAND Task / Check / Keep integration has been code-reviewed and wired to canonical
+  Shared Task completion, but the full matrix (desktop/mobile, completion, SKIP, today/date/
+  week/month send, duplicate send) still needs browser/real-device exercise.
 - `google-calendar-sync.js` (475+ lines) — confirmed it exists and writes/overlays a
   "Techo payload," not read in full.
 - `system-settings.js`, `news-home.js`, `resident.js` — read for their key data-source
