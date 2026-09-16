@@ -49,25 +49,30 @@
   color: rgba(248, 225, 222, .90);
 }
 
+/* The live transcript replaces the old Stan label below the eyes. */
+.stan-presence {
+  display: none !important;
+}
+
 .stan-speech {
-  left: auto;
-  right: max(28px, env(safe-area-inset-right));
-  top: 50%;
-  width: min(22vw, 300px);
-  max-height: min(68vh, 500px);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  justify-items: stretch;
-  transform: translateY(-50%);
-  text-align: left;
+  left: 50%;
+  right: auto;
+  top: 72%;
+  z-index: 3;
+  width: min(68vw, 720px);
+  max-height: none;
+  display: block;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.stan-speech[hidden] {
+  display: none;
 }
 
 .stan-speech-label {
-  color: rgba(183, 207, 219, .46);
-  font-size: 8px;
-  line-height: 1.2;
-  letter-spacing: .08em;
-  text-align: left;
+  display: none;
 }
 
 .stan-stage.is-listening .stan-speech-label::before {
@@ -76,21 +81,25 @@
 }
 
 .stan-transcript {
-  max-height: min(54vh, 420px);
+  width: 100%;
+  height: 1.7em;
+  max-height: none;
   margin: 0;
-  padding-right: 2px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
   scrollbar-width: none;
-  color: rgba(232, 246, 252, .76);
+  color: rgba(232, 246, 252, .72);
   font-size: clamp(10px, 1.05vw, 13px);
-  line-height: 1.65;
+  line-height: 1.7;
   letter-spacing: .015em;
+  text-align: center;
+  white-space: nowrap;
+  text-wrap: nowrap;
+}
+
+.stan-transcript.is-overflowing {
   text-align: left;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  text-wrap: pretty;
 }
 
 .stan-transcript::-webkit-scrollbar {
@@ -98,7 +107,11 @@
 }
 
 .stan-speech-send {
-  justify-self: start;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 @keyframes stan-rec-pulse {
@@ -111,15 +124,13 @@
   }
 
   .stan-speech {
-    right: max(22px, env(safe-area-inset-right));
-    width: clamp(180px, 25vw, 235px);
-    max-height: 70vh;
+    top: 72%;
+    width: min(62vw, 620px);
   }
 
   .stan-transcript {
-    max-height: 54vh;
     font-size: 10px;
-    line-height: 1.58;
+    line-height: 1.7;
   }
 }
 
@@ -136,18 +147,13 @@
   }
 
   .stan-speech {
-    top: auto;
-    right: max(16px, env(safe-area-inset-right));
-    bottom: max(18px, env(safe-area-inset-bottom));
-    width: min(52vw, 220px);
-    max-height: 28vh;
-    transform: none;
+    top: 76%;
+    width: min(78vw, 360px);
   }
 
   .stan-transcript {
-    max-height: 17vh;
     font-size: 10px;
-    line-height: 1.55;
+    line-height: 1.65;
   }
 }
 
