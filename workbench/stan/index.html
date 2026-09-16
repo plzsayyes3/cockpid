@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#03070b">
   <title>Stan — Standby</title>
   <link rel="stylesheet" href="stan.css?v=20260915-landscape2">
-  <link rel="stylesheet" href="stan-speech-ui.css?v=20260916-transcript-clear-eyes">
+  <link rel="stylesheet" href="stan-speech-ui.css?v=20260916-one-line">
   <style>
     @media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
       .stan-face {
@@ -37,8 +37,7 @@
       <div class="eye eye-right"><span class="pupil"></span></div>
     </section>
 
-    <div class="stan-presence" aria-live="polite">
-      <strong>スタンちゃん</strong>
+    <div class="stan-presence" aria-hidden="true">
       <span id="stanMood">待ってるよ</span>
     </div>
 
@@ -64,7 +63,7 @@
           <input id="quickActionUrl" type="text" inputmode="url" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://... / shortcuts://...">
         </label>
 
-        <p class="stan-menu-note">シングルタップでこのメニューを開きます。ダブルタップで最大3分の音声入力を開始し、もう一度ダブルタップすると途中終了します。録音中は左にRECと残り時間、右にリアルタイム文字起こしを表示します。認識後の「送る」で mynotebook / 00_inbox に保存します。</p>
+        <p class="stan-menu-note">シングルタップでこのメニューを開きます。ダブルタップで最大3分の音声入力を開始し、もう一度ダブルタップすると途中終了します。録音中は左にRECと残り時間、目の下に1行だけリアルタイム文字起こしを表示し、長くなったら最新部分へ横スクロールします。認識後の「送る」で mynotebook / 00_inbox に保存します。</p>
         <p class="stan-menu-status" id="quickActionStatus" aria-live="polite">未設定</p>
 
         <div class="stan-menu-actions">
@@ -81,7 +80,7 @@
 
   <script src="stan-speech-session.js?v=20260916-3m"></script>
   <script type="module" src="stan.js?v=20260916-tap2"></script>
-  <script type="module" src="stan-transcript-scroll.js?v=20260916-live"></script>
+  <script type="module" src="stan-transcript-scroll.js?v=20260916-horizontal"></script>
   <script type="module" src="stan-github.js"></script>
   <script type="module" src="stan-auto-update.js"></script>
 </body>
