@@ -108,6 +108,18 @@
     }
   }
 
+  function restoreAfterScheduling(input) {
+    input.checked = false;
+    input.disabled = false;
+    const rowNode = input.closest('.item[data-row-id]');
+    rowNode?.querySelectorAll('.onhand-send-btn,.onhand-route-btn,.skip-btn').forEach((button) => { button.disabled = false; });
+    const status = rowNode?.querySelector('.onhand-route-status');
+    if (status) {
+      status.textContent = '送信済み · Taskは未完了';
+      status.classList.remove('error');
+    }
+  }
+
   async function boot() {
     if (!core.hasToken()) {
       sourceRange.textContent = 'ON HAND · TOKEN REQUIRED';
@@ -143,7 +155,7 @@
     if (!item) return;
     if (item._isCanonicalTask) {
       if (!event.isTrusted) {
-        input.checked = false;
+        restoreAfterScheduling(input);
         return;
       }
       if (input.checked) completeCanonical(bucket, item, input);
