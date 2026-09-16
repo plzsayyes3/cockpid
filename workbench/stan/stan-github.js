@@ -14,43 +14,6 @@
 
   if (!stage || !speechBox || !speechLabel || !transcript) return;
 
-  const style = document.createElement('style');
-  style.textContent = `
-    .stan-speech-send {
-      min-width: 76px;
-      min-height: 34px;
-      margin-top: 2px;
-      padding: 0 14px;
-      border: 1px solid rgba(196, 231, 246, .16);
-      border-radius: 0;
-      color: rgba(235, 247, 252, .78);
-      background: rgba(8, 18, 24, .58);
-      font: inherit;
-      font-size: 9px;
-      letter-spacing: .08em;
-      cursor: pointer;
-      pointer-events: auto;
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .stan-speech-send:disabled {
-      opacity: .28;
-      cursor: default;
-    }
-    .stan-speech-send:focus-visible {
-      outline: 1px solid rgba(196, 231, 246, .38);
-      outline-offset: 2px;
-    }
-  `;
-  document.head.appendChild(style);
-
-  const sendButton = document.createElement('button');
-  sendButton.type = 'button';
-  sendButton.className = 'stan-speech-send';
-  sendButton.textContent = '送る';
-  sendButton.hidden = true;
-  speechBox.appendChild(sendButton);
-
   let posting = false;
 
   function token() {
@@ -59,10 +22,6 @@
     } catch {
       return '';
     }
-  }
-
-  function pad(value) {
-    return String(value).padStart(2, '0');
   }
 
   function jstParts(date = new Date()) {
@@ -76,8 +35,7 @@
       second: '2-digit',
       hourCycle: 'h23'
     }).formatToParts(date);
-    const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-    return map;
+    return Object.fromEntries(parts.map((part) => [part.type, part.value]));
   }
 
   function stamp(date = new Date()) {
@@ -97,13 +55,6 @@
     return transcript.textContent.trim();
   }
 
-  function refreshButton() {
-    const hasText = Boolean(currentText());
-    const listening = stage.classList.contains('is-listening');
-    sendButton.hidden = !hasText;
-    sendButton.disabled = posting || listening || !hasText;
-  }
-
   function setStatus(label, moodText = '') {
     speechBox.hidden = false;
     speechLabel.textContent = label;
@@ -114,19 +65,21 @@
     if (posting) return;
 
     const text = currentText();
-    if (!text) return;
+    if (!text) {
+      speechBox.hidden = true;
+      return;
+    }
 
     const currentToken = token();
     if (!currentToken) {
       setStatus('GitHub接続が必要', 'つながってない');
-      sendButton.disabled = false;
       return;
     }
 
     const name = `${stamp()}.md`;
     const path = `${DIR}/${name}`;
     posting = true;
-    refreshButton();
+    stage.classList.add('is-posting');
     setStatus('送ってる…', '送ってる…');
 
     try {
@@ -144,33 +97,28 @@
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`GitHub ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`GitHub ${response.status}`);
 
-      transcript.textContent = '';
+      transcript.textContent = '保存しました';
       setStatus('送ったよ', '送ったよ');
+      window.dispatchEvent(new CustomEvent('stan:voice-posted', { detail: { path } }));
+
       window.setTimeout(() => {
-        if (!stage.classList.contains('is-listening') && !currentText()) {
+        if (!stage.classList.contains('is-listening')) {
+          transcript.textContent = '';
           speechBox.hidden = true;
         }
-      }, 1300);
+      }, 900);
     } catch (error) {
       console.warn('[Stan] Voice memo post failed:', error);
       setStatus(`送信失敗 · ${String(error?.message || error)}`, '送れなかった');
     } finally {
       posting = false;
-      refreshButton();
+      stage.classList.remove('is-posting');
     }
   }
 
-  ['pointerdown', 'pointerup', 'click', 'dblclick'].forEach((type) => {
-    sendButton.addEventListener(type, (event) => event.stopPropagation());
+  window.addEventListener('stan:speech-complete', () => {
+    window.setTimeout(postVoiceMemo, 0);
   });
-  sendButton.addEventListener('click', postVoiceMemo);
-
-  const observer = new MutationObserver(refreshButton);
-  observer.observe(transcript, { childList: true, characterData: true, subtree: true });
-  observer.observe(stage, { attributes: true, attributeFilter: ['class'] });
-  refreshButton();
 })();
