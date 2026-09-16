@@ -1,0 +1,139 @@
+.stan-recording-hud {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.stan-recording-hud.is-active {
+  opacity: 1;
+}
+
+.stan-recording-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(231, 241, 246, .68);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .14em;
+}
+
+.stan-recording-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d86f68;
+  box-shadow: 0 0 7px rgba(216, 111, 104, .28);
+  animation: stan-rec-pulse 1.2s steps(2, end) infinite;
+}
+
+.stan-recording-countdown {
+  color: rgba(235, 247, 252, .84);
+  font-size: clamp(17px, 2.2vw, 24px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: .04em;
+}
+
+.stan-recording-hud.is-urgent .stan-recording-countdown,
+.stan-recording-hud.is-urgent .stan-recording-state {
+  color: rgba(248, 225, 222, .90);
+}
+
+.stan-speech {
+  left: auto;
+  right: max(18px, env(safe-area-inset-right));
+  top: 50%;
+  width: min(30vw, 360px);
+  max-height: min(58vh, 420px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  justify-items: stretch;
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+.stan-speech-label {
+  color: rgba(183, 207, 219, .46);
+  font-size: 8px;
+  line-height: 1.2;
+  letter-spacing: .08em;
+  text-align: left;
+}
+
+.stan-stage.is-listening .stan-speech-label::before {
+  content: none;
+  display: none;
+}
+
+.stan-transcript {
+  max-height: min(44vh, 340px);
+  margin: 0;
+  padding-right: 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  color: rgba(232, 246, 252, .76);
+  font-size: clamp(10px, 1.2vw, 13px);
+  line-height: 1.65;
+  letter-spacing: .015em;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.stan-transcript::-webkit-scrollbar {
+  display: none;
+}
+
+.stan-speech-send {
+  justify-self: start;
+}
+
+@keyframes stan-rec-pulse {
+  50% { opacity: .30; }
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  .stan-recording-hud {
+    top: auto;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: max(16px, env(safe-area-inset-left));
+    transform: none;
+  }
+
+  .stan-recording-countdown {
+    font-size: 17px;
+  }
+
+  .stan-speech {
+    top: auto;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom));
+    width: min(56vw, 240px);
+    max-height: 28vh;
+    transform: none;
+  }
+
+  .stan-transcript {
+    max-height: 17vh;
+    font-size: 10px;
+    line-height: 1.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stan-recording-hud { transition: none; }
+  .stan-recording-dot { animation: none; }
+}
