@@ -36,6 +36,16 @@
   animation: stan-rec-pulse 1.2s steps(2, end) infinite;
 }
 
+.stan-recording-hud.is-paused .stan-recording-dot {
+  opacity: .24;
+  animation: none;
+  box-shadow: none;
+}
+
+.stan-recording-hud.is-paused .stan-recording-state {
+  color: rgba(226, 240, 248, .42);
+}
+
 .stan-recording-countdown {
   color: rgba(235, 247, 252, .84);
   font-size: clamp(17px, 2.2vw, 24px);
@@ -104,14 +114,6 @@
 
 .stan-transcript::-webkit-scrollbar {
   display: none;
-}
-
-.stan-speech-send {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 8px);
-  transform: translateX(-50%);
-  pointer-events: auto;
 }
 
 @keyframes stan-rec-pulse {
