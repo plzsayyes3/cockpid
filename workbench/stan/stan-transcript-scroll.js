@@ -10,7 +10,9 @@
     if (frame) cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       frame = null;
-      transcript.scrollTop = transcript.scrollHeight;
+      const overflowing = transcript.scrollWidth > transcript.clientWidth + 1;
+      transcript.classList.toggle('is-overflowing', overflowing);
+      transcript.scrollLeft = overflowing ? transcript.scrollWidth : 0;
     });
   }
 
@@ -21,10 +23,12 @@
     subtree: true
   });
 
+  window.addEventListener('resize', scrollToLatest);
   scrollToLatest();
 
   window.addEventListener('pagehide', () => {
     observer.disconnect();
+    window.removeEventListener('resize', scrollToLatest);
     if (frame) cancelAnimationFrame(frame);
   }, { once: true });
 })();
