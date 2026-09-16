@@ -71,6 +71,7 @@ const state = {
   lastTapAt: 0,
   lastTapX: 0,
   lastTapY: 0,
+  singleTapTimer: null,
   speechRecognition: null,
   speechStarting: false,
   speechListening: false,
@@ -203,6 +204,10 @@ function syncQuickActionUi(message = '') {
 }
 
 function clearPendingTap() {
+  if (state.singleTapTimer) {
+    window.clearTimeout(state.singleTapTimer);
+    state.singleTapTimer = null;
+  }
   state.lastTapAt = 0;
 }
 
@@ -324,7 +329,7 @@ function startSpeechRecognition() {
   } catch (error) {
     state.speechStarting = false;
     console.warn('[Stan] Speech recognition could not start:', error);
-    setSpeechUi('開始できません', 'もう一度タップしてください');
+    setSpeechUi('開始できません', 'もう一度ダブルタップしてください');
     setMood('もう一度？');
     return false;
   }
@@ -782,15 +787,25 @@ function endStagePress(event) {
 
   if (isDoubleTap) {
     clearPendingTap();
-    stopSpeechRecognition({ abort: true, silent: true });
-    openMenu();
+    toggleSpeechRecognition();
     return;
+  }
+
+  if (state.singleTapTimer) {
+    window.clearTimeout(state.singleTapTimer);
+    state.singleTapTimer = null;
   }
 
   state.lastTapAt = now;
   state.lastTapX = event.clientX;
   state.lastTapY = event.clientY;
-  toggleSpeechRecognition();
+  const tapAt = now;
+  state.singleTapTimer = window.setTimeout(() => {
+    if (state.lastTapAt !== tapAt) return;
+    state.singleTapTimer = null;
+    state.lastTapAt = 0;
+    openMenu();
+  }, DOUBLE_TAP_MS);
 }
 
 cameraButton.addEventListener('click', toggleCamera);
@@ -821,11 +836,13 @@ stage.addEventListener('contextmenu', (event) => {
 });
 
 window.addEventListener('pagehide', () => {
+  clearPendingTap();
   stopSpeechRecognition({ abort: true, silent: true });
   stopCamera({ preservePreference: true });
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    clearPendingTap();
     stopSpeechRecognition({ abort: true, silent: true });
     state.stream?.getVideoTracks().forEach((track) => { track.enabled = false; });
   } else if (state.cameraEnabled && state.stream) {
