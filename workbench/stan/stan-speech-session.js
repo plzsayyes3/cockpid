@@ -90,6 +90,16 @@
       this._native.onstart = (event) => {
         this._nativeStarting = false;
         this._nativeActive = true;
+
+        if (this._paused) {
+          try {
+            this._native.stop();
+          } catch {
+            // Pause state wins even if the native engine was still starting.
+          }
+          return;
+        }
+
         if (!this._reportedStart) {
           this._reportedStart = true;
           this.onstart?.(event);
@@ -103,11 +113,10 @@
       this._native.onerror = (event) => {
         this._nativeStarting = false;
 
-        if (this._paused && event.error === 'aborted') return;
+        if (this._paused) return;
 
         const canRecover = this._sessionActive
           && !this._ending
-          && !this._paused
           && performance.now() < this._deadline
           && event.error === 'no-speech';
 
