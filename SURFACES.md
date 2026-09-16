@@ -138,8 +138,9 @@ as unconfirmed.
 ### 3.7 Stan (key 9)
 
 `workbench/stan/` is a separate full-screen standby surface rather than an `app-window`
-iframe. The current implementation consists of `index.html`, `stan.css`, `stan.js`,
-`stan-speech-session.js`, and `stan-github.js`.
+iframe. The current implementation includes `index.html`, `stan.css`, `stan.js`,
+`stan-speech-session.js`, `stan-recording-gesture.js`, `stan-speech-ui.css`,
+`stan-transcript-scroll.js`, `stan-github.js`, and `stan-auto-update.js`.
 
 The visual core is a dark standby screen with pixel-style eyes. `stan.js` provides idle eye
 motion, blinking, tap interaction, optional front-camera capture, and MediaPipe Face
@@ -149,19 +150,27 @@ motion.
 
 Interaction is currently:
 
-- single tap: start voice recognition immediately; another single tap ends it early
-- voice session: up to 60 seconds, with a visible remaining-time meter
-- `stan-speech-session.js`: wraps Web Speech recognition and retries recognition after an
-  early `end`/`no-speech` while the 60-second session deadline remains
-- recognized text: stays on screen until the user presses `送る`
-- `送る`: `stan-github.js` writes a new Markdown file to `mynotebook/00_inbox`
-- double tap: open the Stan menu / quick-action URL settings
+- idle single tap: open the Stan menu / quick-action URL settings
+- idle double tap: start a voice-recognition session
+- voice session: up to 3 minutes of active recording time
+- recording single tap: pause; another single tap resumes
+- pause freezes the remaining-time countdown; the left HUD changes from `REC` to `PAUSE`
+  and stops the recording-dot pulse
+- recording double tap: end the session
+- `stan-speech-session.js`: wraps Web Speech recognition and retries after an early
+  `end`/`no-speech` while the active session remains; pause/resume keeps one logical memo
+- live transcript: one line below the eyes; long text scrolls horizontally to the latest
+  recognized portion while the complete text remains the save payload
+- there is no `送る` button: normal end or the 3-minute limit triggers `stan-github.js` to
+  automatically write a new Markdown file to `mynotebook/00_inbox`
+- `stan-auto-update.js`: checks Stan updates every 5 minutes and reloads only at a safe idle
+  point, so recording, pause, unsaved text, menu use, and posting are not interrupted
 
 Stan uses the shared `zen-note-github-token` for the Inbox write. Voice memo filenames use
 JST timestamp plus milliseconds (`YYYYMMDDHHMMSSmmm.md`) to avoid same-second path
-collisions. iPhone Safari behavior across a long silent interval and recognition restart is
-still a real-device validation item; the code path exists, but that device behavior should
-not be marked verified until tested.
+collisions. iPhone Safari behavior across long silent intervals, pause/resume, and recognition
+restart remains real-device dependent and should be validated on-device when behavior is in
+question.
 
 ---
 
@@ -226,7 +235,7 @@ my-storage-note/
 ├─ brain/        rules, interests, chat-modes, review queue, coordination (incl. cockpid-board.md)
 ├─ objects/      canonical human-facing objects: projects/assignments/tasks/ideas/references
 ├─ views/        regenerated read-models for UI consumers (e.g. views/projects.json, views/tasks.json)
-└─ advice/       daily advice output (secretary-log's daily_advice.py)
+└─ advice/       daily advice output (secretary-log's `daily_advice.py`)
 ```
 
 Any future cockpid work that reads warehouse data (extracted items, entities, connections)
@@ -248,8 +257,8 @@ semantic mutation is required (for example, completing a Shared Task).
 - `system-settings.js`, `news-home.js`, `resident.js` — read for their key data-source
   constants, not for complete behavior.
 - Project Town (§3.6) — existence and wiring confirmed only.
-- Stan (§3.7) — implementation has been code-reviewed; long-silence/restart behavior still
-  requires iPhone Safari real-device validation.
+- Stan (§3.7) — implementation has been code-reviewed; long-silence/restart and pause/resume
+  behavior still require iPhone Safari real-device validation.
 
 ---
 
