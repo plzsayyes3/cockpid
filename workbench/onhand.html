@@ -12,7 +12,7 @@
   <header class="onhand-head">
     <div>
       <div class="eyebrow">6 / ON HAND</div>
-      <h1>Do / Check / Keep</h1>
+      <h1>Task / Check / Keep</h1>
       <p id="sourceRange">LAST 7 DAYS · LOADING</p>
     </div>
     <div class="filters" role="group" aria-label="表示フィルター">
@@ -24,8 +24,8 @@
   </header>
 
   <section class="onhand-grid" aria-live="polite">
-    <article class="lane" data-lane="do">
-      <div class="lane-head"><h2>Do</h2><span id="fullDoCount">—</span></div>
+    <article class="lane" data-lane="task">
+      <div class="lane-head"><h2>Task</h2><span id="fullDoCount">—</span></div>
       <div class="lane-list" id="fullDoItems"><div class="empty">読み込み中…</div></div>
     </article>
     <article class="lane" data-lane="check">
@@ -38,6 +38,7 @@
     </article>
   </section>
 </main>
+<script src="onhand-core.js"></script>
 <script src="onhand-shared-state.js"></script>
 <script src="onhand.js"></script>
 <script src="onhand-scheduling-bridge.js"></script>
