@@ -142,6 +142,10 @@
     const item = itemById(bucket, input.dataset.id);
     if (!item) return;
     if (item._isCanonicalTask) {
+      if (!event.isTrusted) {
+        input.checked = false;
+        return;
+      }
       if (input.checked) completeCanonical(bucket, item, input);
       return;
     }
