@@ -113,9 +113,9 @@
   function tasklinerBranch() {
     try {
       const config = JSON.parse(localStorage.getItem('taskliner_github_sync_config_v1') || '{}');
-      return String(config?.branch || 'task-data').trim() || 'task-data';
+      return String(config?.branch || 'main').trim() || 'main';
     } catch (_) {
-      return 'task-data';
+      return 'main';
     }
   }
 
