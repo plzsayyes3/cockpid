@@ -8,7 +8,7 @@
 
   const apps = Object.freeze({
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
-    tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html' },
+    tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html?v=20260918-main-branch' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
@@ -141,7 +141,10 @@
   }, true);
 
   document.addEventListener('keydown', (event) => {
-    if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName || '')) return;
+    const active = document.activeElement;
+    if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName || '') || active?.isContentEditable) return;
+    if (document.getElementById('tokenModal')?.classList.contains('open')) return;
+    if (document.getElementById('drawer')?.classList.contains('open')) return;
     const name = keyToApp[event.key];
     if (!name) return;
     event.preventDefault();
