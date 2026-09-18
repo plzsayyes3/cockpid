@@ -1,32 +1,333 @@
-/* WEEK view: one horizontal row of day cards. */
+/* WEEK view: planner-style weekly timeline. Titles stay hidden until hover/focus or tap. */
+body[data-calendar-view="week"] .book{
+  grid-template-columns:minmax(0,1fr);
+}
+body[data-calendar-view="week"] .today-pane{
+  display:none;
+}
+body[data-calendar-view="week"] .view-pane{
+  grid-column:1/-1;
+}
+
 .week-scroll{
-  overflow-x:auto;
-  overflow-y:hidden;
-  overscroll-behavior-x:contain;
-  scroll-snap-type:x proximity;
+  width:100%;
+  height:100%;
+  overflow:auto;
+  overscroll-behavior:contain;
   scrollbar-gutter:stable;
+  background:rgba(251,250,246,.72);
 }
-.week-grid{
-  min-width:max-content;
+.week-agenda{
+  min-width:780px;
   min-height:100%;
+  padding:8px 10px 14px;
+}
+.week-undated,
+.week-time-head,
+.week-row{
+  display:grid;
+  grid-template-columns:94px minmax(0,1fr);
+}
+.week-undated{
+  min-height:40px;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+}
+.week-undated-label,
+.week-time-label{
+  color:var(--muted);
+  font:700 8px/1 ui-monospace,monospace;
+  letter-spacing:.08em;
+}
+.week-undated .week-count{
+  justify-self:start;
+}
+.week-time-head{
+  min-height:32px;
+  align-items:end;
+  border-bottom:1px solid var(--line-strong);
+}
+.week-time-label{
+  padding:0 7px 7px 0;
+}
+.week-time-axis{
+  position:relative;
+  height:31px;
+}
+.week-hour{
+  position:absolute;
+  bottom:7px;
+  transform:translateX(-50%);
+  color:#817e77;
+  font:650 7px/1 ui-monospace,monospace;
+  pointer-events:none;
+}
+.week-hour:first-child{transform:none}
+.week-hour:last-child{transform:translateX(-100%)}
+
+.week-row{
+  position:relative;
+  min-height:58px;
+  border-bottom:1px solid var(--line);
+}
+.week-row.is-today{
+  background:rgba(184,102,93,.035);
+}
+.week-row-meta{
+  position:relative;
+  min-width:0;
   display:flex;
-  align-items:stretch;
-  gap:8px;
-  padding:8px;
+  align-items:center;
+  gap:5px;
+  padding:5px 7px 5px 0;
 }
-.week-day{
-  flex:0 0 clamp(150px,24vw,210px);
-  min-height:calc(100% - 16px);
+.week-date-button{
+  width:42px;
+  min-width:42px;
+  height:42px;
   border:0;
-  border-radius:7px;
-  background:rgba(246,244,239,.72);
-  overflow:hidden;
-  scroll-snap-align:start;
+  border-radius:6px;
+  background:transparent;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  padding:4px 5px;
+  cursor:pointer;
 }
-.week-day:last-child{border-right:0}
-.week-day-head{border-bottom:1px solid var(--line)}
-.week-day.is-today{box-shadow:inset 0 0 0 1px rgba(184,102,93,.18)}
+.week-date-button b{
+  font:700 17px/1 ui-monospace,monospace;
+  color:var(--ink);
+}
+.week-date-button span{
+  margin-top:4px;
+  color:var(--muted);
+  font:700 7px/1 ui-monospace,monospace;
+  letter-spacing:.07em;
+}
+.week-row.is-today .week-date-button{
+  background:rgba(184,102,93,.09);
+}
+.week-row.is-weekend .week-date-button span{
+  color:#9b6d68;
+}
+
+.week-count{
+  position:relative;
+  border:0;
+  border-radius:999px;
+  background:#ece9e2;
+  color:#77736c;
+  padding:5px 7px;
+  font:700 7px/1 ui-monospace,monospace;
+  letter-spacing:.05em;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.week-count.is-empty{
+  display:inline-block;
+  background:transparent;
+  color:#b1ada5;
+  padding:4px 0;
+  cursor:default;
+}
+.week-list-popover,
+.week-event-popover{
+  position:absolute;
+  z-index:60;
+  min-width:150px;
+  max-width:260px;
+  border:1px solid rgba(52,50,45,.12);
+  border-radius:7px;
+  background:rgba(255,254,249,.98);
+  box-shadow:0 9px 24px rgba(37,34,29,.13);
+  color:var(--ink);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .12s ease, transform .12s ease, visibility .12s;
+}
+.week-list-popover{
+  left:0;
+  top:calc(100% + 5px);
+  padding:7px 8px;
+  transform:translateY(3px);
+  text-align:left;
+}
+.week-list-line{
+  display:block;
+  padding:3px 0;
+  font:500 9px/1.35 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  white-space:normal;
+}
+.week-list-line + .week-list-line{
+  border-top:1px solid var(--line);
+}
+.week-list-line.checked{
+  opacity:.45;
+  text-decoration:line-through;
+}
+
+.week-track{
+  position:relative;
+  min-width:0;
+  overflow:visible;
+}
+.week-gridline{
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:1px;
+  background:rgba(52,50,45,.075);
+  pointer-events:none;
+}
+.week-event{
+  position:absolute;
+  height:24px;
+  border:0;
+  background:transparent;
+  padding:0;
+  overflow:visible;
+  cursor:pointer;
+  z-index:5;
+}
+.week-event::before{
+  content:"";
+  position:absolute;
+  inset:-7px -8px;
+}
+.week-event-stroke{
+  position:absolute;
+  left:0;
+  right:0;
+  top:11px;
+  height:2px;
+  background:#6f6c65;
+  border-radius:2px;
+  pointer-events:none;
+}
+.week-event-stroke::before,
+.week-event-stroke::after{
+  content:"";
+  position:absolute;
+  top:-4px;
+  width:1px;
+  height:9px;
+  background:#6f6c65;
+}
+.week-event-stroke::before{left:0}
+.week-event-stroke::after{right:0}
+.week-event.checked{
+  opacity:.35;
+}
+.week-event-popover{
+  left:50%;
+  top:24px;
+  padding:7px 8px;
+  transform:translate(-50%,3px);
+  text-align:left;
+}
+.week-event-popover b{
+  display:block;
+  margin-bottom:4px;
+  color:#77736c;
+  font:700 7px/1 ui-monospace,monospace;
+}
+.week-event-popover span{
+  display:block;
+  font:500 9px/1.35 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  white-space:normal;
+}
+.week-now-mark{
+  position:absolute;
+  top:5px;
+  bottom:5px;
+  width:1px;
+  background:rgba(184,102,93,.56);
+  z-index:4;
+  pointer-events:none;
+}
+.week-now-mark::before{
+  content:"";
+  position:absolute;
+  top:-1px;
+  left:-2px;
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:var(--accent);
+}
+
+@media(hover:hover){
+  .week-count:not(.is-empty):hover .week-list-popover,
+  .week-count:focus-visible .week-list-popover,
+  .week-event:hover .week-event-popover,
+  .week-event:focus-visible .week-event-popover{
+    opacity:1;
+    visibility:visible;
+  }
+  .week-count:not(.is-empty):hover .week-list-popover,
+  .week-count:focus-visible .week-list-popover{
+    transform:translateY(0);
+  }
+  .week-event:hover .week-event-popover,
+  .week-event:focus-visible .week-event-popover{
+    transform:translate(-50%,0);
+  }
+}
+.week-count.is-open .week-list-popover,
+.week-event.is-open .week-event-popover{
+  opacity:1;
+  visibility:visible;
+}
+.week-count.is-open .week-list-popover{
+  transform:translateY(0);
+}
+.week-event.is-open .week-event-popover{
+  transform:translate(-50%,0);
+}
+
+.week-row:nth-last-child(-n+2) .week-event-popover{
+  top:auto;
+  bottom:24px;
+}
+.week-row:nth-last-child(-n+2) .week-list-popover{
+  top:auto;
+  bottom:calc(100% + 5px);
+}
+
 @media(max-width:760px){
-  .week-grid{min-width:max-content;grid-template-columns:none}
-  .week-day{flex-basis:150px}
+  body[data-calendar-view="week"] .book{
+    display:block;
+    padding:5px;
+  }
+  body[data-calendar-view="week"] .view-pane{
+    height:100%;
+  }
+  .week-agenda{
+    min-width:720px;
+    padding:6px 8px 12px;
+  }
+  .week-undated,
+  .week-time-head,
+  .week-row{
+    grid-template-columns:84px minmax(0,1fr);
+  }
+  .week-row-meta{
+    gap:3px;
+    padding-right:4px;
+  }
+  .week-date-button{
+    width:38px;
+    min-width:38px;
+    height:40px;
+    padding-left:3px;
+  }
+  .week-date-button b{font-size:15px}
+  .week-count{padding:5px 6px;font-size:6px}
+  .week-list-popover,
+  .week-event-popover{
+    min-width:145px;
+    max-width:210px;
+  }
 }
