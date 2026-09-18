@@ -489,9 +489,14 @@
     try {
       const entries = await apiJson(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PROJECT_DIR}?ref=${BRANCH}`);
       const candidates = (Array.isArray(entries) ? entries : []).filter(isCandidate);
+      let failedReads = 0;
       const loaded = await Promise.all(candidates.map(async (entry) => {
         try { return await fetchProject(entry); }
-        catch (error) { console.warn('Backstage project skip', entry.path, error); return null; }
+        catch (error) {
+          failedReads += 1;
+          console.warn('Backstage project skip', entry.path, error);
+          return null;
+        }
       }));
 
       allProjects = loaded.filter(Boolean).sort((a, b) => {
@@ -502,7 +507,7 @@
 
       renderDesk();
       renderList();
-      status.textContent = `${projects.length} projects · source: gpts/projects`;
+      status.textContent = `${projects.length} projects · source: gpts/projects${failedReads ? ` · PARTIAL · ${failedReads} READ ERROR` : ''}`;
 
       const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
       if (hashId && allProjects.some((project) => project.id === hashId)) {
