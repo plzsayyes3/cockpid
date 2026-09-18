@@ -123,18 +123,23 @@ Projectのactivity / momentum等をピクセル表現で眺める画面です。
 - 任意のフロントカメラ
 - MediaPipe Face Detectorによる顔位置検出と視線追従
 - カメラOFF / 拒否 / 失敗時の自律フォールバック
-- シングルタップでWeb Speech Recognition開始
-- 最大60秒の音声セッション
+- 待機中シングルタップでStanメニュー
+- 待機中ダブルタップでWeb Speech Recognition開始
+- 最大3分の音声セッション
 - `end` / `no-speech` 後、期限内なら認識再開を試みるsession wrapper
-- 残り時間メーター
-- 再タップで途中終了
-- 認識文を画面に保持
-- `送る` で `mynotebook/00_inbox` へMarkdown保存
-- ダブルタップでStan menu
+- 録音中シングルタップで一時停止 / 再開。一時停止中は残り時間も停止
+- 録音中ダブルタップで終了
+- 左HUDに `REC / PAUSE` と残り時間
+- 目の下に1行のライブ文字起こし。全文は内部保持
+- 終了または3分上限で `mynotebook/00_inbox` へ自動保存
+- 5分ごとの更新確認。録音・送信・メニュー操作中はリロードを保留
 
-音声メモのファイル名はJSTの `YYYYMMDDHHMMSSmmm.md` とし、同一秒内の送信衝突を避けます。
+`送る` ボタンはありません。音声メモのファイル名はJSTの
+`YYYYMMDDHHMMSSmmm.md` とし、同一秒内の送信衝突を避けます。この形式はWorkbenchの
+Inbox → Daily統合でも処理対象です。
 
-iPhone Safariで長めの無音区間を挟んだ際にSpeech Recognitionが実際に再開できるかは、コード上の仕組みはありますが実機確認項目です。
+iPhone Safariで長めの無音区間を挟んだ際のSpeech Recognition再開可否など、
+ブラウザ依存挙動は実機で問題が出た場合に再確認します。Stan領域自体は現在いったん完了扱いです。
 
 ## Authentication
 
@@ -181,6 +186,18 @@ rootの `board.html` はWorkbench Boardとは別の独立ツールです。
 - token値が見えるスクリーンショットを共有しない
 - tokenを露出した場合はGitHubでrevoke / regenerateする
 - browser-side tokenのキーを機能ごとに増殖させず、既存の共有キーとの整合を確認する
+
+## 2026-09-18 whole-workbench review
+
+ライブ経路を横断レビューし、ON HAND以外にも次を修正しました。
+
+- TaskLinerの旧 `task-data` branch設定を `main` へ移行
+- Calendarの一時的な読込失敗を空予定 / `TECHO LIVE` と誤表示しないよう修正
+- Stan / Home / Zen Memoのミリ秒付きInboxファイルをDaily統合できるよう統一
+- Project TownのAI引継ぎ文をCanonical Project pathから生成
+- iframe内Adviceの `← WORKBENCH` でWorkbenchを入れ子にしない
+- Settings / Memo操作中の数字キーDock shortcutを抑止
+- 変更したライブJSへcache-busting versionを付与
 
 ## Maintenance rules
 
