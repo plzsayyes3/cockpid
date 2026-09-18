@@ -23,9 +23,9 @@
 
   try {
     const sources = JSON.parse(localStorage.getItem(SOURCE_KEY) || '{}');
-    const source = sources?.taskliner;
-    const repo = normalizeRepo(source?.repo);
-    const folder = cleanDir(source?.dir);
+    const source = sources?.taskliner || {};
+    const repo = normalizeRepo(source?.repo || 'mynotebook');
+    const folder = cleanDir(source?.dir || '09_taskchute');
 
     if (repo && folder) {
       let current = {};
