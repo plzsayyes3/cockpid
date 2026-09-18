@@ -63,6 +63,18 @@
     return mixed;
   }
 
+  function interleaveCandidateSources(primaryIds, auditIds, auditFirst = false) {
+    const mixed = [];
+    const first = auditFirst ? auditIds : primaryIds;
+    const second = auditFirst ? primaryIds : auditIds;
+    const max = Math.max(first.length, second.length);
+    for (let i = 0; i < max; i += 1) {
+      if (first[i]) mixed.push(first[i]);
+      if (second[i]) mixed.push(second[i]);
+    }
+    return mixed;
+  }
+
   function stableIds(items, existingIds = [], randomize = false) {
     const ids = items.map(core.itemId);
     if (randomize) return shuffle(ids);
@@ -81,10 +93,9 @@
   function rebuildQueue(bucket) {
     const { canonical, primary, audit } = splitOpenBySource(bucket);
     const canonicalIds = stableIds(canonical, [], true);
-    const candidateIds = [
-      ...stableIds(primary, [], true),
-      ...stableIds(audit, [], true)
-    ];
+    const primaryIds = stableIds(primary, [], true);
+    const auditIds = stableIds(audit, [], true);
+    const candidateIds = interleaveCandidateSources(primaryIds, auditIds, Math.random() < 0.5);
     queues[bucket] = interleave(canonicalIds, candidateIds);
   }
 
@@ -92,9 +103,8 @@
     const { canonical, primary, audit } = splitOpenBySource(bucket);
     const existing = queues[bucket];
     const canonicalIds = stableIds(canonical, existing);
-    const primaryIds = stableIds(primary, existing);
-    const auditIds = stableIds(audit, existing);
-    queues[bucket] = interleave(canonicalIds, [...primaryIds, ...auditIds]);
+    const candidateIds = stableIds([...primary, ...audit], existing);
+    queues[bucket] = interleave(canonicalIds, candidateIds);
   }
 
   function emptyRow(label = '候補なし') {
