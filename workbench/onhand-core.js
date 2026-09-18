@@ -259,6 +259,7 @@
   function mergeByPriority(...groups) {
     const seenTitles = new Set();
     const seenOccurrences = new Set();
+    const seenCanonicalIds = new Set();
     const canonicalByTitle = new Map();
     const merged = [];
     groups.flat().forEach((item) => {
@@ -266,10 +267,12 @@
       if (!keyValue) return;
 
       if (item?._isCanonicalTask) {
-        if (seenTitles.has(keyValue)) return;
+        const canonicalId = String(item._canonicalTaskId || item.id || '');
+        if (!canonicalId || seenCanonicalIds.has(canonicalId)) return;
         item._shadowCandidates = [];
+        seenCanonicalIds.add(canonicalId);
         seenTitles.add(keyValue);
-        canonicalByTitle.set(keyValue, item);
+        if (!canonicalByTitle.has(keyValue)) canonicalByTitle.set(keyValue, item);
         merged.push(item);
         return;
       }
