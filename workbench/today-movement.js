@@ -23,6 +23,7 @@
   const queues = { task: [], check: [], keep: [] };
   let history = core.readHistory();
   let feedbackTimer = null;
+  let feedbackBase = '';
 
   const stateOf = (item) => core.stateFor(item, history);
   const statusOf = (item) => stateOf(item)?.status || 'open';
@@ -154,11 +155,13 @@
 
   function showFeedback(message) {
     if (!source) return;
-    const previous = source.textContent;
+    if (!feedbackTimer) feedbackBase = source.textContent;
     source.textContent = message;
     clearTimeout(feedbackTimer);
     feedbackTimer = setTimeout(() => {
-      if (source.textContent === message) source.textContent = previous;
+      if (source.textContent === message) source.textContent = feedbackBase;
+      feedbackTimer = null;
+      feedbackBase = '';
     }, 2600);
   }
 
