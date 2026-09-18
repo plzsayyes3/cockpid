@@ -275,12 +275,13 @@
     metaEl.textContent = `${dateLabel(name)}  /  my-storage-note/advice/${name}`;
     bodyEl.innerHTML = '<div class="loading">本文を読み込んでいます…</div>';
     if (mobileOpen) mailbox.classList.add('message-open');
-    markRead(name);
     renderList();
     try {
       const payload = await gh(file.path, 'my-storage-note');
       if (!payload?.content) throw new Error('advice content not found');
       bodyEl.innerHTML = renderMarkdown(decode(payload.content));
+      markRead(name);
+      renderList();
     } catch (error) {
       console.error(error);
       bodyEl.innerHTML = `<div class="error">${esc(String(error?.message || error))}</div>`;
