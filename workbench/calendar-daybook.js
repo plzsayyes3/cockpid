@@ -131,6 +131,7 @@
         return parseMonth(decode(payload.content), parts.year, parts.month);
       } catch (error) {
         console.error(error);
+        monthCache.delete(key);
         return { year: parts.year, month: parts.month, days: new Map(), monthUndated: [], weekUndated: new Map(), error: true };
       }
     })();
