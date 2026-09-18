@@ -54,16 +54,16 @@
   <div class="small">mynotebook の <b>00_inbox</b> に新規メモとして保存します。</div>
   <textarea id="memoText" placeholder="ここにメモを書く……"></textarea>
   <div class="drawer-foot"><span class="drawer-status" id="memoStatus">READY</span><button class="btn primary" id="memoSave">POST / CTRL+ENTER</button></div>
-  <div class="zen-hint">Ctrl + Enter で投稿。ファイル名: YYYYMMDDHHMMSS.md</div>
+  <div class="zen-hint">Ctrl + Enter で投稿。ファイル名: YYYYMMDDHHMMSSmmm.md</div>
   <button class="btn token-toggle" id="tokenToggle">▸ 接続設定を表示</button>
   <div class="token-settings" id="tokenSettings"><div class="token-box"><label>GITHUB FINE-GRAINED TOKEN</label><input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…"><div class="small">COCKPID本体と同じ <b>zen-note-github-token</b> を使います。</div><button class="btn token-save" id="tokenSave">TOKENを保存</button></div></div>
 </aside>
 
-<script src="../prototype-common.js"></script>
+<script src="../prototype-common.js?v=20260918-workbench-review"></script>
 <script src="calendar-source-adapter.js"></script>
-<script src="../zen-memo.js"></script>
+<script src="../zen-memo.js?v=20260918-workbench-review"></script>
 <script src="google-calendar-sync.js"></script>
-<script src="calendar-daybook.js"></script>
+<script src="calendar-daybook.js?v=20260918-workbench-review"></script>
 <script src="calendar-view-state.js"></script>
 <script>
 document.getElementById('fullMonthOpen')?.addEventListener('click',()=>{
