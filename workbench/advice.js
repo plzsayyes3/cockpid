@@ -6,6 +6,7 @@
   const countEl = document.getElementById('adviceCount');
   const unreadEl = document.getElementById('unreadCount');
   const backBtn = document.getElementById('messageBack');
+  const workbenchBack = document.querySelector('.advice-top .back');
   const READ_KEY = 'cockpid.advice.read.v1';
   const PENDING_KEY = 'cockpid.advice.read.pending.v1';
   const REMOTE_PATH = 'app-state/cockpid/message-state.json';
@@ -309,6 +310,15 @@
     }
   }
 
+  workbenchBack?.addEventListener('click', (event) => {
+    if (window.parent === window) return;
+    try {
+      const close = window.parent.document.getElementById('appClose');
+      if (!close) return;
+      event.preventDefault();
+      close.click();
+    } catch (_) { /* cross-origin fallback keeps the normal link */ }
+  });
   backBtn.addEventListener('click', () => mailbox.classList.remove('message-open'));
   window.addEventListener('popstate', () => mailbox.classList.remove('message-open'));
   window.addEventListener('online', pullReadState);
