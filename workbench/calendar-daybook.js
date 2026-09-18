@@ -211,6 +211,22 @@
     return { start, end: Math.max(start + 60, end) };
   }
 
+  function uniqueWeekItems(items) {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = [
+        item.start ?? '',
+        item.end ?? '',
+        item.title || '',
+        item.checked ? '1' : '0',
+        item.task ? '1' : '0'
+      ].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function layoutWeekEvents(items) {
     const lanes = [];
     return items
@@ -229,7 +245,7 @@
   }
 
   function weekListPopover(items, label) {
-    if (!items.length) return `<span class="week-count is-empty">${label} 0</span>`;
+    if (!items.length) return '';
     return `<button type="button" class="week-count" data-week-popover aria-expanded="false" aria-label="${esc(label)} ${items.length}件">
       <span>${esc(label)} ${items.length}</span>
       <span class="week-list-popover" role="tooltip">${items.map((item) => `<span class="week-list-line${item.checked ? ' checked' : ''}">${esc(item.title)}</span>`).join('')}</span>
@@ -253,7 +269,7 @@
     const ownerData = await loadMonth(start);
     if (seq !== renderSeq) return;
     const week = isoWeek(start);
-    const weekUndated = ownerData.weekUndated.get(week) || [];
+    const weekUndated = uniqueWeekItems(ownerData.weekUndated.get(week) || []);
     const bounds = weekTimeBounds(rows);
     const span = bounds.end - bounds.start;
     const hours = [];
@@ -268,8 +284,9 @@
     const now = clockMinutes();
     const nowVisible = now >= bounds.start && now <= bounds.end;
     const dayRows = rows.map(({ date, items }, index) => {
-      const anytime = items.filter((item) => item.start == null);
-      const laidOut = layoutWeekEvents(items);
+      const displayItems = uniqueWeekItems(items);
+      const anytime = displayItems.filter((item) => item.start == null);
+      const laidOut = layoutWeekEvents(displayItems);
       const laneCount = Math.max(1, ...laidOut.map((entry) => entry.lane + 1));
       const trackHeight = Math.max(54, laneCount * 22 + 20);
       const eventHtml = laidOut.map(({ item, lane }) => {
