@@ -4,8 +4,8 @@
   const appContent=document.getElementById('appContent');
   if(!appWindow||!appTitle||!appContent)return;
   function openOnHand(){
-    appTitle.textContent='6 / ON HAND';
-    appContent.innerHTML='<iframe src="onhand.html" title="6 / ON HAND"></iframe>';
+    appTitle.textContent='5 / ON HAND';
+    appContent.innerHTML='<iframe src="onhand.html" title="5 / ON HAND"></iframe>';
     appWindow.classList.add('open');
     appWindow.setAttribute('aria-hidden','false');
   }
@@ -15,7 +15,7 @@
     event.preventDefault();event.stopImmediatePropagation();openOnHand();
   },true);
   document.addEventListener('keydown',event=>{
-    if(event.key!=='6')return;
+    if(event.key!=='5')return;
     if(/INPUT|TEXTAREA/.test(document.activeElement?.tagName||''))return;
     event.preventDefault();event.stopImmediatePropagation();openOnHand();
   },true);
