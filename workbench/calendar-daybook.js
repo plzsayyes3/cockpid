@@ -132,7 +132,7 @@
       } catch (error) {
         console.error(error);
         monthCache.delete(key);
-        return { year: parts.year, month: parts.month, days: new Map(), monthUndated: [], weekUndated: new Map(), error: true };
+        throw error;
       }
     })();
     monthCache.set(key, promise);
@@ -179,12 +179,18 @@
       return;
     }
     todayContent.innerHTML = '<div class="message">READING TODAY…</div>';
-    const items = await itemsFor(today);
-    todayContent.innerHTML = dayTimelineHtml(today, items, 'today');
-    requestAnimationFrame(() => {
-      const now = clockMinutes();
-      todayContent.scrollTop = Math.max(0, (now / 60) * 38 - todayContent.clientHeight * 0.32);
-    });
+    try {
+      const items = await itemsFor(today);
+      todayContent.innerHTML = dayTimelineHtml(today, items, 'today');
+      requestAnimationFrame(() => {
+        const now = clockMinutes();
+        todayContent.scrollTop = Math.max(0, (now / 60) * 38 - todayContent.clientHeight * 0.32);
+      });
+    } catch (error) {
+      console.error('Calendar TODAY load failed', error);
+      todayContent.innerHTML = '<div class="message">Techoを読み込めませんでした。再操作すると再試行します。</div>';
+      sourceStatus.textContent = 'READ ERROR';
+    }
   }
 
   function weekStart(parts) {
@@ -381,17 +387,24 @@
     }
     sourceStatus.textContent = 'READING';
     viewContent.innerHTML = '<div class="message">READING VIEW…</div>';
-    if (state.view === 'day') {
-      const items = await itemsFor(state.anchor);
+    try {
+      if (state.view === 'day') {
+        const items = await itemsFor(state.anchor);
+        if (seq !== renderSeq) return;
+        viewContent.innerHTML = dayTimelineHtml(state.anchor, items, 'other');
+        requestAnimationFrame(() => { viewContent.scrollTop = 0; });
+      } else if (state.view === 'week') {
+        await renderWeek(state.anchor, seq);
+      } else {
+        await renderMonth(state.anchor, seq);
+      }
+      if (seq === renderSeq) sourceStatus.textContent = 'TECHO LIVE';
+    } catch (error) {
       if (seq !== renderSeq) return;
-      viewContent.innerHTML = dayTimelineHtml(state.anchor, items, 'other');
-      requestAnimationFrame(() => { viewContent.scrollTop = 0; });
-    } else if (state.view === 'week') {
-      await renderWeek(state.anchor, seq);
-    } else {
-      await renderMonth(state.anchor, seq);
+      console.error('Calendar view load failed', error);
+      sourceStatus.textContent = 'READ ERROR';
+      viewContent.innerHTML = '<div class="message">Techoを読み込めませんでした。前後移動や表示切替で再試行できます。</div>';
     }
-    if (seq === renderSeq) sourceStatus.textContent = 'TECHO LIVE';
   }
 
   function parseDateInput(value) {
