@@ -202,6 +202,7 @@
         `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${BRANCH}&_=${Date.now()}`
       );
 
+      let failedReads = 0;
       const loaded = await Promise.all(
         (Array.isArray(entries) ? entries : [])
           .filter(isProjectCandidate)
@@ -209,6 +210,7 @@
             try {
               return await loadProject(entry);
             } catch (error) {
+              failedReads += 1;
               console.warn('Project Town skip', entry.path, error);
               return null;
             }
@@ -228,6 +230,7 @@
       renderRoom();
       renderList();
       updateSummary();
+      if (failedReads) dom.summary.textContent += ` / PARTIAL ${failedReads} READ ERROR`;
       if (selected) showProject(selected);
     } catch (error) {
       console.error(error);
