@@ -193,6 +193,49 @@
     return fromDate(d);
   }
 
+  function isoWeek(parts) {
+    const d = toDate(parts);
+    const day = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+
+  function weekTimeBounds(rows) {
+    const timed = rows.flatMap((row) => row.items).filter((item) => Number.isFinite(item.start));
+    if (!timed.length) return { start: 6 * 60, end: 22 * 60 };
+    const earliest = Math.min(...timed.map((item) => item.start));
+    const latest = Math.max(...timed.map((item) => item.end));
+    const start = Math.max(0, Math.min(6 * 60, Math.floor(earliest / 60) * 60));
+    const end = Math.min(24 * 60, Math.max(22 * 60, Math.ceil(latest / 60) * 60));
+    return { start, end: Math.max(start + 60, end) };
+  }
+
+  function layoutWeekEvents(items) {
+    const lanes = [];
+    return items
+      .filter((item) => Number.isFinite(item.start))
+      .sort((a, b) => a.start - b.start || a.end - b.end)
+      .map((item) => {
+        let lane = lanes.findIndex((end) => end <= item.start);
+        if (lane < 0) {
+          lane = lanes.length;
+          lanes.push(item.end);
+        } else {
+          lanes[lane] = item.end;
+        }
+        return { item, lane };
+      });
+  }
+
+  function weekListPopover(items, label) {
+    if (!items.length) return `<span class="week-count is-empty">${label} 0</span>`;
+    return `<button type="button" class="week-count" data-week-popover aria-expanded="false" aria-label="${esc(label)} ${items.length}件">
+      <span>${esc(label)} ${items.length}</span>
+      <span class="week-list-popover" role="tooltip">${items.map((item) => `<span class="week-list-line${item.checked ? ' checked' : ''}">${esc(item.title)}</span>`).join('')}</span>
+    </button>`;
+  }
+
   async function renderWeek(anchor, seq) {
     const start = weekStart(anchor);
     const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -202,16 +245,75 @@
       return loadMonth({ year, month, day: 1 });
     }));
     if (seq !== renderSeq) return;
+
+    const rows = [];
+    for (const date of dates) rows.push({ date, items: await itemsFor(date) });
+    if (seq !== renderSeq) return;
+
+    const ownerData = await loadMonth(start);
+    if (seq !== renderSeq) return;
+    const week = isoWeek(start);
+    const weekUndated = ownerData.weekUndated.get(week) || [];
+    const bounds = weekTimeBounds(rows);
+    const span = bounds.end - bounds.start;
+    const hours = [];
+    for (let minute = bounds.start; minute <= bounds.end; minute += 60) hours.push(minute);
+
+    const timeAxis = hours.map((minute) => {
+      const left = ((minute - bounds.start) / span) * 100;
+      return `<span class="week-hour" style="left:${left}%">${pad(Math.floor(minute / 60))}</span>`;
+    }).join('');
+
     const today = jstParts();
-    const columns = [];
-    for (const date of dates) {
-      const items = await itemsFor(date);
-      columns.push(`<button class="week-day${sameDate(date, today) ? ' is-today' : ''}" data-date="${dateKey(date)}">
-        <div class="week-day-head"><span>${weekday(date)}</span><b>${date.month}/${date.day}</b></div>
-        <div class="week-items">${items.length ? items.map((item) => `<div class="week-item${item.checked ? ' checked' : ''}"><span>${item.time || 'ALL DAY'}</span>${esc(item.title)}</div>`).join('') : '<div class="week-empty">—</div>'}</div>
-      </button>`);
-    }
-    viewContent.innerHTML = `<div class="week-scroll"><div class="week-grid">${columns.join('')}</div></div>`;
+    const now = clockMinutes();
+    const nowVisible = now >= bounds.start && now <= bounds.end;
+    const dayRows = rows.map(({ date, items }, index) => {
+      const anytime = items.filter((item) => item.start == null);
+      const laidOut = layoutWeekEvents(items);
+      const laneCount = Math.max(1, ...laidOut.map((entry) => entry.lane + 1));
+      const trackHeight = Math.max(54, laneCount * 22 + 20);
+      const eventHtml = laidOut.map(({ item, lane }) => {
+        const visibleStart = Math.max(bounds.start, item.start);
+        const visibleEnd = Math.min(bounds.end, item.end);
+        const left = ((visibleStart - bounds.start) / span) * 100;
+        const width = Math.max(.6, ((visibleEnd - visibleStart) / span) * 100);
+        const timeLabel = item.time || `${pad(Math.floor(item.start / 60))}:${pad(item.start % 60)}`;
+        return `<button type="button" class="week-event${item.checked ? ' checked' : ''}" data-week-popover aria-expanded="false"
+          style="left:${left}%;width:${width}%;top:${8 + lane * 22}px"
+          aria-label="${esc(timeLabel)} ${esc(item.title)}">
+          <span class="week-event-stroke" aria-hidden="true"></span>
+          <span class="week-event-popover" role="tooltip"><b>${esc(timeLabel)}</b><span>${esc(item.title)}</span></span>
+        </button>`;
+      }).join('');
+      const nowHtml = sameDate(date, today) && nowVisible
+        ? `<span class="week-now-mark" style="left:${((now - bounds.start) / span) * 100}%" aria-label="現在時刻"></span>`
+        : '';
+      return `<div class="week-row${sameDate(date, today) ? ' is-today' : ''}${index >= 5 ? ' is-weekend' : ''}">
+        <div class="week-row-meta">
+          <button type="button" class="week-date-button" data-date="${dateKey(date)}" aria-label="${date.month}月${date.day}日 ${weekday(date, true)}">
+            <b>${date.day}</b><span>${weekday(date)}</span>
+          </button>
+          ${weekListPopover(anytime, 'ANYTIME')}
+        </div>
+        <div class="week-track" style="height:${trackHeight}px">
+          ${hours.map((minute) => `<span class="week-gridline" style="left:${((minute - bounds.start) / span) * 100}%"></span>`).join('')}
+          ${eventHtml}
+          ${nowHtml}
+        </div>
+      </div>`;
+    }).join('');
+
+    viewContent.innerHTML = `<div class="week-scroll"><div class="week-agenda">
+      <div class="week-undated">
+        <span class="week-undated-label">WEEK ${week}</span>
+        ${weekListPopover(weekUndated, 'UNDATED')}
+      </div>
+      <div class="week-time-head">
+        <span class="week-time-label">${pad(Math.floor(bounds.start / 60))}:00–${pad(Math.floor(bounds.end / 60))}:00</span>
+        <div class="week-time-axis">${timeAxis}</div>
+      </div>
+      ${dayRows}
+    </div></div>`;
   }
 
   async function renderMonth(anchor, seq) {
@@ -240,6 +342,7 @@
   };
 
   function syncControls() {
+    document.body.dataset.calendarView = state.view;
     document.querySelectorAll('[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === state.view));
     anchorInput.value = dateKey(state.anchor);
     const label = $('rightDateLabel');
@@ -298,6 +401,27 @@
     renderRight();
   });
   viewContent.addEventListener('click', (event) => {
+    const peek = event.target.closest?.('[data-week-popover]');
+    const coarsePointer = window.matchMedia?.('(hover: none), (pointer: coarse)')?.matches;
+    if (peek) {
+      event.stopPropagation();
+      if (coarsePointer) {
+        const wasOpen = peek.classList.contains('is-open');
+        viewContent.querySelectorAll('[data-week-popover].is-open').forEach((node) => {
+          node.classList.remove('is-open');
+          node.setAttribute('aria-expanded', 'false');
+        });
+        if (!wasOpen) {
+          peek.classList.add('is-open');
+          peek.setAttribute('aria-expanded', 'true');
+        }
+      }
+      return;
+    }
+    viewContent.querySelectorAll('[data-week-popover].is-open').forEach((node) => {
+      node.classList.remove('is-open');
+      node.setAttribute('aria-expanded', 'false');
+    });
     const target = event.target.closest?.('[data-date]');
     if (!target) return;
     const parsed = parseDateInput(target.dataset.date);
