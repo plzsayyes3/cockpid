@@ -247,12 +247,31 @@
   }
 
   function mergeByPriority(...groups) {
-    const seen = new Set();
+    const seenTitles = new Set();
+    const seenOccurrences = new Set();
     const merged = [];
     groups.flat().forEach((item) => {
       const keyValue = titleKey(item);
-      if (!keyValue || seen.has(keyValue)) return;
-      seen.add(keyValue);
+      if (!keyValue) return;
+
+      if (item?._isCanonicalTask) {
+        if (seenTitles.has(keyValue)) return;
+        seenTitles.add(keyValue);
+        merged.push(item);
+        return;
+      }
+
+      if (seenTitles.has(keyValue)) return;
+
+      if (item?._isRecurring) {
+        const occurrenceId = legacyItemId(item);
+        if (seenOccurrences.has(occurrenceId)) return;
+        seenOccurrences.add(occurrenceId);
+        merged.push(item);
+        return;
+      }
+
+      seenTitles.add(keyValue);
       merged.push(item);
     });
     return merged;
@@ -374,12 +393,31 @@
   async function loadAllItems() {
     const [taskResult, curated, audit] = await Promise.all([loadCanonicalTasks(), loadCuratedWeek(), loadAudit()]);
     const tasks = Array.isArray(taskResult) ? taskResult : [];
-    const weekItems = curated?.length ? curated : await loadLegacySevenDays();
-    const candidates = mergeByPriority(tasks, weekItems, audit.items).map((item) => ({
+    const legacyWeekItems = curated?.length ? null : await loadLegacySevenDays();
+    const weekItems = curated?.length
+      ? curated
+      : [...(legacyWeekItems || [])].sort((a, b) => String(b?._date || '').localeCompare(String(a?._date || '')));
+
+    const recurringTitles = new Set(audit.recurringTitles);
+    [...weekItems, ...audit.items].forEach((item) => {
+      if (item?.recurring || item?.cadence) {
+        const keyValue = titleKey(item);
+        if (keyValue) recurringTitles.add(keyValue);
+      }
+    });
+
+    const prepare = (item) => ({
       ...item,
       mode: normalizeMode(item.mode) || item.mode,
-      _isRecurring: Boolean(item._isCanonicalTask ? false : (item.recurring || item.cadence || audit.recurringTitles.has(titleKey(item))))
-    }));
+      _isRecurring: Boolean(item._isCanonicalTask ? false : recurringTitles.has(titleKey(item)))
+    });
+
+    const candidates = mergeByPriority(
+      tasks.map(prepare),
+      weekItems.map(prepare),
+      audit.items.map(prepare)
+    );
+
     return {
       items: candidates,
       tasksLoaded: tasks.length,
