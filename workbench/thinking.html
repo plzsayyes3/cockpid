@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f1f0eb">
+<title>Thinking — Workbench</title>
+<link rel="stylesheet" href="thinking.css?v=20260918-thinking1">
+</head>
+<body>
+<main class="thinking-shell">
+  <header class="thinking-head">
+    <div>
+      <div class="eyebrow">6 / THINKING</div>
+      <h1>考えていたことを、見つけ直す。</h1>
+      <p>ここでは決めない。Idea / Theme / Question / Hypothesis / Action を眺め、必要なものだけ ON HAND へ持っていく。</p>
+    </div>
+    <div class="thinking-status" id="thinkingStatus">READING…</div>
+  </header>
+
+  <section class="thinking-tools" aria-label="Thinking filters">
+    <div class="type-tabs" id="typeTabs">
+      <button class="type-tab active" type="button" data-type="all">ALL</button>
+      <button class="type-tab" type="button" data-type="idea">IDEA</button>
+      <button class="type-tab" type="button" data-type="theme">THEME</button>
+      <button class="type-tab" type="button" data-type="question">QUESTION</button>
+      <button class="type-tab" type="button" data-type="hypothesis">HYPOTHESIS</button>
+      <button class="type-tab" type="button" data-type="action">ACTION</button>
+    </div>
+    <label class="thinking-search">
+      <span>SEARCH</span>
+      <input id="thinkingSearch" type="search" autocomplete="off" placeholder="タイトル・要約を探す">
+    </label>
+  </section>
+
+  <section class="thinking-summary" id="thinkingSummary" aria-label="Thinking summary"></section>
+
+  <section class="thinking-section" data-section="recent">
+    <div class="section-head">
+      <div><span class="section-kicker">RECENT</span><h2>最近、頭にあったこと</h2></div>
+      <b class="section-count" id="recentCount">—</b>
+    </div>
+    <div class="thinking-grid" id="recentList"><div class="thinking-empty">読み込み中…</div></div>
+  </section>
+
+  <section class="thinking-section" data-section="recurring">
+    <div class="section-head">
+      <div><span class="section-kicker">RECURRING</span><h2>何度も戻ってきていること</h2></div>
+      <b class="section-count" id="recurringCount">—</b>
+    </div>
+    <div class="thinking-grid" id="recurringList"><div class="thinking-empty">読み込み中…</div></div>
+  </section>
+
+  <section class="thinking-section" data-section="old">
+    <div class="section-head">
+      <div><span class="section-kicker">OLD BUT ALIVE</span><h2>古いけれど、まだ終わっていないこと</h2></div>
+      <b class="section-count" id="oldCount">—</b>
+    </div>
+    <div class="thinking-grid" id="oldList"><div class="thinking-empty">読み込み中…</div></div>
+  </section>
+</main>
+
+<script src="../prototype-common.js?v=20260918-workbench-review"></script>
+<script src="thinking.js?v=20260918-thinking1"></script>
+</body>
+</html>
