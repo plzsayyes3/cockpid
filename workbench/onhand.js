@@ -135,7 +135,13 @@
     core.ensureSkipDeadlines(loaded.items, history);
     buckets.forEach((bucket) => { pools[bucket].length = 0; });
     loaded.items.forEach((item) => pools[core.classify(item._type, item)].push(item));
-    sourceRange.textContent = `${loaded.start} – ${loaded.end} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3 MONTH AUDIT' : ''}${loaded.curated ? ' · CURATED' : ''}`;
+    const sourceWarnings = [
+      ...(loaded.tasksLoadFailed ? ['shared-task'] : []),
+      ...(loaded.recentLoadFailedTypes || []).map((type) => `recent:${type}`),
+      ...(loaded.auditLoadFailed ? ['audit'] : [])
+    ];
+    sourceRange.textContent = `${loaded.start} – ${loaded.end} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3 MONTH AUDIT' : ''}${loaded.curated ? ' · CURATED' : ''}${loaded.partialData ? ' · PARTIAL DATA' : ''}`;
+    sourceRange.title = sourceWarnings.length ? `一部データ取得失敗: ${sourceWarnings.join(', ')}` : '';
     renderAll();
   }
 
