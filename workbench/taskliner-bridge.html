@@ -32,10 +32,11 @@
       try { current = JSON.parse(localStorage.getItem(TASKLINER_CONFIG_KEY) || '{}') || {}; }
       catch (_) { current = {}; }
 
+      const currentBranch = String(current.branch || '').trim();
       localStorage.setItem(TASKLINER_CONFIG_KEY, JSON.stringify({
         ...current,
         repo,
-        branch: String(current.branch || 'main').trim() || 'main',
+        branch: !currentBranch || currentBranch === 'task-data' ? 'main' : currentBranch,
         folder
       }));
     }
