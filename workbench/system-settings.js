@@ -55,7 +55,10 @@
     const sources = sourceApi.all();
     list.innerHTML = SOURCE_ROWS.map((row) => {
       const source = sources[row.key];
-      const stateLabel = row.state === 'LIVE' ? 'LIVE' : 'SAVED FOR NEXT';
+      const canonicalProjectView = row.key === 'projects' && source.repo === 'gpts' && source.dir === 'projects';
+      const stateLabel = canonicalProjectView
+        ? 'LIVE · CANONICAL VIEW'
+        : (row.state === 'LIVE' ? 'LIVE' : 'SAVED FOR NEXT');
       return `<div class="source-row" data-source-key="${row.key}">
         <div class="source-meta"><span>${escHtml(row.label)}</span><small class="source-state ${row.state === 'LIVE' ? 'live' : ''}">${stateLabel}</small></div>
         <label class="source-field"><span>Repository</span><input class="source-repo" type="text" autocomplete="off" spellcheck="false" value="${escHtml(source.repo)}"></label>
@@ -158,6 +161,9 @@
         const checked = await checkTasklinerSource(validation.value);
         const result = checked.result;
         if (status) status.textContent = result == null ? `NOT FOUND · ${checked.branch}` : Array.isArray(result) ? `FOUND · ${checked.branch} · ${result.length} items` : `FOUND · ${checked.branch}`;
+      } else if (row.dataset.sourceKey === 'projects' && validation.value.repo === 'gpts' && validation.value.dir === 'projects') {
+        const result = await gh('views/projects.json', 'my-storage-note');
+        if (status) status.textContent = result == null ? 'NOT FOUND · CANONICAL VIEW' : 'FOUND · CANONICAL VIEW';
       } else {
         const result = await gh(validation.value.dir, validation.value.repo);
         if (status) status.textContent = result == null ? 'NOT FOUND' : Array.isArray(result) ? `FOUND · ${result.length} items` : 'FOUND';
