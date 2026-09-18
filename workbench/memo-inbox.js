@@ -44,7 +44,7 @@
   }
 
   function parseMemoFileName(fileName) {
-    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.md$/.exec(String(fileName || ''));
+    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\d{3})?\.md$/.exec(String(fileName || ''));
     if (!match) return null;
 
     const year = Number(match[1]);
