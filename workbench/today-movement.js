@@ -214,7 +214,7 @@
     loaded.items.forEach((item) => pools[core.classify(item._type, item)].push(item));
     renderAll({ randomize: true });
     const range = `${loaded.start.slice(5).replace('-', '.')}–${loaded.end.slice(5).replace('-', '.')}`;
-    source.textContent = `${range} · ${loaded.tasksLoaded} TASKS${loaded.auditLoaded ? ' + 3M' : ''}${loaded.curated ? ' · CURATED' : ''}`;
+    source.textContent = `${range} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3M' : ''}${loaded.curated ? ' · CURATED' : ''}`;
   }
 
   randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
