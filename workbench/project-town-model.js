@@ -177,7 +177,7 @@
     const filename = String(project?.path || `${project?.id || 'project'}.md`).split('/').filter(Boolean).pop();
     const source = window.COCKPID_PROJECT_SOURCE;
     if (source?.mode === 'view') return `my-storage-note/objects/projects/${filename}`;
-    if (source?.repo && source?.dir) return `${source.repo}/${String(source.dir).replace(/^\\/+|\\/+$/g, '')}/${filename}`;
+    if (source?.repo && source?.dir) return `${source.repo}/${String(source.dir).split('/').filter(Boolean).join('/')}/${filename}`;
     return `my-storage-note/objects/projects/${filename}`;
   }
 
