@@ -35,7 +35,7 @@
       localStorage.setItem(TASKLINER_CONFIG_KEY, JSON.stringify({
         ...current,
         repo,
-        branch: String(current.branch || 'task-data').trim() || 'task-data',
+        branch: String(current.branch || 'main').trim() || 'main',
         folder
       }));
     }
