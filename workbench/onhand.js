@@ -135,7 +135,7 @@
     core.ensureSkipDeadlines(loaded.items, history);
     buckets.forEach((bucket) => { pools[bucket].length = 0; });
     loaded.items.forEach((item) => pools[core.classify(item._type, item)].push(item));
-    sourceRange.textContent = `${loaded.start} – ${loaded.end} · ${loaded.tasksLoaded} TASKS${loaded.auditLoaded ? ' + 3 MONTH AUDIT' : ''}${loaded.curated ? ' · CURATED' : ''}`;
+    sourceRange.textContent = `${loaded.start} – ${loaded.end} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3 MONTH AUDIT' : ''}${loaded.curated ? ' · CURATED' : ''}`;
     renderAll();
   }
 
