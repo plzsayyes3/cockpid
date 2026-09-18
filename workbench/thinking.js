@@ -157,10 +157,13 @@
 
   function buildSections(recentItems, audit) {
     const recentCutoff = dateMinus(RECENT_DAYS - 1);
-    const recentAll = recentItems.filter((item) => item._date >= recentCutoff);
+    const recentAll = [
+      ...recentItems,
+      ...audit.items.filter((item) => item._date >= recentCutoff)
+    ];
     const recent = dedupeLatest(recentAll).sort((a,b) => b._date.localeCompare(a._date));
     const recentKeys = new Set(recent.map(titleKey));
-    const occurrences = occurrenceCounts(recentItems);
+    const occurrences = occurrenceCounts(recentAll);
     const recurringCandidates = [...recentItems, ...audit.items].filter((item) => {
       const key = titleKey(item);
       return key && (audit.recurring.has(key) || occurrences.get(key) > 1 || item.recurring || item.cadence);
@@ -291,7 +294,7 @@
       state.warnings = [];
       const [curated, audit] = await Promise.all([loadCuratedWeek(), loadAudit()]);
       let recentItems = curated;
-      if (!recentItems?.length) {
+      if (!recentItems?.length || !audit.loaded) {
         const fallback = await loadRecentFallback();
         recentItems = fallback.items;
         state.warnings.push(...fallback.warnings.map((type) => `recent:${type}`));
