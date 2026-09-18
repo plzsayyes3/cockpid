@@ -335,12 +335,14 @@
   async function loadLegacySevenDays() {
     const start = weekStart();
     const end = today();
+    const failedTypes = new Set();
     const directories = await Promise.all(TYPES.map(async (type) => {
       try {
         const entries = await gh(`memory/extracted/${type}`);
         return { type, entries: Array.isArray(entries) ? entries : [] };
       } catch (error) {
-        console.error(error);
+        console.error(`ON HAND recent ${type} index load failed`, error);
+        failedTypes.add(type);
         return { type, entries: [] };
       }
     }));
@@ -353,17 +355,21 @@
     const groups = await Promise.all(files.map(async (file) => {
       try {
         const payload = await gh(file.path);
-        if (!payload?.content) return [];
+        if (!payload?.content) {
+          failedTypes.add(file.type);
+          return [];
+        }
         const data = JSON.parse(decode(payload.content));
         return (Array.isArray(data?.items) ? data.items : []).map((item) => ({
           ...item, _type: file.type, _date: file.date, _source: 'legacy'
         }));
       } catch (error) {
-        console.error(error);
+        console.error(`ON HAND recent ${file.type} file load failed`, error);
+        failedTypes.add(file.type);
         return [];
       }
     }));
-    return groups.flat();
+    return { items: groups.flat(), failedTypes: [...failedTypes] };
   }
 
   async function latestAuditPath() {
@@ -379,18 +385,18 @@
       return matches[0]?.path || null;
     } catch (error) {
       console.error('ON HAND audit index load failed', error);
-      return null;
+      throw error;
     }
   }
 
   async function loadAudit() {
     try {
       const path = await latestAuditPath();
-      if (!path) return { items: [], recurringTitles: new Set(), loaded: false };
+      if (!path) return { items: [], recurringTitles: new Set(), loaded: false, failed: false };
       const payload = await gh(path);
-      if (!payload?.content) return { items: [], recurringTitles: new Set(), loaded: false };
+      if (!payload?.content) return { items: [], recurringTitles: new Set(), loaded: false, failed: true };
       const data = JSON.parse(decode(payload.content));
-      if (!Array.isArray(data?.items)) return { items: [], recurringTitles: new Set(), loaded: false };
+      if (!Array.isArray(data?.items)) return { items: [], recurringTitles: new Set(), loaded: false, failed: true };
       const recurringTitles = new Set((Array.isArray(data?.recurring_work) ? data.recurring_work : []).map(titleKey).filter(Boolean));
       const items = data.items
         .filter((item) => String(item?.state_at_last_source || '').toLowerCase() !== 'completed')
@@ -402,20 +408,20 @@
           _date: item.last_seen || item.first_seen || today(),
           _source: 'audit'
         }));
-      return { items, recurringTitles, loaded: true };
+      return { items, recurringTitles, loaded: true, failed: false };
     } catch (error) {
       console.error('ON HAND audit load failed', error);
-      return { items: [], recurringTitles: new Set(), loaded: false };
+      return { items: [], recurringTitles: new Set(), loaded: false, failed: true };
     }
   }
 
   async function loadAllItems() {
     const [taskResult, curated, audit] = await Promise.all([loadCanonicalTasks(), loadCuratedWeek(), loadAudit()]);
     const tasks = Array.isArray(taskResult) ? taskResult : [];
-    const legacyWeekItems = curated?.length ? null : await loadLegacySevenDays();
+    const legacyResult = curated?.length ? { items: [], failedTypes: [] } : await loadLegacySevenDays();
     const weekItems = curated?.length
       ? curated
-      : [...(legacyWeekItems || [])].sort((a, b) => String(b?._date || '').localeCompare(String(a?._date || '')));
+      : [...legacyResult.items].sort((a, b) => String(b?._date || '').localeCompare(String(a?._date || '')));
 
     const recurringTitles = new Set(audit.recurringTitles);
     [...weekItems, ...audit.items].forEach((item) => {
@@ -442,6 +448,9 @@
       tasksLoaded: tasks.length,
       tasksLoadFailed: taskResult === null,
       auditLoaded: audit.loaded,
+      auditLoadFailed: Boolean(audit.failed),
+      recentLoadFailedTypes: legacyResult.failedTypes,
+      partialData: Boolean(audit.failed || legacyResult.failedTypes.length),
       curated: Boolean(curated?.length),
       start: weekStart(),
       end: today()
