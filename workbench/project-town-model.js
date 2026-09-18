@@ -173,8 +173,16 @@
     return 'いまは休止しています。再開するときに起こせます。';
   }
 
+  function projectSourcePath(project) {
+    const filename = String(project?.path || `${project?.id || 'project'}.md`).split('/').filter(Boolean).pop();
+    const source = window.COCKPID_PROJECT_SOURCE;
+    if (source?.mode === 'view') return `my-storage-note/objects/projects/${filename}`;
+    if (source?.repo && source?.dir) return `${source.repo}/${String(source.dir).replace(/^\\/+|\\/+$/g, '')}/${filename}`;
+    return `my-storage-note/objects/projects/${filename}`;
+  }
+
   function handoffPrompt(project) {
-    return `「${project.title}」Projectの続きを進めたい。\n\nまず gpts/${project.path} を確認して、Project正本を基準に現在地を把握してください。\n\n現在の記録:\nCurrent: ${project.current || '未記載'}\nNext: ${project.next || '未記載'}\nDecision: ${project.decision || '未記載'}\nactivity: ${project.activity || activity(project).key}\n\nこのProjectは私の判断・指示を待っている状態です。まず、今私が判断すべきことを1〜3点に絞って提示してください。私が返答したら、その内容に従って作業を進め、Project正本の current / next / decision / activity / last_touched / History を必要に応じて更新してください。`;
+    return `「${project.title}」Projectの続きを進めたい。\n\nまず ${projectSourcePath(project)} を確認して、Project正本を基準に現在地を把握してください。\n\n現在の記録:\nCurrent: ${project.current || '未記載'}\nNext: ${project.next || '未記載'}\nDecision: ${project.decision || '未記載'}\nactivity: ${project.activity || activity(project).key}\n\nこのProjectは私の判断・指示を待っている状態です。まず、今私が判断すべきことを1〜3点に絞って提示してください。私が返答したら、その内容に従って作業を進め、Project正本の current / next / decision / activity / last_touched / History を必要に応じて更新してください。`;
   }
 
   window.ProjectTownModel = Object.freeze({
