@@ -136,6 +136,7 @@
 
   function writeHistory(history) {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(normalizeHistory(history)));
+    window.dispatchEvent(new Event('cockpid:onhand-history-written'));
   }
 
   function historyFromText(text) {
