@@ -435,7 +435,10 @@
     setBusy(row, true, '送信中…');
     try {
       const result = await operation();
-      toast(result.duplicate ? '登録済み · ON HAND処理済み' : successText(result));
+      const canonical = row.matches('[data-canonical-task="true"]');
+      toast(result.duplicate
+        ? (canonical ? '登録済み · Taskは未完了' : '登録済み · ON HAND処理済み')
+        : successText(result));
       markHandled(row);
     } catch (error) {
       console.error('ON HAND scheduling bridge failed', error);
