@@ -118,7 +118,7 @@
   }
 
   function tasklinerTitle(line) {
-    const match = String(line || '').match(/^\s*-\s+(?:\[[ xX/>]\]\s+)?(.+?)\s*$/);
+    const match = String(line || '').match(/^-\s+(?:\[[ xX/>]\]\s+)?(.+?)\s*$/);
     if (!match) return '';
     let value = match[1]
       .replace(/\s*<!--[\s\S]*?-->\s*$/g, '')
@@ -180,7 +180,7 @@
   }
 
   function itemTitle(line) {
-    const match = String(line || '').match(/^\s*-\s+(?:\[([ xX])\]\s+)?(?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)\s+)?(.+?)\s*$/);
+    const match = String(line || '').match(/^-\s+(?:\[([ xX])\]\s+)?(?:(\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?)\s+)?(.+?)\s*$/);
     return match ? clean(match[3]) : '';
   }
 
