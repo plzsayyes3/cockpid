@@ -304,6 +304,12 @@ function ensureSpeechRecognition() {
 }
 
 function startSpeechRecognition() {
+  if (window.StanVoiceMemo?.hasPending?.()) {
+    window.StanVoiceMemo.retry?.();
+    setMood('送るね');
+    return false;
+  }
+
   if (!SpeechRecognitionCtor) {
     setSpeechUi('音声認識未対応', 'このブラウザではブラウザ音声認識を使えません');
     openMenu({ message: 'このブラウザでは音声認識未対応です' });
