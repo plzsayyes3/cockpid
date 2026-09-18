@@ -194,7 +194,11 @@ body[data-calendar-view="week"] .view-pane{
 .week-event::before{
   content:"";
   position:absolute;
-  inset:-7px -8px;
+  top:-7px;
+  bottom:-7px;
+  left:50%;
+  width:max(calc(100% + 16px),36px);
+  transform:translateX(-50%);
 }
 .week-event-stroke{
   position:absolute;
