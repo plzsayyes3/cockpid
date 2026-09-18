@@ -1,4 +1,4 @@
-# SURFACES.md — What's actually implemented (verified 2026-09-16)
+# SURFACES.md — What's actually implemented (verified 2026-09-18)
 
 > **Purpose**: `DIRECTION.md` is a policy document (what the workbench should be and why).
 > This document is the opposite: an exhaustive, code-verified inventory of what actually
@@ -209,8 +209,7 @@ Canonical Shared Task completion, ON HAND state, TaskLiner and Techo routing pat
   register distinct from the monospace UI chrome.
 - Cards ("object"): 12px border-radius, soft shadow, `backdrop-filter: blur(8px)` — a light
   glassmorphism. Subtle dot-grid background pattern on `body`.
-- Responsive breakpoints at 900px and 720px; dock becomes a horizontally-scrolling strip on
-  narrow screens.
+- Responsive breakpoints at 900px and 720px; the dock remains a two-row 5-column grid on narrow screens, with each button shrinking to the available width.
 - Stan is intentionally visually separate from the light Workbench shell: it is a dark,
   low-distraction standby surface centered on the character's eyes.
 
@@ -245,22 +244,48 @@ semantic mutation is required (for example, completing a Shared Task).
 
 ---
 
-## 7. Known-shallow areas (verified less thoroughly — don't treat these as settled)
+## 7. Known-shallow areas / real-device boundaries
 
-- The exact mapping of `mynotebook/02_techo` reads through `calendar-source-adapter.js`'s
-  compatibility layer was traced structurally but not exercised end-to-end.
-- ON HAND Task / Check / Keep integration has been code-reviewed and wired to canonical
-  Shared Task completion, but the full matrix (desktop/mobile, completion, SKIP, today/date/
-  week/month send, duplicate send) still needs browser/real-device exercise.
-- `google-calendar-sync.js` (475+ lines) — confirmed it exists and writes/overlays a
-  "Techo payload," not read in full.
-- `system-settings.js`, `news-home.js`, `resident.js` — read for their key data-source
-  constants, not for complete behavior.
-- Project Town (§3.6) — existence and wiring confirmed only.
-- Stan (§3.7) — implementation has been code-reviewed; long-silence/restart and pause/resume
-  behavior still require iPhone Safari real-device validation.
+The 2026-09-18 whole-workbench review traced the live entry, routing, Settings, Calendar,
+TaskLiner bridge, Advice, ON HAND, Board, Backstage, Project Town, Memo/Inbox, Resident,
+News Home and Stan wiring. The following are still real-device or external-service boundaries
+rather than code paths that have been fully exercised here.
+
+- ON HAND's desktop/mobile completion, SKIP, today/date/week/month routing and cross-device
+  state should still be exercised in the browser after deployment, even though the code paths
+  were reviewed and the identified defects were fixed.
+- Google Calendar OAuth / Calendar API behavior is external-service dependent. The Techo
+  overlay and source-adapter path were reviewed, and Techo read failures now surface as
+  `READ ERROR` rather than silently appearing empty.
+- Stan's long-silence Speech Recognition restart and pause/resume behavior remain iPhone Safari
+  real-device dependent.
+- External apps launched by Workbench (Zen, My Internet Place, TaskLiner) have separate
+  repositories; this inventory verifies Workbench's handoff/configuration to them, not their
+  full internals.
 
 ---
+
+## 7.1 2026-09-18 cross-surface review findings
+
+The following live-path defects were corrected during the whole-workbench review:
+
+- TaskLiner bridge / Settings no longer default to legacy `task-data`; an existing
+  `task-data` local setting is migrated to `main`, while an explicitly configured custom
+  branch is preserved.
+- Calendar month reads no longer cache transient read errors. A source failure is shown as
+  `READ ERROR` instead of an empty schedule followed by `TECHO LIVE`.
+- Workbench Capture, Zen Memo and Stan use collision-resistant millisecond timestamp filenames,
+  and Inbox → Daily accepts both historical second-resolution names and the new millisecond
+  form.
+- Inbox → Daily counts/enables only mergeable timestamp memo files rather than every Markdown
+  file in the Inbox.
+- Project Town handoff text derives the Project source from the active/canonical source instead
+  of relying on clipboard rewriting of a legacy `gpts` path.
+- Advice's `← WORKBENCH` closes the parent Workbench drawer when Advice is embedded, avoiding
+  a Workbench-within-Workbench iframe.
+- Numeric Dock shortcuts are suppressed while Settings or Memo is open.
+- Updated live modules use versioned script URLs so iPhone/browser caches do not retain the
+  reviewed pre-fix implementations.
 
 ## 8. Root-level files: what's alive, what isn't (evidence, not guesses)
 
