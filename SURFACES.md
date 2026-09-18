@@ -286,6 +286,15 @@ The following live-path defects were corrected during the whole-workbench review
 - Numeric Dock shortcuts are suppressed while Settings or Memo is open.
 - Updated live modules use versioned script URLs so iPhone/browser caches do not retain the
   reviewed pre-fix implementations.
+- Advice marks a message read only after its Markdown body has loaded successfully.
+- Backstage / Project Town surface partial per-project read failures instead of silently reducing
+  the visible Project count.
+- Home Today, Calendar day/week/month and Full Month use aligned exact-item deduplication so
+  duplicated Techo rows do not appear differently by surface.
+- Stan persists an unsent voice memo with a stable filename and retries it idempotently; a new
+  recording cannot overwrite a pending failed memo.
+- Settings keeps the legacy `gpts/projects` value only as the compatibility-adapter sentinel,
+  labels it `CANONICAL VIEW`, and CHECK verifies `my-storage-note/views/projects.json`.
 
 ## 8. Root-level files: what's alive, what isn't (evidence, not guesses)
 
