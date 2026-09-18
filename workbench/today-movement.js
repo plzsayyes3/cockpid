@@ -136,7 +136,13 @@
       target.list.innerHTML = visible.map((item) => rowHtml(bucket, item)).join('');
       return;
     }
-    target.list.innerHTML = poolItems(bucket).length ? clearRow() : emptyRow();
+    const all = poolItems(bucket);
+    if (!all.length) {
+      target.list.innerHTML = emptyRow();
+      return;
+    }
+    const hasSkipped = all.some((item) => statusOf(item) === 'skip');
+    target.list.innerHTML = hasSkipped ? emptyRow('SKIP中 · 再表示待ち') : clearRow();
   }
 
   function renderAll({ randomize = false } = {}) {
