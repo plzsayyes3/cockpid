@@ -116,7 +116,18 @@
     };
   }
 
+  function uniqueCalendarItems(items) {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = [item.start ?? '', item.end ?? '', item.time || '', item.title || ''].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   function renderTodayTimeline(items, day) {
+    items = uniqueCalendarItems(items);
     const relation = dateRelation(day);
     const isToday = relation === 0;
     const isPastDay = relation < 0;
