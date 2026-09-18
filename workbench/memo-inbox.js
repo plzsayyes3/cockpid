@@ -110,10 +110,10 @@
   function syncTopMergeButton() {
     const button = topMergeButton || document.getElementById('topMemoMerge');
     if (!button) return;
-    const count = currentFiles.length;
-    button.disabled = merging || loading || !token();
+    const count = currentFiles.filter(isMergeCandidateFile).length;
+    button.disabled = merging || loading || !token() || !count;
     button.textContent = merging ? 'INBOX → DAILY …' : `INBOX → DAILY${count ? ` · ${count}` : ''}`;
-    button.title = count ? `${count}件のInboxメモをDailyへ統合` : 'Inboxを確認してDailyへ統合';
+    button.title = count ? `${count}件のInboxメモをDailyへ統合` : 'Dailyへ統合できるInboxメモはありません';
   }
 
   function ensureTopMergeUi() {
@@ -216,7 +216,7 @@
     currentFiles = files;
     inboxCount.textContent = String(files.length);
     const mergeButton = document.getElementById('memoInboxMerge');
-    if (mergeButton) mergeButton.disabled = merging || !files.length;
+    if (mergeButton) mergeButton.disabled = merging || !files.some(isMergeCandidateFile);
     syncTopMergeButton();
     if (!files.length) {
       inboxList.innerHTML = '<div class="memo-inbox-empty">未処理Memoはありません。</div>';
@@ -468,7 +468,7 @@
       merging = false;
       if (refreshButton) refreshButton.disabled = false;
       const button = document.getElementById('memoInboxMerge');
-      if (button) button.disabled = !currentFiles.length;
+      if (button) button.disabled = !currentFiles.some(isMergeCandidateFile);
       syncTopMergeButton();
     }
   }
