@@ -52,34 +52,48 @@
     return { canonical, primary, audit };
   }
 
+  function interleave(canonicalIds, candidateIds) {
+    const mixed = [];
+    const max = Math.max(canonicalIds.length, candidateIds.length);
+    for (let i = 0; i < max; i += 1) {
+      if (candidateIds[i]) mixed.push(candidateIds[i]);
+      if (canonicalIds[i]) mixed.push(canonicalIds[i]);
+    }
+    return mixed;
+  }
+
+  function stableIds(items, existingIds = [], randomize = false) {
+    const ids = items.map(core.itemId);
+    if (randomize) return shuffle(ids);
+    const allowed = new Set(ids);
+    const kept = existingIds.filter((id) => allowed.has(id));
+    const seen = new Set(kept);
+    ids.forEach((id) => {
+      if (!seen.has(id)) {
+        kept.push(id);
+        seen.add(id);
+      }
+    });
+    return kept;
+  }
+
   function rebuildQueue(bucket) {
     const { canonical, primary, audit } = splitOpenBySource(bucket);
-    queues[bucket] = [...canonical, ...shuffle(primary), ...shuffle(audit)].map(core.itemId);
+    const canonicalIds = stableIds(canonical, [], true);
+    const candidateIds = [
+      ...stableIds(primary, [], true),
+      ...stableIds(audit, [], true)
+    ];
+    queues[bucket] = interleave(canonicalIds, candidateIds);
   }
 
   function syncQueue(bucket) {
     const { canonical, primary, audit } = splitOpenBySource(bucket);
-    const grouped = [canonical, primary, audit];
-    const openIds = new Set(grouped.flat().map(core.itemId));
-    const next = [];
-    const queued = new Set();
-    grouped.forEach((group) => {
-      const groupIds = new Set(group.map(core.itemId));
-      queues[bucket].forEach((id) => {
-        if (openIds.has(id) && groupIds.has(id) && !queued.has(id)) {
-          next.push(id);
-          queued.add(id);
-        }
-      });
-      group.forEach((item) => {
-        const id = core.itemId(item);
-        if (!queued.has(id)) {
-          next.push(id);
-          queued.add(id);
-        }
-      });
-    });
-    queues[bucket] = next;
+    const existing = queues[bucket];
+    const canonicalIds = stableIds(canonical, existing);
+    const primaryIds = stableIds(primary, existing);
+    const auditIds = stableIds(audit, existing);
+    queues[bucket] = interleave(canonicalIds, [...primaryIds, ...auditIds]);
   }
 
   function emptyRow(label = '候補なし') {
