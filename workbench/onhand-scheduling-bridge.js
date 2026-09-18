@@ -406,6 +406,8 @@
 
   function setBusy(row, busy, message = '', error = false) {
     row.querySelectorAll('.onhand-send-btn,.onhand-route-btn,.movement-skip,.skip-btn').forEach((button) => { button.disabled = busy; });
+    const checkbox = row.querySelector('.movement-done[data-movement-id],.done-box[data-id]');
+    if (checkbox) checkbox.disabled = busy;
     const status = row.querySelector('.onhand-route-status');
     if (status) {
       status.textContent = message;
@@ -436,6 +438,7 @@
     try {
       const result = await operation();
       const canonical = row.matches('[data-canonical-task="true"]');
+      setBusy(row, false);
       toast(result.duplicate
         ? (canonical ? '登録済み · Taskは未完了' : '登録済み · ON HAND処理済み')
         : successText(result));
