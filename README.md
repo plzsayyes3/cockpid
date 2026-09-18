@@ -132,6 +132,7 @@ Projectのactivity / momentum等をピクセル表現で眺める画面です。
 - 左HUDに `REC / PAUSE` と残り時間
 - 目の下に1行のライブ文字起こし。全文は内部保持
 - 終了または3分上限で `mynotebook/00_inbox` へ自動保存
+- 保存失敗時は未送信文字列と送信先ファイル名をlocalStorageへ保持し、オンライン復帰・再フォーカス・次回録音開始時に同じファイル名で再送
 - 5分ごとの更新確認。録音・送信・メニュー操作中はリロードを保留
 
 `送る` ボタンはありません。音声メモのファイル名はJSTの
@@ -198,6 +199,10 @@ rootの `board.html` はWorkbench Boardとは別の独立ツールです。
 - iframe内Adviceの `← WORKBENCH` でWorkbenchを入れ子にしない
 - Settings / Memo操作中の数字キーDock shortcutを抑止
 - 変更したライブJSへcache-busting versionを付与
+- Adviceは本文取得成功後にだけ既読化
+- Backstage / Project Townは部分読込失敗を `PARTIAL / READ ERROR` と表示
+- CalendarのHOME / DAY / WEEK / MONTH / FULL MONTHで同一予定の重複表示ルールを統一
+- Stanは送信失敗メモを永続化し、新規録音より再送を優先
 
 ## Maintenance rules
 
