@@ -185,7 +185,7 @@
   }
 
   function hasTitle(lines, start, end, title) {
-    const wanted = clean(title);
+    const wanted = itemTitle(`- ${clean(title)}`) || clean(title);
     for (let i = start; i < end; i += 1) if (itemTitle(lines[i]) === wanted) return true;
     return false;
   }
