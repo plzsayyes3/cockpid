@@ -457,6 +457,9 @@
       applySharedItems(merged);
     }
   });
+  window.addEventListener('cockpid:onhand-history-written', () => {
+    if (!applyingSharedState) setTimeout(detectLocalChanges, 0);
+  });
 
   document.addEventListener('change', scheduleImmediateDetection);
   document.addEventListener('click', scheduleImmediateDetection);
@@ -473,8 +476,9 @@
   installStatusUi();
   if (resetApplied) setSaveState(token() ? 'syncing' : 'local', '旧ローカル状態をリセットしました。');
 
-  // Bootstrap from the shared-state cache only. Legacy local DONE/SKIP is intentionally not seeded.
-  const initial = readCacheItems();
+  // The reset marker has already removed pre-reset legacy state, so current local history
+  // is valid unsynced state and must survive a reload together with the shared-state cache.
+  const initial = mergeItems(readCacheItems(), historyToShared(readHistory()));
   applySharedItems(initial);
   pullSharedState();
 
