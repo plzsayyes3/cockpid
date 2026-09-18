@@ -145,6 +145,7 @@
   }
 
   function dayTimelineHtml(parts, items, mode) {
+    items = uniqueWeekItems(items);
     const allDay = items.filter((item) => item.start == null);
     const timed = items.filter((item) => Number.isFinite(item.start)).sort((a, b) => a.start - b.start);
     const allDayHtml = `
@@ -351,7 +352,7 @@
     for (let i = 0; i < offset; i += 1) cells.push('<div class="month-cell outside"></div>');
     for (let day = 1; day <= daysInMonth; day += 1) {
       const date = { year: anchor.year, month: anchor.month, day };
-      const items = data.days.get(day) || [];
+      const items = uniqueWeekItems(data.days.get(day) || []);
       const shown = items.slice(0, 2).map((item) => `<div class="month-item"><span>${item.time || ''}</span>${esc(item.title)}</div>`).join('');
       const more = items.length > 2 ? `<div class="month-more">+${items.length - 2}</div>` : '';
       cells.push(`<button class="month-cell${sameDate(date, today) ? ' is-today' : ''}" data-date="${dateKey(date)}"><b>${day}</b>${shown}${more}</button>`);
