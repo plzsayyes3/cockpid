@@ -392,22 +392,30 @@
   function mutateTaskCompletion(text, taskId) {
     const lines = String(text || '').replace(/\r/g, '').split('\n');
     const escapedId = String(taskId).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const start = lines.findIndex((line) => new RegExp(`^\\s{2}- id:\\s*${escapedId}\\s*$`).test(line));
+    const idPattern = new RegExp(`^(\\s*)-\\s+id:\\s*${escapedId}\\s*$`);
+    const start = lines.findIndex((line) => idPattern.test(line));
     if (start < 0) throw new Error('Shared Taskが見つかりません');
+
+    const taskIndent = lines[start].match(idPattern)?.[1] || '';
+    const fieldIndent = `${taskIndent}  `;
+    const nextTaskPattern = new RegExp(`^${taskIndent}-\\s+id:\\s*`);
     let end = lines.length;
     for (let i = start + 1; i < lines.length; i += 1) {
-      if (/^\s{2}- id:\s*/.test(lines[i]) || /^series:\s*/.test(lines[i])) { end = i; break; }
+      if (nextTaskPattern.test(lines[i]) || /^series:\s*/.test(lines[i])) { end = i; break; }
     }
-    const completedIndex = lines.slice(start, end).findIndex((line) => /^\s{4}completed:\s*(true|false)\s*$/.test(line));
+
+    const completedPattern = new RegExp(`^${fieldIndent}completed:\\s*(true|false)\\s*$`);
+    const completedIndex = lines.slice(start, end).findIndex((line) => completedPattern.test(line));
     if (completedIndex < 0) throw new Error('Shared Taskのcompletedフィールドがありません');
     const absoluteCompleted = start + completedIndex;
     if (/true\s*$/.test(lines[absoluteCompleted])) return { duplicate: true, text };
-    lines[absoluteCompleted] = '    completed: true';
-    const touchedIndex = lines.slice(start, end).findIndex((line) => /^\s{4}last_touched:\s*/.test(line));
-    if (touchedIndex >= 0) lines[start + touchedIndex] = `    last_touched: ${nowJstIso()}`;
+    lines[absoluteCompleted] = `${fieldIndent}completed: true`;
+
+    const touchedPattern = new RegExp(`^${fieldIndent}last_touched:\\s*`);
+    const touchedIndex = lines.slice(start, end).findIndex((line) => touchedPattern.test(line));
+    if (touchedIndex >= 0) lines[start + touchedIndex] = `${fieldIndent}last_touched: ${nowJstIso()}`;
     return { duplicate: false, text: `${lines.join('\n').replace(/\s+$/, '')}\n` };
   }
-
   async function completeCanonicalTask(taskId) {
     if (!hasToken()) throw new Error('GitHub token が必要です');
     const path = 'objects/tasks/current.yml';
