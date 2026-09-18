@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f3f0e8">
-<title>COCKPID — Backstage</title>
+<title>COCKPID — Projects</title>
 <link rel="stylesheet" href="backstage.css">
 </head>
 <body>
 <div class="backstage-app">
   <header class="backstage-top">
     <div>
-      <div class="kicker">PROJECT SHELF</div>
-      <h1>Backstage</h1>
-      <p>今やらないProjectも残しておく場所。上ほど最近触れたもの。開けば Current / Next から再開できます。</p>
+      <div class="kicker">PROJECTS</div>
+      <h1>Projects</h1>
+      <p>Projectの一覧・現在地・次の判断をひとつの場所で確認します。</p>
     </div>
     <button class="reload-btn" id="reloadBtn" type="button" aria-label="再読み込み">↻</button>
   </header>
@@ -31,7 +31,7 @@
   <main class="backstage-layout">
     <section class="list-pane" id="listPane" aria-labelledby="backstageTitle">
       <div class="section-line backstage-line">
-        <span class="section-label" id="backstageTitle">BACKSTAGE</span>
+        <span class="section-label" id="backstageTitle">PROJECTS</span>
         <span class="section-count" id="projectCount">—</span>
       </div>
       <div class="axis"><span>NEW</span><span></span><span>OLD</span></div>
@@ -48,6 +48,8 @@
   </main>
 </div>
 <script src="project-source-adapter.js"></script>
+<script src="project-status-model.js?v=20260918-projects1"></script>
+<script src="project-status-view.js?v=20260918-projects1"></script>
 <script src="backstage.js?v=20260918-partial-read"></script>
 </body>
 </html>

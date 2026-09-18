@@ -82,13 +82,13 @@ Runtime routingの正本:
 | 4 | News | external `My_Internet_place` |
 | — | Advice | Dock外。Mail Statusから `workbench/advice.html` |
 | 5 | On Hand | `workbench/onhand.html` |
-| 6 | Board | `workbench/board.js` / Workbench Board |
-| 7 | Backstage | `workbench/backstage.html` |
-| 8 | Project Town | `workbench/project-town.html` |
+| 6 | Dictionary | `workbench/dictionary.js` / StickS3 Voice Capture dictionary editor |
+| 7 | Projects | `workbench/backstage.html` — Overview / Town status |
+| — | Project Town | `workbench/project-town.html` — standalone compatibility view |
 | 9 | Stan | `workbench/stan/` |
 | 0 | Secret Desk | local easter egg |
 
-`5=On Hand / 6=Board / 7=Backstage / 8=Project Town / 9=Stan` が現在値です。
+`5=On Hand / 6=Dictionary / 7=Projects / 9=Stan` が現在値です。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
 
 ## HOME principle
 
@@ -102,15 +102,15 @@ HOMEは「全部を監視するMission Control」ではなく、必要な道具�
 
 ## Project surfaces
 
-### Backstage
+### Projects / Backstage
 
-Projectの棚です。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。
+Projectの一覧・詳細画面です。旧Backstageを親画面として、OverviewとTown / Statusを切り替えます。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。
 
 Canonical Projectは `my-storage-note/objects/projects/` です。
 
-### Project Town
+### Project Town / Status
 
-Projectのactivity / momentum等をピクセル表現で眺める画面です。Project read modelはBackstageと同じKnowledge Systemを基準にします。
+Projectのactivity / momentum等を眺める表示です。Projectsの詳細画面に統合され、Project read modelはBackstageと同じKnowledge Systemを基準にします。`workbench/project-town.html` は既存ブックマーク向けの独立入口として残します。
 
 ## Stan / スタンちゃん
 
@@ -200,7 +200,7 @@ rootの `board.html` はWorkbench Boardとは別の独立ツールです。
 - Settings / Memo操作中の数字キーDock shortcutを抑止
 - 変更したライブJSへcache-busting versionを付与
 - Adviceは本文取得成功後にだけ既読化
-- Backstage / Project Townは部分読込失敗を `PARTIAL / READ ERROR` と表示
+- Projects / Project Townは部分読込失敗を `PARTIAL / READ ERROR` と表示
 - CalendarのHOME / DAY / WEEK / MONTH / FULL MONTHで同一予定の重複表示ルールを統一
 - Stanは送信失敗メモを永続化し、新規録音より再送を優先
 

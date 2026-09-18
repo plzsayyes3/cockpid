@@ -512,6 +512,8 @@
     esc,
     clean,
     hasToken,
+    readFile: gh,
+    writeFile: put,
     today,
     weekStart,
     classify,

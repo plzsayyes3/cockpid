@@ -17,6 +17,8 @@
   const reloadButton = $('reloadBtn');
   const detailContent = $('detailContent');
   const detailEmpty = $('detailEmpty');
+  const statusModel = window.COCKPID_PROJECT_STATUS;
+  const statusView = window.COCKPID_PROJECT_STATUS_VIEW;
 
   let allProjects = [];
   let projects = [];
@@ -425,6 +427,38 @@
     </section>`;
   }
 
+  function bindDetailView(project) {
+    const tabs = [...detailContent.querySelectorAll('[data-project-view]')];
+    const views = {
+      overview: detailContent.querySelector('#projectOverview'),
+      town: detailContent.querySelector('#projectTownView')
+    };
+    const selectView = (name) => {
+      tabs.forEach((tab) => {
+        const active = tab.dataset.projectView === name;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      Object.entries(views).forEach(([key, view]) => {
+        if (view) view.hidden = key !== name;
+      });
+      if (name !== 'town' || !views.town || views.town.dataset.rendered === 'true') return;
+      if (!statusModel || !statusView) {
+        views.town.innerHTML = '<div class="town-view-error">STATUS VIEWを読み込めませんでした。</div>';
+        return;
+      }
+      try {
+        views.town.innerHTML = statusView.renderTownStatus(project, statusModel);
+        views.town.dataset.rendered = 'true';
+      } catch (error) {
+        console.error('Project Town view failed', error);
+        views.town.innerHTML = '<div class="town-view-error">Project statusを表示できませんでした。</div>';
+      }
+    };
+    tabs.forEach((tab) => tab.addEventListener('click', () => selectView(tab.dataset.projectView)));
+    selectView('overview');
+  }
+
   function showProject(id, updateHash = true) {
     const project = allProjects.find((item) => item.id === id);
     if (!project) return;
@@ -436,25 +470,33 @@
     const parts = detailParts(project);
 
     detailContent.innerHTML = `
-      <button class="detail-back" id="detailBack" type="button">← BACKSTAGE</button>
+      <button class="detail-back" id="detailBack" type="button">← PROJECTS</button>
       <div class="detail-title-row">
         <div>
           <h1 class="detail-title">${esc(project.title)}</h1>
           <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span></div>
         </div>
         <div class="detail-meter" aria-label="${sheets} sheets / 100">
-          <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
+        <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
           <div class="detail-meter-label">${sheets} / 100 sheets</div>
         </div>
       </div>
-      ${parts.resume ? `<div class="markdown detail-resume">${renderMarkdown(parts.resume)}</div>` : ''}
-      ${renderWorkstreams(project)}
-      ${renderRelations(project)}
-      ${renderProjectLinks(project)}
-      ${parts.rest ? `<div class="markdown detail-rest">${renderMarkdown(parts.rest)}</div>` : ''}`;
+      <div class="detail-view-tabs" role="tablist" aria-label="Project view">
+        <button class="detail-view-tab active" type="button" role="tab" aria-selected="true" data-project-view="overview">OVERVIEW</button>
+        <button class="detail-view-tab" type="button" role="tab" aria-selected="false" data-project-view="town">TOWN / STATUS</button>
+      </div>
+      <div id="projectOverview" class="project-detail-view">
+        ${parts.resume ? `<div class="markdown detail-resume">${renderMarkdown(parts.resume)}</div>` : ''}
+        ${renderWorkstreams(project)}
+        ${renderRelations(project)}
+        ${renderProjectLinks(project)}
+        ${parts.rest ? `<div class="markdown detail-rest">${renderMarkdown(parts.rest)}</div>` : ''}
+      </div>
+      <div id="projectTownView" class="project-detail-view" hidden></div>`;
 
     detailEmpty.hidden = true;
     detailContent.hidden = false;
+    bindDetailView(project);
     document.body.classList.add('detail-open');
     $('detailBack')?.addEventListener('click', closeMobileDetail);
     if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(project.id)}`);
@@ -470,7 +512,7 @@
   function bindEvents() {
     document.addEventListener('click', (event) => {
       const button = event.target.closest?.('[data-project-id]');
-      if (!button) return;
+      if (!button || button.tagName !== 'BUTTON') return;
       showProject(button.dataset.projectId);
     });
     reloadButton.addEventListener('click', loadProjects);

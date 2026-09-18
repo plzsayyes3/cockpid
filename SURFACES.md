@@ -64,14 +64,15 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
 | 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
-| 6 | Board | ✅ | special (`board.js`, loaded lazily) | `my-storage-note/brain/coordination/cockpid-board.md` — see §3.4, **not the same thing as the root `board.html`** |
-| 7 | Backstage | ✅ | iframe → `backstage.html` | Project data, see §3.5 |
-| 8 | Project Town | ✅ | iframe → `project-town.html` | pixel-art project visualization, see §3.6 |
+| 6 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
+| 7 | Projects | ✅ | iframe → `backstage.html` | Overview + Town status view, see §3.6 |
+| — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
 | 9 | Stan | ✅ | page → `stan/` | full-screen standby character / voice capture surface, see §3.7 |
 | 0 | ??? (secret) | ✅ | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
 
-Runtime dock tail is therefore `5=On Hand / 6=Board / 7=Backstage / 8=Project Town /
-9=Stan`, followed by `0=Secret Desk`. Advice stays outside the numeric dock.
+Runtime dock tail is therefore `5=On Hand / 6=Dictionary / 7=Projects / 9=Stan`, followed by
+`0=Secret Desk`. Project Town is no longer a numeric dock entry; its standalone URL remains
+for compatibility. Advice stays outside the numeric dock.
 
 ### 3.1 Calendar
 
@@ -103,7 +104,15 @@ Mail badge. This is intentionally **not** in the app dock — `index.html`'s own
 copy says so explicitly: "AdviceはMENUから外し、Mail Statusから既存画面を開きます" (Advice
 is deliberately treated as a notification, not a peer app).
 
-### 3.4 Board (workbench's own, key 6)
+### 3.4 Dictionary (key 6)
+
+Reads the manual and auto transcription dictionaries from `plzsayyes3/sticks3-voice-capture`.
+The manual `local-receiver/transcription-dictionary.txt` is editable and saved through the
+GitHub Contents API using its current SHA. The auto-generated
+`local-receiver/transcription-dictionary.auto.txt` is displayed read-only and is never written.
+SHA conflicts are surfaced as save errors so another worker's update is not overwritten.
+
+### 3.5 Board (header status button)
 
 Reads a single file: `my-storage-note/brain/coordination/cockpid-board.md`, rendered
 through a small hand-rolled Markdown→HTML renderer (headings, bullets, and a fixed set of
@@ -113,7 +122,7 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 `secretary-ai-overview/BOARD.md` — all three serve a similar "who's doing what" purpose but
 are separate files with separate audiences; don't conflate them.
 
-### 3.5 Backstage (key 7)
+### 3.6 Projects / Backstage (key 7)
 
 `backstage.js`'s own constants say `REPO = 'gpts'`, `PROJECT_DIR = 'projects'` — this looks
 like it's reading the *legacy*, about-to-be-frozen `gpts` repository directly, which would
@@ -127,15 +136,18 @@ paths; its *runtime behavior* reads the new canonical view. This exact pattern i
 out by name in `my-storage-note/MIGRATION_MAP.md` ("Cockpid Project screens may still
 contain old gpts/projects labels/constants for compatibility adapters").
 
-### 3.6 Project Town (key 8)
+The detail panel has an `OVERVIEW` mode for Current / Next, Workstreams, Relations, and links,
+plus a `TOWN / STATUS` mode backed by the shared `project-status-model.js`. Both modes use the
+same selected Project record; a Town rendering failure does not hide the Project list.
+
+### 3.7 Project Town (standalone compatibility URL)
 
 A pixel-art visualization (`project-town.js`/`project-town-v2.js`/`project-town-characters.js`,
 plus sprite assets under `workbench/assets/project-town/`) that represents projects as
-characters in a town. Per `BRIEF.md` this is "開発中" (in development). Not deeply verified
-beyond confirming its files exist and it's wired into the dock — treat anything beyond that
-as unconfirmed.
+characters in a town. It is no longer in the numeric dock, but remains available at its direct
+URL and uses the shared `project-status-model.js`.
 
-### 3.7 Stan (key 9)
+### 3.8 Stan (key 9)
 
 `workbench/stan/` is a separate full-screen standby surface rather than an `app-window`
 iframe. The current implementation includes `index.html`, `stan.css`, `stan.js`,
@@ -247,7 +259,7 @@ semantic mutation is required (for example, completing a Shared Task).
 ## 7. Known-shallow areas / real-device boundaries
 
 The 2026-09-18 whole-workbench review traced the live entry, routing, Settings, Calendar,
-TaskLiner bridge, Advice, ON HAND, Board, Backstage, Project Town, Memo/Inbox, Resident,
+TaskLiner bridge, Advice, ON HAND, Board, Projects, Project Town, Memo/Inbox, Resident,
 News Home and Stan wiring. The following are still real-device or external-service boundaries
 rather than code paths that have been fully exercised here.
 
@@ -287,7 +299,7 @@ The following live-path defects were corrected during the whole-workbench review
 - Updated live modules use versioned script URLs so iPhone/browser caches do not retain the
   reviewed pre-fix implementations.
 - Advice marks a message read only after its Markdown body has loaded successfully.
-- Backstage / Project Town surface partial per-project read failures instead of silently reducing
+- Projects / Project Town surface partial per-project read failures instead of silently reducing
   the visible Project count.
 - Home Today, Calendar day/week/month and Full Month use aligned exact-item deduplication so
   duplicated Techo rows do not appear differently by surface.

@@ -13,10 +13,11 @@
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    thinking: { key: '6', title: '6 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    thinking: { key: null, title: 'THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    dictionary: { key: '6', title: '6 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
-    projecttown: { key: '8', title: '8 / PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
+    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html' },
+    projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     stan: { key: '9', title: '9 / STAN', type: 'page', src: 'stan/' },
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
@@ -45,9 +46,8 @@
     const zero = dockButton('0');
     const entries = [
       ['5', 'onhand', 'On Hand'],
-      ['6', 'thinking', 'Thinking'],
-      ['7', 'backstage', 'Backstage'],
-      ['8', 'projecttown', 'Project Town'],
+      ['6', 'dictionary', 'Dictionary'],
+      ['7', 'backstage', 'Projects'],
       ['9', 'stan', 'Stan']
     ];
 
@@ -66,6 +66,7 @@
   rebuildDockTail();
 
   let boardLoader = null;
+  let dictionaryLoader = null;
   function ensureBoardModule() {
     if (window.COCKPID_BOARD?.render) return Promise.resolve(window.COCKPID_BOARD);
     if (boardLoader) return boardLoader;
@@ -100,6 +101,54 @@
     }
   }
 
+  function ensureDictionaryModule() {
+    if (window.COCKPID_DICTIONARY?.render) return Promise.resolve(window.COCKPID_DICTIONARY);
+    if (dictionaryLoader) return dictionaryLoader;
+
+    dictionaryLoader = new Promise((resolve, reject) => {
+      if (!document.querySelector('script[data-cockpid-dictionary-model]')) {
+        const model = document.createElement('script');
+        model.src = 'dictionary-model.js';
+        model.dataset.cockpidDictionaryModel = 'true';
+        document.head.appendChild(model);
+        model.onerror = () => reject(new Error('dictionary-model.js load failed'));
+        model.onload = () => loadDictionaryModule(resolve, reject);
+      } else {
+        loadDictionaryModule(resolve, reject);
+      }
+    });
+    return dictionaryLoader;
+  }
+
+  function loadDictionaryModule(resolve, reject) {
+    if (!document.querySelector('link[data-cockpid-dictionary]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'dictionary.css';
+      link.dataset.cockpidDictionary = 'true';
+      document.head.appendChild(link);
+    }
+    const script = document.createElement('script');
+    script.src = 'dictionary.js';
+    script.async = true;
+    script.onload = () => window.COCKPID_DICTIONARY?.render
+      ? resolve(window.COCKPID_DICTIONARY)
+      : reject(new Error('DICTIONARY module unavailable'));
+    script.onerror = () => reject(new Error('dictionary.js load failed'));
+    document.head.appendChild(script);
+  }
+
+  async function renderDictionary() {
+    appContent.innerHTML = '<div class="dictionary-view"><div class="dictionary-loading">DICTIONARYを読み込んでいます…</div></div>';
+    try {
+      const dictionary = await ensureDictionaryModule();
+      await dictionary.render(appContent);
+    } catch (error) {
+      console.error(error);
+      appContent.innerHTML = '<div class="dictionary-view"><div class="dictionary-error"><strong>DICTIONARY UNAVAILABLE</strong><p>辞書画面を読み込めませんでした。</p></div></div>';
+    }
+  }
+
   function openApp(name) {
     const app = apps[name];
     if (!app) return false;
@@ -114,6 +163,8 @@
       appContent.innerHTML = `<iframe src="${app.src}" title="${app.title}"></iframe>`;
     } else if (app.type === 'board') {
       renderBoard();
+    } else if (app.type === 'dictionary') {
+      renderDictionary();
     } else if (app.type === 'game') {
       appContent.innerHTML = '<div class="under-construction"><div><strong>SECRET DESK</strong><p>仕事をしないための場所。</p><button class="ghost-btn" id="fortuneBtn">今日の謎を引く</button><div class="game-result" id="gameResult"></div></div></div>';
       const button = document.getElementById('fortuneBtn');

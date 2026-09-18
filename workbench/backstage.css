@@ -56,6 +56,23 @@ h1{margin:5px 0 6px;font:600 34px/1 Georgia,"Times New Roman",serif}
 .detail-content{max-width:720px}
 .detail-back{display:none;margin:0 0 16px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);font-size:10px;cursor:pointer}
 .detail-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.detail-view-tabs{display:flex;gap:6px;padding:14px 0 2px;border-bottom:1px solid var(--line)}
+.detail-view-tab{border:1px solid transparent;border-radius:5px;background:transparent;padding:6px 8px;color:var(--muted);cursor:pointer;font-size:8px;font-weight:800;letter-spacing:.1em}
+.detail-view-tab:hover,.detail-view-tab.active{border-color:var(--line);background:var(--paper);color:var(--ink)}
+.project-detail-view[hidden]{display:none}
+.project-town-status{padding:24px 0 42px}
+.town-status-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.town-status-top h2{margin:4px 0 0;font:600 24px/1.2 Georgia,"Times New Roman",serif}
+.town-turn{flex:0 0 auto;padding:5px 8px;border:1px solid var(--line);border-radius:999px;color:#655f57;font-size:8px;font-weight:800;letter-spacing:.06em}
+.town-turn-review{background:#eadca5}.town-turn-working{background:#e2e9df}.town-turn-researching{background:#e3e0ea}.town-turn-external_wait{background:#e8ddd3}.town-turn-paused{background:#ebe7df}
+.town-status-message{margin:10px 0 20px;color:var(--muted);font-size:11px;line-height:1.7}
+.town-status-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.town-status-metrics>div{padding:12px;border:1px solid var(--line);border-radius:7px;background:rgba(255,255,255,.35)}
+.town-status-metrics span,.town-decision>span{display:block;color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.1em}
+.town-status-metrics strong{display:block;margin-top:7px;font:600 14px/1.25 Georgia,"Times New Roman",serif}
+.town-decision{padding:14px;border-left:3px solid var(--fill-strong);background:rgba(255,255,255,.35)}
+.town-decision p{margin:8px 0 0;font-size:12px;line-height:1.7}
+.town-view-error{padding:18px 0;color:#8b4742;font-size:10px}
 .detail-title{margin:0;font:600 30px/1.12 Georgia,"Times New Roman",serif}
 .detail-meta{margin-top:11px;display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--muted);font-size:9px}
 .detail-meter{width:92px;flex:0 0 92px}
@@ -116,6 +133,7 @@ button.relation-row:hover{border-color:#bdb2a3;background:rgba(255,255,255,.34)}
   .detail-back{display:inline-block}
   .detail-title{font-size:27px}
   .detail-title-row{gap:12px;padding-bottom:19px}
+  .town-status-metrics{grid-template-columns:1fr}
   .detail-meter{width:74px;flex-basis:74px}
   .project-list{gap:8px;padding-left:5px;padding-right:1px}
   .project-inner{padding:10px 16px 9px 19px}
