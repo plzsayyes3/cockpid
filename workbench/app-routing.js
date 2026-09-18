@@ -13,7 +13,8 @@
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    board: { key: '6', title: '6 / BOARD', type: 'board' },
+    thinking: { key: '6', title: '6 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    board: { key: null, title: 'BOARD', type: 'board' },
     backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html' },
     projecttown: { key: '8', title: '8 / PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     stan: { key: '9', title: '9 / STAN', type: 'page', src: 'stan/' },
@@ -44,7 +45,7 @@
     const zero = dockButton('0');
     const entries = [
       ['5', 'onhand', 'On Hand'],
-      ['6', 'board', 'Board'],
+      ['6', 'thinking', 'Thinking'],
       ['7', 'backstage', 'Backstage'],
       ['8', 'projecttown', 'Project Town'],
       ['9', 'stan', 'Stan']
