@@ -84,11 +84,12 @@ Runtime routingの正本:
 | 5 | On Hand | `workbench/onhand.html` |
 | 6 | Dictionary | `workbench/dictionary.js` / StickS3 Voice Capture dictionary editor |
 | 7 | Projects | `workbench/backstage.html` — Overview / Town status |
+| 8 | Thinking | `workbench/thinking.html` — ideas / themes / questions / hypotheses / actions |
 | — | Project Town | `workbench/project-town.html` — standalone compatibility view |
 | 9 | Stan | `workbench/stan/` |
 | 0 | Secret Desk | local easter egg |
 
-`5=On Hand / 6=Dictionary / 7=Projects / 9=Stan` が現在値です。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
+`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Stan` が現在値です。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
 
 ## HOME principle
 

@@ -66,11 +66,12 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
 | 6 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
 | 7 | Projects | ✅ | iframe → `backstage.html` | Overview + Town status view, see §3.6 |
+| 8 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
 | 9 | Stan | ✅ | page → `stan/` | full-screen standby character / voice capture surface, see §3.7 |
 | 0 | ??? (secret) | ✅ | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
 
-Runtime dock tail is therefore `5=On Hand / 6=Dictionary / 7=Projects / 9=Stan`, followed by
+Runtime dock tail is therefore `5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Stan`, followed by
 `0=Secret Desk`. Project Town is no longer a numeric dock entry; its standalone URL remains
 for compatibility. Advice stays outside the numeric dock.
 

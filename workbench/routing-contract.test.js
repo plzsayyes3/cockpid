@@ -13,8 +13,9 @@ test('key 7 is the canonical Projects route', () => {
   assert.match(index, /data-app="backstage"><b>7<\/b><span>Projects<\/span>/);
 });
 
-test('key 8 is not injected into the runtime dock', () => {
-  assert.doesNotMatch(routing, /\['8', 'projecttown'/);
+test('key 8 is the canonical Thinking route', () => {
+  assert.match(routing, /\['8', 'thinking', 'Thinking'\]/);
+  assert.match(routing, /thinking:\s*\{ key: '8', title: '8 \/ THINKING'/);
 });
 
 test('standalone Project Town remains available', () => {

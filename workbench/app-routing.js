@@ -13,7 +13,7 @@
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    thinking: { key: null, title: 'THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '6', title: '6 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
     backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html' },
@@ -48,6 +48,7 @@
       ['5', 'onhand', 'On Hand'],
       ['6', 'dictionary', 'Dictionary'],
       ['7', 'backstage', 'Projects'],
+      ['8', 'thinking', 'Thinking'],
       ['9', 'stan', 'Stan']
     ];
 
