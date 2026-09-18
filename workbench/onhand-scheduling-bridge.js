@@ -121,8 +121,10 @@
     const match = String(line || '').match(/^\s*-\s+(?:\[[ xX/>]\]\s+)?(.+?)\s*$/);
     if (!match) return '';
     let value = match[1]
+      .replace(/\s*<!--[\s\S]*?-->\s*$/g, '')
       .replace(/\s*【[^】]*】\s*$/, '')
-      .replace(/\s*(?:\(\s*\d+\s*m\s*\)|⏳\s*\d+\s*m)\s*$/, '');
+      .replace(/\s*(?:\(\s*\d+\s*m\s*\)|⏳\s*\d+\s*m)\s*$/, '')
+      .replace(/\s*<!--[\s\S]*?-->\s*$/g, '');
     return clean(value);
   }
 
