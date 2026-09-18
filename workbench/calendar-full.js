@@ -37,6 +37,15 @@
     }
     return {days,monthUndated};
   }
+  function uniqueItems(items){
+    const seen=new Set();
+    return items.filter(item=>{
+      const key=[item.time||'',item.title||'',item.checked?'1':'0'].join('|');
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+  }
   function initialMonth(){
     const q=new URLSearchParams(location.search).get('month');
     const m=/^(\d{4})-(\d{2})$/.exec(q||'');
@@ -79,13 +88,14 @@
         const day=i-offset+1;
         if(day<1){cells.push(`<div class="day outside"><div class="day-head"><b>${prevDays+day}</b></div></div>`);continue}
         if(day>daysInMonth){cells.push(`<div class="day outside"><div class="day-head"><b>${day-daysInMonth}</b></div></div>`);continue}
-        const items=data.days.get(day)||[];
+        const items=uniqueItems(data.days.get(day)||[]);
         const isToday=today.year===state.year&&today.month===state.month&&today.day===day;
         const events=items.map(item=>`<div class="event${item.checked?' checked':''}">${item.time?`<time>${esc(item.time)}</time>`:''}${esc(item.title)}</div>`).join('');
         cells.push(`<section class="day${isToday?' today':''}"><div class="day-head"><b>${day}</b>${isToday?'<span class="today-tag">TODAY</span>':''}</div>${events}</section>`);
       }
       $('monthGrid').innerHTML=cells.join('');
-      if(data.monthUndated.length){$('undated').hidden=false;$('undatedItems').innerHTML=data.monthUndated.map(item=>`<div class="undated-item${item.checked?' checked':''}">${esc(item.title)}</div>`).join('')}
+      const monthUndated=uniqueItems(data.monthUndated);
+      if(monthUndated.length){$('undated').hidden=false;$('undatedItems').innerHTML=monthUndated.map(item=>`<div class="undated-item${item.checked?' checked':''}">${esc(item.title)}</div>`).join('')}
       $('sourceStatus').textContent='TECHO LIVE';
     }catch(error){console.error(error);$('sourceStatus').textContent='READ ERROR';$('monthGrid').innerHTML='<div class="message">Techoを読み込めませんでした。</div>'}
   }
