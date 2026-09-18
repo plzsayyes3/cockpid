@@ -224,7 +224,13 @@
     loaded.items.forEach((item) => pools[core.classify(item._type, item)].push(item));
     renderAll({ randomize: true });
     const range = `${loaded.start.slice(5).replace('-', '.')}–${loaded.end.slice(5).replace('-', '.')}`;
-    source.textContent = `${range} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3M' : ''}${loaded.curated ? ' · CURATED' : ''}`;
+    const sourceWarnings = [
+      ...(loaded.tasksLoadFailed ? ['shared-task'] : []),
+      ...(loaded.recentLoadFailedTypes || []).map((type) => `recent:${type}`),
+      ...(loaded.auditLoadFailed ? ['audit'] : [])
+    ];
+    source.textContent = `${range} · ${loaded.tasksLoadFailed ? 'TASK READ ERROR' : `${loaded.tasksLoaded} TASKS`}${loaded.auditLoaded ? ' + 3M' : ''}${loaded.curated ? ' · CURATED' : ''}${loaded.partialData ? ' · PARTIAL DATA' : ''}`;
+    source.title = sourceWarnings.length ? `一部データ取得失敗: ${sourceWarnings.join(', ')}` : '';
   }
 
   randomButton?.addEventListener('click', () => renderAll({ randomize: true }));
