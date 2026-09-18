@@ -261,7 +261,7 @@
   async function loadCanonicalTasks() {
     try {
       const payload = await gh('views/tasks.json');
-      if (!payload?.content) return [];
+      if (!payload?.content) throw new Error('views/tasks.json を読めません');
       const data = JSON.parse(decode(payload.content));
       return (Array.isArray(data?.tasks) ? data.tasks : [])
         .filter((task) => !task?.completed && task?.id && titleKey(task))
@@ -277,7 +277,7 @@
         }));
     } catch (error) {
       console.error('ON HAND Shared Task load failed', error);
-      return [];
+      return null;
     }
   }
 
@@ -372,7 +372,8 @@
   }
 
   async function loadAllItems() {
-    const [tasks, curated, audit] = await Promise.all([loadCanonicalTasks(), loadCuratedWeek(), loadAudit()]);
+    const [taskResult, curated, audit] = await Promise.all([loadCanonicalTasks(), loadCuratedWeek(), loadAudit()]);
+    const tasks = Array.isArray(taskResult) ? taskResult : [];
     const weekItems = curated?.length ? curated : await loadLegacySevenDays();
     const candidates = mergeByPriority(tasks, weekItems, audit.items).map((item) => ({
       ...item,
@@ -382,6 +383,7 @@
     return {
       items: candidates,
       tasksLoaded: tasks.length,
+      tasksLoadFailed: taskResult === null,
       auditLoaded: audit.loaded,
       curated: Boolean(curated?.length),
       start: weekStart(),
