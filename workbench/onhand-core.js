@@ -230,9 +230,19 @@
   function setLocalStatus(item, status, history) {
     const id = itemId(item);
     if (status === 'done') {
+      const at = new Date().toISOString();
       history[id] = {
-        status: 'done', at: new Date().toISOString(), title_key: titleKey(item), recurring: Boolean(item?._isRecurring)
+        status: 'done', at, title_key: titleKey(item), recurring: Boolean(item?._isRecurring)
       };
+      if (item?._isCanonicalTask && Array.isArray(item._shadowCandidates)) {
+        item._shadowCandidates
+          .filter((candidate) => !candidate?._isRecurring)
+          .forEach((candidate) => {
+            history[itemId(candidate)] = {
+              status: 'done', at, title_key: titleKey(candidate), recurring: false
+            };
+          });
+      }
     } else if (status === 'skip') {
       const plan = skipPlan(classify(item._type, item), item);
       history[id] = {
@@ -249,6 +259,7 @@
   function mergeByPriority(...groups) {
     const seenTitles = new Set();
     const seenOccurrences = new Set();
+    const canonicalByTitle = new Map();
     const merged = [];
     groups.flat().forEach((item) => {
       const keyValue = titleKey(item);
@@ -256,8 +267,16 @@
 
       if (item?._isCanonicalTask) {
         if (seenTitles.has(keyValue)) return;
+        item._shadowCandidates = [];
         seenTitles.add(keyValue);
+        canonicalByTitle.set(keyValue, item);
         merged.push(item);
+        return;
+      }
+
+      const canonical = canonicalByTitle.get(keyValue);
+      if (canonical) {
+        canonical._shadowCandidates.push(item);
         return;
       }
 
