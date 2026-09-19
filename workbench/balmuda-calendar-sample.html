@@ -95,7 +95,15 @@
     -webkit-overflow-scrolling:touch;
     background:var(--paper);
   }
-  #canvas{position:relative;min-height:100%;padding-bottom:40vh}
+  #canvas{
+    position:relative;
+    min-height:100%;
+    padding-bottom:40vh;
+    transform-origin:0 0;
+    will-change:transform;
+    contain:layout paint style;
+    backface-visibility:hidden;
+  }
   .day{
     position:relative;
     min-height:4px;
@@ -253,16 +261,18 @@
     eventsByDate.get(ev.date).push(ev);
   }
 
-  let zoom = 0.54; // 0 = year, 1 = day
+  let zoom = 0.54; // committed zoom: 0 = year, 1 = day
+  let visualZoom = zoom;
   const minRow = 2.35;
   const maxRow = 168;
 
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const mix=(a,b,t)=>a+(b-a)*t;
-  const rowHeight=()=> {
-    const t = Math.pow(zoom, 2.15);
+  const rowHeightFor=(z)=> {
+    const t = Math.pow(z, 2.15);
     return mix(minRow,maxRow,t);
   };
+  const rowHeight=()=>rowHeightFor(zoom);
   const dateKey=d=>{
     const y=d.getFullYear();
     const m=String(d.getMonth()+1).padStart(2,'0');
@@ -341,6 +351,7 @@
   }
 
   function applyZoom(anchorY=null, anchorDateIndex=null){
+    canvas.style.transform='';
     const h=rowHeight();
     document.documentElement.style.setProperty('--row-height',h+'px');
     for(const row of canvas.children) row.style.height=h+'px';
@@ -382,6 +393,8 @@
   viewport.addEventListener('scroll',updateFocus,{passive:true});
 
   let pinch=null;
+  let pinchRaf=0;
+  let pendingPinch=null;
   function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
   function centerY(a,b){
     const r=viewport.getBoundingClientRect();
@@ -408,21 +421,42 @@
       const h=rowHeight();
       const ay=anchorYForMode(e.touches);
       const absoluteY=viewport.scrollTop+ay-22;
+      visualZoom=zoom;
       pinch={
         startDist:dist(e.touches[0],e.touches[1]),
         startZoom:zoom,
+        startRowHeight:h,
         anchorY:ay,
-        anchorIndex:absoluteY/h
+        anchorIndex:absoluteY/h,
+        anchorContentY:absoluteY
       };
+      document.body.classList.add('pinching');
       setAnchorGuide(ay,true);
     }
   },{passive:true});
+
+  function renderPinchFrame(){
+    pinchRaf=0;
+    if(!pinch || !pendingPinch) return;
+    const {targetZoom,anchorY}=pendingPinch;
+    visualZoom=targetZoom;
+    const scale=rowHeightFor(targetZoom)/pinch.startRowHeight;
+    const anchorContentY=pinch.anchorContentY;
+    const translateY=anchorContentY*(1-scale);
+    canvas.style.transform=`matrix(1,0,0,${scale},0,${translateY})`;
+
+    const [mode,scaleLabelText]=modeForZoom(targetZoom);
+    modeLabel.textContent=mode;
+    scaleLabel.textContent=scaleLabelText;
+    zoomMeter.style.height=(targetZoom*100)+'%';
+    setAnchorGuide(anchorY,true);
+  }
 
   viewport.addEventListener('touchmove',e=>{
     if(e.touches.length===2 && pinch){
       e.preventDefault();
       const ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
-      zoom=clamp(pinch.startZoom + Math.log(ratio)*.14,0,1);
+      const targetZoom=clamp(pinch.startZoom + Math.log(ratio)*.14,0,1);
 
       let ay=pinch.anchorY;
       if(anchorMode==='finger'){
@@ -432,14 +466,27 @@
       } else if(anchorMode==='focus'){
         ay=viewport.clientHeight*.38;
       }
-      setAnchorGuide(ay,true);
-      applyZoom(ay,pinch.anchorIndex);
+
+      pendingPinch={targetZoom,anchorY:ay};
+      if(!pinchRaf) pinchRaf=requestAnimationFrame(renderPinchFrame);
     }
   },{passive:false});
 
   viewport.addEventListener('touchend',e=>{
-    if(e.touches.length<2){
+    if(e.touches.length<2 && pinch){
+      if(pinchRaf){
+        cancelAnimationFrame(pinchRaf);
+        pinchRaf=0;
+      }
+      if(pendingPinch) visualZoom=pendingPinch.targetZoom;
+      zoom=visualZoom;
+      const finalAnchorY=pendingPinch?.anchorY ?? pinch.anchorY;
+      const finalAnchorIndex=pinch.anchorIndex;
+      pendingPinch=null;
+      canvas.style.transform='';
+      applyZoom(finalAnchorY,finalAnchorIndex);
       pinch=null;
+      document.body.classList.remove('pinching');
       setAnchorGuide(0,false);
     }
   },{passive:true});
