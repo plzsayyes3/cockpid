@@ -442,7 +442,7 @@
     visualZoom=targetZoom;
     const scale=rowHeightFor(targetZoom)/pinch.startRowHeight;
     const anchorContentY=pinch.anchorContentY;
-    const translateY=anchorContentY*(1-scale);
+    const translateY=viewport.scrollTop + anchorY - 22 - anchorContentY*scale;
     canvas.style.transform=`matrix(1,0,0,${scale},0,${translateY})`;
 
     const [mode,scaleLabelText]=modeForZoom(targetZoom);
@@ -472,23 +472,30 @@
     }
   },{passive:false});
 
-  viewport.addEventListener('touchend',e=>{
-    if(e.touches.length<2 && pinch){
-      if(pinchRaf){
-        cancelAnimationFrame(pinchRaf);
-        pinchRaf=0;
-      }
-      if(pendingPinch) visualZoom=pendingPinch.targetZoom;
-      zoom=visualZoom;
-      const finalAnchorY=pendingPinch?.anchorY ?? pinch.anchorY;
-      const finalAnchorIndex=pinch.anchorIndex;
-      pendingPinch=null;
-      canvas.style.transform='';
-      applyZoom(finalAnchorY,finalAnchorIndex);
-      pinch=null;
-      document.body.classList.remove('pinching');
-      setAnchorGuide(0,false);
+  function finishPinch(){
+    if(!pinch) return;
+    if(pinchRaf){
+      cancelAnimationFrame(pinchRaf);
+      pinchRaf=0;
     }
+    if(pendingPinch) visualZoom=pendingPinch.targetZoom;
+    zoom=visualZoom;
+    const finalAnchorY=pendingPinch?.anchorY ?? pinch.anchorY;
+    const finalAnchorIndex=pinch.anchorIndex;
+    pendingPinch=null;
+    canvas.style.transform='';
+    applyZoom(finalAnchorY,finalAnchorIndex);
+    pinch=null;
+    document.body.classList.remove('pinching');
+    setAnchorGuide(0,false);
+  }
+
+  viewport.addEventListener('touchend',e=>{
+    if(e.touches.length<2 && pinch) finishPinch();
+  },{passive:true});
+
+  viewport.addEventListener('touchcancel',()=>{
+    finishPinch();
   },{passive:true});
 
   // Desktop testing: Ctrl/⌘ + wheel
