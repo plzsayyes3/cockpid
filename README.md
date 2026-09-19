@@ -86,10 +86,10 @@ Runtime routingの正本:
 | 7 | Projects | `workbench/backstage.html` — Overview / Town status |
 | 8 | Thinking | `workbench/thinking.html` — ideas / themes / questions / hypotheses / actions |
 | — | Project Town | `workbench/project-town.html` — standalone compatibility view |
-| 9 | Stan | `workbench/stan/` |
+| 9 | Keyboard | `workbench/keyboard.html` — 薙刀式ツールへの入口 |
 | 0 | Secret Desk | local easter egg |
 
-`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Stan` が現在値です。StanはDockの9番に加え、ヘッダーの電池型Settingsアイコン横にあるマイクアイコンからも開けます。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
+`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Keyboard` が現在値です。Stanはヘッダーの電池型Settingsアイコン横にあるマイクアイコンから開けます。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
 
 ## HOME principle
 
@@ -115,7 +115,7 @@ Projectのactivity / momentum等を眺める表示です。Projectsの詳細画�
 
 ## Stan / スタンちゃん
 
-`workbench/stan/` は9番から開く独立全画面のstandby surfaceです。
+`workbench/stan/` はヘッダーのマイクアイコンから開く独立全画面のstandby surfaceです。9番は `workbench/keyboard.html` から薙刀式ツールへ進みます。
 
 現在実装済み:
 

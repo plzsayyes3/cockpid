@@ -16,7 +16,14 @@ test('key 7 is the canonical Projects route', () => {
 test('header microphone opens the existing Stan surface', () => {
   assert.match(index, /class="status-icon status-mic" data-app="stan"/);
   assert.match(index, /aria-label="Stan \/ 音声入力"/);
-  assert.match(routing, /stan:\s*\{ key: '9', title: '9 \/ STAN', type: 'page', src: 'stan\/'/);
+  assert.match(routing, /stan:\s*\{ key: null, title: 'STAN', type: 'page', src: 'stan\/'/);
+});
+
+test('key 9 opens the Keyboard surface with the Naginata tool link', () => {
+  assert.match(routing, /keyboard:\s*\{ key: '9', title: '9 \/ KEYBOARD', type: 'page', src: 'keyboard\.html'/);
+  assert.match(routing, /\['9', 'keyboard', 'Keyboard'\]/);
+  assert.match(index, /data-app="keyboard"><b>9<\/b><span>Keyboard<\/span>/);
+  assert.match(fs.readFileSync(path.join(__dirname, 'keyboard.html'), 'utf8'), /https:\/\/github\.com\/eswai\/Benkei2/);
 });
 
 test('key 8 is the canonical Thinking route', () => {

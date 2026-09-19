@@ -18,7 +18,8 @@
     board: { key: null, title: 'BOARD', type: 'board' },
     backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
-    stan: { key: '9', title: '9 / STAN', type: 'page', src: 'stan/' },
+    keyboard: { key: '9', title: '9 / KEYBOARD', type: 'page', src: 'keyboard.html' },
+    stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
 
@@ -49,7 +50,7 @@
       ['6', 'dictionary', 'Dictionary'],
       ['7', 'backstage', 'Projects'],
       ['8', 'thinking', 'Thinking'],
-      ['9', 'stan', 'Stan']
+      ['9', 'keyboard', 'Keyboard']
     ];
 
     entries.forEach(([key, appName, label]) => {
