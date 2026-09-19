@@ -56,7 +56,6 @@
     position:relative;
     min-height:4px;
     border-bottom:1px solid var(--line);
-    transition:height 70ms linear;
   }
   .day.month-start{border-top:1px solid var(--strong)}
   .date{
@@ -108,7 +107,6 @@
     font-size:9px;
     line-height:12px;
     padding:0 5px;
-    transition:height 70ms linear,top 70ms linear,border-radius 70ms linear,padding 70ms linear,opacity 70ms linear;
   }
   .event.soft{background:#77746d}
   .event.personal{background:#b8665d}
@@ -355,7 +353,7 @@
     if(e.touches.length===2 && pinch){
       e.preventDefault();
       const ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
-      zoom=clamp(pinch.startZoom + Math.log(ratio)*.22,0,1);
+      zoom=clamp(pinch.startZoom + Math.log(ratio)*.14,0,1);
       applyZoom(pinch.anchorY,pinch.anchorIndex);
     }
   },{passive:false});
@@ -371,7 +369,7 @@
     const r=viewport.getBoundingClientRect();
     const anchorY=e.clientY-r.top;
     const anchorIndex=(viewport.scrollTop+anchorY-22)/rowHeight();
-    zoom=clamp(zoom-e.deltaY*.0012,0,1);
+    zoom=clamp(zoom-e.deltaY*.0009,0,1);
     applyZoom(anchorY,anchorIndex);
   },{passive:false});
 })();
