@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<title>Zoom Calendar Prototype</title>
+<style>
+  :root{
+    --bg:#f4f2ec;
+    --ink:#20201d;
+    --muted:#8f8d85;
+    --line:rgba(32,32,29,.13);
+    --strong:rgba(32,32,29,.26);
+    --paper:#fbfaf6;
+    --today:#bc6258;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{overscroll-behavior:none}
+  .app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+  header{
+    flex:0 0 auto;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:12px;
+    align-items:end;
+    padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
+    border-bottom:1px solid var(--line);
+    background:rgba(244,242,236,.92);
+    backdrop-filter:blur(16px);
+    z-index:5;
+  }
+  .eyebrow{font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:var(--muted);margin-bottom:6px}
+  h1{font-size:22px;line-height:1;margin:0;font-weight:650;letter-spacing:-.03em}
+  .mode{text-align:right}
+  #modeLabel{font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
+  #scaleLabel{display:block;margin-top:5px;font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .hint{
+    flex:0 0 auto;
+    padding:8px 18px;
+    border-bottom:1px solid var(--line);
+    font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--muted);
+    background:var(--paper);
+  }
+  #viewport{
+    position:relative;
+    flex:1 1 auto;
+    overflow:auto;
+    touch-action:pan-y;
+    -webkit-overflow-scrolling:touch;
+    background:var(--paper);
+  }
+  #canvas{position:relative;min-height:100%;padding-bottom:40vh}
+  .day{
+    position:relative;
+    min-height:4px;
+    border-bottom:1px solid var(--line);
+    transition:height 70ms linear;
+  }
+  .day.month-start{border-top:1px solid var(--strong)}
+  .date{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:62px;
+    padding-left:10px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-start;
+    color:var(--muted);
+    font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    pointer-events:none;
+  }
+  .date span{position:sticky;top:3px;padding-top:4px}
+  .day.today .date{color:var(--today)}
+  .timeline{
+    position:absolute;
+    left:62px;right:10px;top:0;bottom:0;
+    border-left:1px solid var(--line);
+    background-image:linear-gradient(to right,
+      transparent 0,
+      transparent calc(25% - .5px), var(--line) calc(25% - .5px), var(--line) 25%,
+      transparent 25%, transparent calc(50% - .5px), var(--line) calc(50% - .5px), var(--line) 50%,
+      transparent 50%, transparent calc(75% - .5px), var(--line) calc(75% - .5px), var(--line) 75%,
+      transparent 75%);
+  }
+  .hour-labels{
+    position:sticky;top:0;z-index:3;height:22px;margin-left:62px;margin-right:10px;
+    background:linear-gradient(to bottom,rgba(251,250,246,.97),rgba(251,250,246,.86));
+    border-bottom:1px solid var(--line);
+    pointer-events:none;
+  }
+  .hour-labels span{
+    position:absolute;top:6px;transform:translateX(-50%);
+    font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)
+  }
+  .event{
+    position:absolute;
+    height:12px;
+    top:50%;
+    transform:translateY(-50%);
+    min-width:2px;
+    border-radius:999px;
+    background:var(--ink);
+    overflow:hidden;
+    white-space:nowrap;
+    color:var(--paper);
+    font-size:9px;
+    line-height:12px;
+    padding:0 5px;
+    transition:height 70ms linear,top 70ms linear,border-radius 70ms linear,padding 70ms linear,opacity 70ms linear;
+  }
+  .event.soft{background:#77746d}
+  .event.personal{background:#b8665d}
+  .event-title{opacity:1;transition:opacity 60ms linear}
+  .month-label{
+    position:absolute;left:9px;top:3px;
+    font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:var(--ink);letter-spacing:.08em;
+    z-index:2;
+  }
+  .density{
+    position:absolute;left:62px;right:10px;top:50%;height:1px;background:transparent;
+    transform:translateY(-50%);
+  }
+  .density i{
+    position:absolute;top:-1px;height:3px;background:var(--ink);border-radius:2px;opacity:.68;
+  }
+  body.compact .date{font-size:8px}
+  body.compact .timeline{background-image:none}
+  body.compact .event{height:5px;padding:0;border-radius:2px}
+  body.compact .event-title{opacity:0}
+  body.year .date{opacity:0}
+  body.year .timeline{border-left-color:transparent;background-image:none}
+  body.year .event{height:2px;padding:0;border-radius:0;opacity:.7}
+  body.year .event-title{display:none}
+  body.year .day{border-bottom-color:rgba(32,32,29,.05)}
+  .zoom-meter{
+    position:absolute;right:9px;bottom:calc(10px + env(safe-area-inset-bottom));
+    width:7px;height:88px;border-radius:999px;background:rgba(32,32,29,.1);z-index:6;pointer-events:none;
+  }
+  .zoom-meter i{
+    position:absolute;left:1px;right:1px;bottom:1px;border-radius:999px;background:var(--ink);height:50%;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="eyebrow">ZOOM CALENDAR / PROTOTYPE</div>
+      <h1 id="focusTitle">2026.09</h1>
+    </div>
+    <div class="mode">
+      <span id="modeLabel">WEEK</span>
+      <span id="scaleLabel">7 DAYS</span>
+    </div>
+  </header>
+  <div class="hint">2本指で広げる = 詳細 / つまむ = 俯瞰　・　上下スワイプ = 時間移動</div>
+  <div id="viewport">
+    <div class="hour-labels" id="hourLabels"></div>
+    <div id="canvas"></div>
+    <div class="zoom-meter"><i id="zoomMeter"></i></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const DAY_MS = 86400000;
+  const startDate = new Date('2026-01-01T00:00:00+09:00');
+  const endDate   = new Date('2027-01-01T00:00:00+09:00');
+  const viewport = document.getElementById('viewport');
+  const canvas = document.getElementById('canvas');
+  const modeLabel = document.getElementById('modeLabel');
+  const scaleLabel = document.getElementById('scaleLabel');
+  const focusTitle = document.getElementById('focusTitle');
+  const zoomMeter = document.getElementById('zoomMeter');
+
+  const sampleEvents = [
+    ['2026-09-17','09:00','10:30','職員会議',''],
+    ['2026-09-17','13:30','15:00','研修','soft'],
+    ['2026-09-18','10:00','12:00','打ち合わせ',''],
+    ['2026-09-18','16:00','17:15','迎え','personal'],
+    ['2026-09-19','09:30','11:00','家族の予定','personal'],
+    ['2026-09-19','13:00','14:30','個人制作','soft'],
+    ['2026-09-20','11:00','12:00','買い物','personal'],
+    ['2026-09-21','08:30','09:15','朝会',''],
+    ['2026-09-21','14:00','16:00','園内研修',''],
+    ['2026-09-22','10:00','11:30','面談',''],
+    ['2026-09-23','12:00','15:00','外出','personal'],
+    ['2026-09-24','09:00','10:00','ミーティング',''],
+    ['2026-09-25','15:30','17:00','資料作成','soft'],
+    ['2026-10-03','09:00','13:00','運動会',''],
+    ['2026-10-10','11:00','12:00','家族','personal'],
+    ['2026-11-06','13:00','15:00','研修',''],
+    ['2026-12-18','10:00','11:00','会議',''],
+  ].map((e,i)=>({id:i,date:e[0],start:e[1],end:e[2],title:e[3],kind:e[4]}));
+
+  const eventsByDate = new Map();
+  for (const ev of sampleEvents) {
+    if (!eventsByDate.has(ev.date)) eventsByDate.set(ev.date, []);
+    eventsByDate.get(ev.date).push(ev);
+  }
+
+  let zoom = 0.54; // 0 = year, 1 = day
+  const minRow = 2.35;
+  const maxRow = 168;
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const mix=(a,b,t)=>a+(b-a)*t;
+  const rowHeight=()=> {
+    const t = Math.pow(zoom, 2.15);
+    return mix(minRow,maxRow,t);
+  };
+  const dateKey=d=>{
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,'0');
+    const day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  };
+  const timePct=t=>{
+    const [h,m]=t.split(':').map(Number);
+    return ((h*60+m)/(24*60))*100;
+  };
+  const durationPct=(a,b)=>timePct(b)-timePct(a);
+
+  function modeForZoom(z){
+    if(z>=.88) return ['DAY','1 DAY'];
+    if(z>=.73) return ['DAYS','3 DAYS'];
+    if(z>=.56) return ['WEEK','7 DAYS'];
+    if(z>=.40) return ['WEEKS','3 WEEKS'];
+    if(z>=.22) return ['MONTH','1-2 MONTHS'];
+    return ['YEAR','1 YEAR'];
+  }
+
+  const allDays=[];
+  for(let t=startDate.getTime();t<endDate.getTime();t+=DAY_MS){
+    allDays.push(new Date(t));
+  }
+
+  function build(){
+    const frag=document.createDocumentFragment();
+    for(const d of allDays){
+      const key=dateKey(d);
+      const row=document.createElement('section');
+      row.className='day'+(d.getDate()===1?' month-start':'')+(key==='2026-09-19'?' today':'');
+      row.dataset.date=key;
+
+      const date=document.createElement('div');
+      date.className='date';
+      const ds=document.createElement('span');
+      ds.textContent=`${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+      date.appendChild(ds);
+      row.appendChild(date);
+
+      if(d.getDate()===1){
+        const ml=document.createElement('div');
+        ml.className='month-label';
+        ml.textContent=`${d.getMonth()+1}月`;
+        row.appendChild(ml);
+      }
+
+      const tl=document.createElement('div');
+      tl.className='timeline';
+      for(const ev of eventsByDate.get(key)||[]){
+        const el=document.createElement('div');
+        el.className='event '+ev.kind;
+        el.style.left=timePct(ev.start)+'%';
+        el.style.width=Math.max(durationPct(ev.start,ev.end),.7)+'%';
+        el.innerHTML='<span class="event-title">'+ev.title+'</span>';
+        tl.appendChild(el);
+      }
+      row.appendChild(tl);
+      frag.appendChild(row);
+    }
+    canvas.appendChild(frag);
+  }
+
+  function updateHours(){
+    const labels=document.getElementById('hourLabels');
+    labels.innerHTML='';
+    const hours = zoom>.76 ? [0,3,6,9,12,15,18,21,24] : zoom>.46 ? [0,6,12,18,24] : [0,12,24];
+    for(const h of hours){
+      const s=document.createElement('span');
+      s.textContent=String(h).padStart(2,'0');
+      s.style.left=(h/24*100)+'%';
+      labels.appendChild(s);
+    }
+    labels.style.display=zoom<.23?'none':'block';
+  }
+
+  function applyZoom(anchorY=null, anchorDateIndex=null){
+    const h=rowHeight();
+    document.documentElement.style.setProperty('--row-height',h+'px');
+    for(const row of canvas.children) row.style.height=h+'px';
+
+    const [mode,scale]=modeForZoom(zoom);
+    modeLabel.textContent=mode;
+    scaleLabel.textContent=scale;
+    zoomMeter.style.height=(zoom*100)+'%';
+
+    document.body.classList.toggle('compact',zoom<.44);
+    document.body.classList.toggle('year',zoom<.20);
+
+    updateHours();
+
+    if(anchorY!=null && anchorDateIndex!=null){
+      viewport.scrollTop = anchorDateIndex*h - anchorY + 22;
+    }
+    updateFocus();
+  }
+
+  function updateFocus(){
+    const h=rowHeight();
+    const y=Math.max(0,viewport.scrollTop-22)+viewport.clientHeight*.38;
+    const idx=clamp(Math.floor(y/h),0,allDays.length-1);
+    const d=allDays[idx];
+    focusTitle.textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+
+  function scrollToDate(key, align=.34){
+    const i=allDays.findIndex(d=>dateKey(d)===key);
+    if(i<0)return;
+    viewport.scrollTop=Math.max(0,i*rowHeight()-viewport.clientHeight*align+22);
+  }
+
+  build();
+  applyZoom();
+  requestAnimationFrame(()=>scrollToDate('2026-09-19'));
+
+  viewport.addEventListener('scroll',updateFocus,{passive:true});
+
+  let pinch=null;
+  function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
+  function centerY(a,b){
+    const r=viewport.getBoundingClientRect();
+    return ((a.clientY+b.clientY)/2)-r.top;
+  }
+
+  viewport.addEventListener('touchstart',e=>{
+    if(e.touches.length===2){
+      const h=rowHeight();
+      const cy=centerY(e.touches[0],e.touches[1]);
+      const absoluteY=viewport.scrollTop+cy-22;
+      pinch={
+        startDist:dist(e.touches[0],e.touches[1]),
+        startZoom:zoom,
+        anchorY:cy,
+        anchorIndex:absoluteY/h
+      };
+    }
+  },{passive:true});
+
+  viewport.addEventListener('touchmove',e=>{
+    if(e.touches.length===2 && pinch){
+      e.preventDefault();
+      const ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
+      zoom=clamp(pinch.startZoom + Math.log(ratio)*.52,0,1);
+      applyZoom(pinch.anchorY,pinch.anchorIndex);
+    }
+  },{passive:false});
+
+  viewport.addEventListener('touchend',e=>{
+    if(e.touches.length<2) pinch=null;
+  },{passive:true});
+
+  // Desktop testing: Ctrl/⌘ + wheel
+  viewport.addEventListener('wheel',e=>{
+    if(!(e.ctrlKey||e.metaKey))return;
+    e.preventDefault();
+    const r=viewport.getBoundingClientRect();
+    const anchorY=e.clientY-r.top;
+    const anchorIndex=(viewport.scrollTop+anchorY-22)/rowHeight();
+    zoom=clamp(zoom-e.deltaY*.0025,0,1);
+    applyZoom(anchorY,anchorIndex);
+  },{passive:false});
+})();
+</script>
+</body>
+</html>
