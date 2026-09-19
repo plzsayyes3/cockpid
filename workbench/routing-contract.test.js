@@ -13,6 +13,12 @@ test('key 7 is the canonical Projects route', () => {
   assert.match(index, /data-app="backstage"><b>7<\/b><span>Projects<\/span>/);
 });
 
+test('header microphone opens the existing Stan surface', () => {
+  assert.match(index, /class="status-icon status-mic" data-app="stan"/);
+  assert.match(index, /aria-label="Stan \/ 音声入力"/);
+  assert.match(routing, /stan:\s*\{ key: '9', title: '9 \/ STAN', type: 'page', src: 'stan\/'/);
+});
+
 test('key 8 is the canonical Thinking route', () => {
   assert.match(routing, /\['8', 'thinking', 'Thinking'\]/);
   assert.match(routing, /thinking:\s*\{ key: '8', title: '8 \/ THINKING'/);

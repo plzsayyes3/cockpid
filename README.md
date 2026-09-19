@@ -89,7 +89,7 @@ Runtime routingの正本:
 | 9 | Stan | `workbench/stan/` |
 | 0 | Secret Desk | local easter egg |
 
-`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Stan` が現在値です。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
+`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Stan` が現在値です。StanはDockの9番に加え、ヘッダーの電池型Settingsアイコン横にあるマイクアイコンからも開けます。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
 
 ## HOME principle
 

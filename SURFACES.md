@@ -151,7 +151,7 @@ URL and uses the shared `project-status-model.js`.
 ### 3.8 Stan (key 9)
 
 `workbench/stan/` is a separate full-screen standby surface rather than an `app-window`
-iframe. The current implementation includes `index.html`, `stan.css`, `stan.js`,
+iframe. It is reachable from Dock key 9 and the header microphone icon beside Settings. The current implementation includes `index.html`, `stan.css`, `stan.js`,
 `stan-speech-session.js`, `stan-recording-gesture.js`, `stan-speech-ui.css`,
 `stan-transcript-scroll.js`, `stan-github.js`, and `stan-auto-update.js`.
 
