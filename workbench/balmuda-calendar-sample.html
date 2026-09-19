@@ -355,7 +355,7 @@
     if(e.touches.length===2 && pinch){
       e.preventDefault();
       const ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
-      zoom=clamp(pinch.startZoom + Math.log(ratio)*.52,0,1);
+      zoom=clamp(pinch.startZoom + Math.log(ratio)*.22,0,1);
       applyZoom(pinch.anchorY,pinch.anchorIndex);
     }
   },{passive:false});
@@ -371,7 +371,7 @@
     const r=viewport.getBoundingClientRect();
     const anchorY=e.clientY-r.top;
     const anchorIndex=(viewport.scrollTop+anchorY-22)/rowHeight();
-    zoom=clamp(zoom-e.deltaY*.0025,0,1);
+    zoom=clamp(zoom-e.deltaY*.0012,0,1);
     applyZoom(anchorY,anchorIndex);
   },{passive:false});
 })();
