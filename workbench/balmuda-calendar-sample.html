@@ -10,7 +10,7 @@
   --line:rgba(32,32,29,.13);--strong:rgba(32,32,29,.28);--accent:#b8665d;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior:none}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior:none}
 .app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 header{
   flex:0 0 auto;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;
@@ -23,7 +23,7 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
 #modeLabel{display:block;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
 #scaleLabel{display:block;margin-top:5px;font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
 .motion-switch{
-  flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:7px 7px;
+  flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:7px;
   border-bottom:1px solid var(--line);background:var(--paper)
 }
 .motion-switch button{
@@ -31,18 +31,21 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
   font:700 8px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:5px 2px
 }
 .motion-switch button.active{color:var(--ink);border-color:var(--strong);background:rgba(32,32,29,.055)}
-.motion-switch small{display:block;margin-top:3px;font-size:6px;font-weight:600;letter-spacing:0}
+.motion-switch small{display:block;margin-top:3px;font-size:6px;font-weight:600}
 .hint{
   flex:0 0 auto;padding:6px 11px;border-bottom:1px solid var(--line);background:var(--paper);
   color:var(--muted);font:9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace
 }
 #viewport{
-  position:relative;flex:1 1 auto;min-height:0;overflow:hidden;touch-action:none;
-  background:var(--paper);user-select:none;-webkit-user-select:none
+  position:relative;flex:1 1 auto;min-height:0;overflow:auto;
+  touch-action:pan-y;-webkit-overflow-scrolling:touch;background:var(--paper)
 }
-#svgRenderer{display:block;width:100%;height:100%;background:var(--paper);pointer-events:none}
+#surface{position:relative;min-height:100%}
+#svgRenderer{
+  position:sticky;top:0;display:block;width:100%;height:100%;pointer-events:none;background:var(--paper)
+}
 .anchor-guide{
-  position:absolute;left:0;right:0;height:1px;background:var(--accent);z-index:30;pointer-events:none;opacity:0
+  position:sticky;left:0;right:0;height:1px;background:var(--accent);z-index:30;pointer-events:none;opacity:0
 }
 .anchor-guide::before{
   content:"CENTER";position:absolute;left:7px;top:-11px;padding:1px 3px;background:var(--paper);color:var(--accent);
@@ -50,22 +53,17 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
 }
 .anchor-guide.show{opacity:.85}
 .zoom-meter{
-  position:absolute;right:7px;bottom:calc(9px + env(safe-area-inset-bottom));width:6px;height:78px;
-  border-radius:999px;background:rgba(32,32,29,.1);z-index:30;pointer-events:none
+  position:sticky;float:right;right:7px;bottom:calc(9px + env(safe-area-inset-bottom));width:6px;height:78px;
+  margin-top:-88px;margin-right:7px;border-radius:999px;background:rgba(32,32,29,.1);z-index:30;pointer-events:none
 }
 .zoom-meter i{position:absolute;left:1px;right:1px;bottom:1px;border-radius:999px;background:var(--ink);height:50%}
-.motion-readout{
-  position:absolute;left:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:30;pointer-events:none;
-  padding:4px 6px;border-radius:7px;background:rgba(251,250,246,.86);backdrop-filter:blur(8px);
-  color:var(--muted);font:700 7px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace
-}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div>
-      <div class="eyebrow">SVG MOTION LAB / FINGER-CENTERED</div>
+      <div class="eyebrow">SVG / NATIVE SCROLL + CUSTOM PINCH</div>
       <h1 id="focusTitle">2026.09</h1>
     </div>
     <div class="mode">
@@ -74,21 +72,22 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
     </div>
   </header>
 
-  <div class="motion-switch" aria-label="慣性パターン">
-    <button type="button" data-motion="direct" class="active">1 DIRECT+<small>速い・止まる</small></button>
-    <button type="button" data-motion="silky">2 SILKY<small>軽い慣性</small></button>
-    <button type="button" data-motion="float">3 FLOAT<small>中間</small></button>
-    <button type="button" data-motion="glide">4 GLIDE<small>よく滑る</small></button>
-    <button type="button" data-motion="heavy">5 HEAVY<small>重く長い</small></button>
+  <div class="motion-switch" aria-label="ピンチ特性">
+    <button type="button" data-motion="calm">1 CALM<small>ゆっくり</small></button>
+    <button type="button" data-motion="balanced" class="active">2 BALANCED<small>基準</small></button>
+    <button type="button" data-motion="wide">3 WIDE<small>変化大</small></button>
+    <button type="button" data-motion="soft">4 SOFT<small>軽い追従</small></button>
+    <button type="button" data-motion="glide">5 GLIDE<small>少し余韻</small></button>
   </div>
 
-  <div class="hint" id="hint">SVG固定 / 1本指スクロール / 2本指ピンチ / 中心は指2本の中点</div>
+  <div class="hint">1本指＝iPhoneネイティブスクロール / 2本指＝尺度変更 / 中心＝2本指の中点</div>
 
   <div id="viewport">
-    <svg id="svgRenderer" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="anchor-guide" id="anchorGuide"></div>
-    <div class="zoom-meter"><i id="zoomMeter"></i></div>
-    <div class="motion-readout" id="motionReadout"></div>
+    <div id="surface">
+      <svg id="svgRenderer" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="anchor-guide" id="anchorGuide"></div>
+      <div class="zoom-meter"><i id="zoomMeter"></i></div>
+    </div>
   </div>
 </div>
 
@@ -101,24 +100,23 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
   var endDate=new Date('2027-01-01T00:00:00+09:00');
 
   var viewport=document.getElementById('viewport');
+  var surface=document.getElementById('surface');
   var svg=document.getElementById('svgRenderer');
   var anchorGuide=document.getElementById('anchorGuide');
   var zoomMeter=document.getElementById('zoomMeter');
   var focusTitle=document.getElementById('focusTitle');
   var modeLabel=document.getElementById('modeLabel');
   var scaleLabel=document.getElementById('scaleLabel');
-  var motionReadout=document.getElementById('motionReadout');
   var motionButtons=[].slice.call(document.querySelectorAll('[data-motion]'));
 
   var presets={
-    direct:{label:'1 DIRECT+',scrollGain:1.22,scrollFriction:.82,pinchGain:.18,follow:.72,zoomInertia:0},
-    silky:{label:'2 SILKY',scrollGain:1.28,scrollFriction:.89,pinchGain:.20,follow:.48,zoomInertia:.10},
-    float:{label:'3 FLOAT',scrollGain:1.36,scrollFriction:.925,pinchGain:.22,follow:.34,zoomInertia:.18},
-    glide:{label:'4 GLIDE',scrollGain:1.46,scrollFriction:.952,pinchGain:.235,follow:.26,zoomInertia:.27},
-    heavy:{label:'5 HEAVY',scrollGain:1.20,scrollFriction:.965,pinchGain:.195,follow:.18,zoomInertia:.36}
+    calm:{gain:.13,follow:1.00,release:.00},
+    balanced:{gain:.17,follow:1.00,release:.00},
+    wide:{gain:.22,follow:1.00,release:.00},
+    soft:{gain:.18,follow:.42,release:.00},
+    glide:{gain:.19,follow:.55,release:.18}
   };
-  var presetKey='direct';
-  var preset=presets[presetKey];
+  var presetKey='balanced',preset=presets[presetKey];
 
   var sampleEvents=[
     ['2026-09-17','09:00','10:30','職員会議',''],
@@ -150,25 +148,14 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
   for(var t=startDate.getTime();t<endDate.getTime();t+=DAY_MS)allDays.push(new Date(t));
 
   var minRow=2.35,maxRow=168;
-  var zoom=.54,targetZoom=zoom;
-  var scrollPos=0,targetScroll=0;
-  var gesture=null;
-  var animationId=0;
-  var inertia=null;
+  var zoom=.54,visualZoom=zoom,targetZoom=zoom;
+  var pinch=null,raf=0,release=null;
 
   function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
   function mix(a,b,t){return a+(b-a)*t}
   function rowHeightFor(z){return mix(minRow,maxRow,Math.pow(z,2.15))}
-  function maxScrollFor(z){
-    return Math.max(0,allDays.length*rowHeightFor(z)-viewport.clientHeight+viewport.clientHeight*.35);
-  }
-  function dateKey(d){
-    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  }
-  function timePct(s){
-    var p=s.split(':').map(Number);
-    return ((p[0]*60+p[1])/1440)*100;
-  }
+  function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function timePct(s){var p=s.split(':').map(Number);return((p[0]*60+p[1])/1440)*100}
   function modeForZoom(z){
     if(z>=.88)return['DAY','1 DAY'];
     if(z>=.73)return['DAYS','3 DAYS'];
@@ -177,46 +164,43 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
     if(z>=.22)return['MONTH','1-2 MONTHS'];
     return['YEAR','1 YEAR'];
   }
-  function eventColor(kind){
-    return kind==='personal'?'#b8665d':kind==='soft'?'#77746d':'#20201d';
-  }
-  function esc(s){
-    return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});
-  }
+  function eventColor(kind){return kind==='personal'?'#b8665d':kind==='soft'?'#77746d':'#20201d'}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
-  function centerY(a,b){
-    var r=viewport.getBoundingClientRect();
-    return ((a.clientY+b.clientY)/2)-r.top;
-  }
+  function centerY(a,b){var r=viewport.getBoundingClientRect();return((a.clientY+b.clientY)/2)-r.top}
+
   function setGuide(y,show){
-    anchorGuide.style.top=Math.max(0,y)+'px';
+    anchorGuide.style.top=Math.max(0,viewport.scrollTop+y)+'px';
     anchorGuide.classList.toggle('show',!!show);
   }
-  function updateLabels(){
-    var m=modeForZoom(zoom);
-    modeLabel.textContent=m[0];scaleLabel.textContent=m[1];
-    zoomMeter.style.height=(zoom*100)+'%';
 
-    var h=rowHeightFor(zoom);
-    var idx=clamp(Math.floor((scrollPos+viewport.clientHeight*.38)/h),0,allDays.length-1);
-    var d=allDays[idx];
-    focusTitle.textContent=d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0');
-
-    motionReadout.textContent=preset.label+'  SCROLL ×'+preset.scrollGain.toFixed(2)+'  PINCH ×'+preset.pinchGain.toFixed(3);
+  function setSurfaceHeight(z){
+    surface.style.height=(allDays.length*rowHeightFor(z)+viewport.clientHeight*.40)+'px';
   }
 
-  function draw(){
-    var w=viewport.clientWidth,hv=viewport.clientHeight,rowH=rowHeightFor(zoom);
+  function updateLabels(z){
+    var m=modeForZoom(z);
+    modeLabel.textContent=m[0];scaleLabel.textContent=m[1];zoomMeter.style.height=(z*100)+'%';
+
+    var h=rowHeightFor(z);
+    var idx=clamp(Math.floor((viewport.scrollTop+viewport.clientHeight*.38)/h),0,allDays.length-1);
+    var d=allDays[idx];
+    focusTitle.textContent=d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function draw(z){
+    var w=viewport.clientWidth,hv=viewport.clientHeight,rowH=rowHeightFor(z),scroll=viewport.scrollTop;
+    svg.style.height=hv+'px';
     svg.setAttribute('viewBox','0 0 '+w+' '+hv);
     svg.setAttribute('width',w);svg.setAttribute('height',hv);
 
-    var first=clamp(Math.floor(scrollPos/rowH)-2,0,allDays.length-1);
-    var last=clamp(Math.ceil((scrollPos+hv)/rowH)+2,0,allDays.length-1);
-    var compact=zoom<.44,year=zoom<.20,left=58,right=8,tw=w-left-right;
+    var first=clamp(Math.floor(scroll/rowH)-2,0,allDays.length-1);
+    var last=clamp(Math.ceil((scroll+hv)/rowH)+2,0,allDays.length-1);
+    var compact=z<.44,year=z<.20,left=58,right=8,tw=w-left-right;
     var out=['<rect width="'+w+'" height="'+hv+'" fill="#fbfaf6"/>'];
 
     for(var i=first;i<=last;i++){
-      var d=allDays[i],key=dateKey(d),y=i*rowH-scrollPos;
+      var d=allDays[i],key=dateKey(d),y=i*rowH-scroll;
       var stroke=d.getDate()===1?'rgba(32,32,29,.28)':'rgba(32,32,29,.13)';
       out.push('<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="'+stroke+'" stroke-width="1"/>');
 
@@ -250,199 +234,123 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
     }
 
     svg.innerHTML=out.join('');
-    updateLabels();
+    updateLabels(z);
   }
 
-  function stopInertia(){
-    inertia=null;
-  }
-
-  function ensureAnimation(){
-    if(animationId)return;
-    animationId=requestAnimationFrame(frame);
-  }
-
-  function frame(){
-    animationId=0;
-    var active=false;
-
-    if(gesture&&gesture.type==='pinch'){
-      zoom += (targetZoom-zoom)*preset.follow;
-      scrollPos=gesture.anchorIndex*rowHeightFor(zoom)-gesture.anchorY;
-      scrollPos=clamp(scrollPos,0,maxScrollFor(zoom));
-      active=Math.abs(targetZoom-zoom)>.00005;
-    }else if(inertia){
-      if(inertia.type==='scroll'){
-        scrollPos+=inertia.v;
-        inertia.v*=preset.scrollFriction;
-        if(scrollPos<0||scrollPos>maxScrollFor(zoom)){
-          scrollPos=clamp(scrollPos,0,maxScrollFor(zoom));
-          inertia.v*=.35;
-        }
-        active=Math.abs(inertia.v)>.08;
-        if(!active)inertia=null;
-      }else if(inertia.type==='zoom'){
-        zoom=clamp(zoom+inertia.v,0,1);
-        scrollPos=inertia.anchorIndex*rowHeightFor(zoom)-inertia.anchorY;
-        scrollPos=clamp(scrollPos,0,maxScrollFor(zoom));
-        inertia.v*=.88;
-        active=Math.abs(inertia.v)>.00008 && zoom>0 && zoom<1;
-        if(!active){targetZoom=zoom;inertia=null}
-      }
-    }
-
-    draw();
-    if(active||gesture)ensureAnimation();
+  function scheduleDraw(){
+    if(raf)return;
+    raf=requestAnimationFrame(function(){raf=0;draw(visualZoom)});
   }
 
   function applyPreset(key){
     presetKey=key;preset=presets[key];
     motionButtons.forEach(function(b){b.classList.toggle('active',b.dataset.motion===key)});
-    stopInertia();
-    targetZoom=zoom;
-    draw();
+    release=null;targetZoom=zoom;visualZoom=zoom;draw(zoom);
+  }
+  motionButtons.forEach(function(btn){btn.addEventListener('click',function(){applyPreset(btn.dataset.motion)})});
+
+  function startPinch(e){
+    release=null;
+    var ay=centerY(e.touches[0],e.touches[1]);
+    var h=rowHeightFor(zoom);
+    pinch={
+      startDist:dist(e.touches[0],e.touches[1]),
+      startZoom:zoom,
+      anchorY:ay,
+      anchorIndex:(viewport.scrollTop+ay)/h,
+      lastTarget:zoom,lastTime:performance.now(),velocity:0
+    };
+    targetZoom=zoom;visualZoom=zoom;setGuide(ay,true);
   }
 
-  motionButtons.forEach(function(btn){
-    btn.addEventListener('click',function(){applyPreset(btn.dataset.motion)});
-  });
+  function updatePinch(e){
+    var ay=centerY(e.touches[0],e.touches[1]);
+    var ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
+    var nextTarget=clamp(pinch.startZoom+Math.log(ratio)*preset.gain,0,1);
+
+    var now=performance.now(),dt=Math.max(8,now-pinch.lastTime);
+    pinch.velocity=(nextTarget-pinch.lastTarget)/(dt/16.67);
+    pinch.lastTarget=nextTarget;pinch.lastTime=now;
+    pinch.anchorY=ay;targetZoom=nextTarget;
+
+    if(preset.follow>=.999)visualZoom=targetZoom;
+    else visualZoom+=(targetZoom-visualZoom)*preset.follow;
+
+    setSurfaceHeight(visualZoom);
+    viewport.scrollTop=pinch.anchorIndex*rowHeightFor(visualZoom)-ay;
+    setGuide(ay,true);
+    scheduleDraw();
+  }
+
+  function finishPinch(){
+    if(!pinch)return;
+    visualZoom=targetZoom;zoom=targetZoom;
+    setSurfaceHeight(zoom);
+    viewport.scrollTop=pinch.anchorIndex*rowHeightFor(zoom)-pinch.anchorY;
+
+    var v=pinch.velocity*preset.release;
+    if(Math.abs(v)>.00008){
+      release={v:v,anchorY:pinch.anchorY,anchorIndex:pinch.anchorIndex};
+      requestAnimationFrame(runRelease);
+    }
+
+    pinch=null;setGuide(0,false);draw(zoom);
+  }
+
+  function runRelease(){
+    if(!release)return;
+    var next=clamp(zoom+release.v,0,1);
+    if(next===zoom){release=null;return}
+    zoom=next;visualZoom=zoom;targetZoom=zoom;
+    setSurfaceHeight(zoom);
+    viewport.scrollTop=release.anchorIndex*rowHeightFor(zoom)-release.anchorY;
+    release.v*=.86;
+    draw(zoom);
+    if(Math.abs(release.v)>.00008)requestAnimationFrame(runRelease);
+    else release=null;
+  }
 
   viewport.addEventListener('touchstart',function(e){
-    stopInertia();
-
-    if(e.touches.length===1){
-      var t=e.touches[0];
-      gesture={
-        type:'scroll',
-        startY:t.clientY,lastY:t.clientY,
-        startScroll:scrollPos,lastTime:performance.now(),
-        velocity:0
-      };
-    }else if(e.touches.length===2){
-      var ay=centerY(e.touches[0],e.touches[1]);
-      var h=rowHeightFor(zoom);
-      gesture={
-        type:'pinch',
-        startDist:dist(e.touches[0],e.touches[1]),
-        startZoom:zoom,
-        anchorY:ay,
-        anchorIndex:(scrollPos+ay)/h,
-        lastZoom:zoom,lastTime:performance.now(),
-        zoomVelocity:0
-      };
-      targetZoom=zoom;
-      setGuide(ay,true);
-    }
-    ensureAnimation();
+    if(e.touches.length===2)startPinch(e);
   },{passive:true});
 
   viewport.addEventListener('touchmove',function(e){
-    if(!gesture)return;
-    e.preventDefault();
-
-    if(e.touches.length===2){
-      if(gesture.type!=='pinch'){
-        var ay0=centerY(e.touches[0],e.touches[1]);
-        var h0=rowHeightFor(zoom);
-        gesture={
-          type:'pinch',
-          startDist:dist(e.touches[0],e.touches[1]),
-          startZoom:zoom,
-          anchorY:ay0,
-          anchorIndex:(scrollPos+ay0)/h0,
-          lastZoom:zoom,lastTime:performance.now(),zoomVelocity:0
-        };
-      }
-
-      var ay=centerY(e.touches[0],e.touches[1]);
-      var ratio=dist(e.touches[0],e.touches[1])/gesture.startDist;
-      var nextTarget=clamp(gesture.startZoom+Math.log(ratio)*preset.pinchGain,0,1);
-      var now=performance.now();
-      var dt=Math.max(8,now-gesture.lastTime);
-      gesture.zoomVelocity=(nextTarget-gesture.lastZoom)/(dt/16.67);
-      gesture.lastZoom=nextTarget;gesture.lastTime=now;
-      gesture.anchorY=ay;
-      targetZoom=nextTarget;
-      setGuide(ay,true);
-      ensureAnimation();
-
-    }else if(e.touches.length===1&&gesture.type==='scroll'){
-      var t=e.touches[0],now2=performance.now();
-      var dy=t.clientY-gesture.startY;
-      targetScroll=gesture.startScroll-dy*preset.scrollGain;
-      targetScroll=clamp(targetScroll,0,maxScrollFor(zoom));
-
-      var frameDy=t.clientY-gesture.lastY;
-      var dt2=Math.max(8,now2-gesture.lastTime);
-      gesture.velocity=(-frameDy*preset.scrollGain)/(dt2/16.67);
-      gesture.lastY=t.clientY;gesture.lastTime=now2;
-      scrollPos=targetScroll;
-      draw();
+    if(e.touches.length===2&&pinch){
+      e.preventDefault();
+      updatePinch(e);
     }
   },{passive:false});
 
   viewport.addEventListener('touchend',function(e){
-    if(!gesture)return;
-
-    if(gesture.type==='pinch'&&e.touches.length<2){
-      zoom=targetZoom;
-      scrollPos=gesture.anchorIndex*rowHeightFor(zoom)-gesture.anchorY;
-      scrollPos=clamp(scrollPos,0,maxScrollFor(zoom));
-
-      var zv=gesture.zoomVelocity*preset.zoomInertia;
-      if(Math.abs(zv)>.0001){
-        inertia={
-          type:'zoom',
-          v:zv,
-          anchorY:gesture.anchorY,
-          anchorIndex:gesture.anchorIndex
-        };
-      }
-
-      setGuide(0,false);
-      gesture=null;
-      draw();
-      if(inertia)ensureAnimation();
-      return;
-    }
-
-    if(gesture.type==='scroll'&&e.touches.length===0){
-      inertia={type:'scroll',v:gesture.velocity};
-      gesture=null;
-      ensureAnimation();
-    }
+    if(pinch&&e.touches.length<2)finishPinch();
   },{passive:true});
 
   viewport.addEventListener('touchcancel',function(){
-    gesture=null;targetZoom=zoom;setGuide(0,false);
+    pinch=null;release=null;targetZoom=zoom;visualZoom=zoom;setGuide(0,false);draw(zoom);
+  },{passive:true});
+
+  viewport.addEventListener('scroll',function(){
+    if(!pinch)scheduleDraw();
   },{passive:true});
 
   viewport.addEventListener('wheel',function(e){
+    if(!(e.ctrlKey||e.metaKey))return;
     e.preventDefault();
-    stopInertia();
-
-    if(e.ctrlKey||e.metaKey){
-      var r=viewport.getBoundingClientRect();
-      var ay=e.clientY-r.top;
-      var idx=(scrollPos+ay)/rowHeightFor(zoom);
-      zoom=clamp(zoom-e.deltaY*.0012,0,1);targetZoom=zoom;
-      scrollPos=idx*rowHeightFor(zoom)-ay;
-    }else{
-      scrollPos=clamp(scrollPos+e.deltaY*preset.scrollGain,0,maxScrollFor(zoom));
-    }
-    draw();
+    var r=viewport.getBoundingClientRect(),ay=e.clientY-r.top;
+    var idx=(viewport.scrollTop+ay)/rowHeightFor(zoom);
+    zoom=clamp(zoom-e.deltaY*.0012,0,1);visualZoom=zoom;targetZoom=zoom;
+    setSurfaceHeight(zoom);
+    viewport.scrollTop=idx*rowHeightFor(zoom)-ay;
+    draw(zoom);
   },{passive:false});
 
-  window.addEventListener('resize',function(){
-    scrollPos=clamp(scrollPos,0,maxScrollFor(zoom));
-    draw();
-  });
+  window.addEventListener('resize',function(){setSurfaceHeight(zoom);draw(zoom)});
 
+  setSurfaceHeight(zoom);
   requestAnimationFrame(function(){
     var target=allDays.findIndex(function(d){return dateKey(d)==='2026-09-19'});
-    scrollPos=Math.max(0,target*rowHeightFor(zoom)-viewport.clientHeight*.34);
-    targetScroll=scrollPos;
-    draw();
+    viewport.scrollTop=Math.max(0,target*rowHeightFor(zoom)-viewport.clientHeight*.34);
+    draw(zoom);
   });
 })();
 </script>
