@@ -3,73 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-<title>BALMUDA Calendar Motion Lab</title>
+<title>BALMUDA Scheduler Structure Prototype</title>
 <style>
 :root{
-  --bg:#f4f2ec;--paper:#fbfaf6;--ink:#20201d;--muted:#8f8d85;
-  --line:rgba(32,32,29,.13);--strong:rgba(32,32,29,.28);--accent:#b8665d;
+  --bg:#171819;--panel:#1d1e20;--ink:#f1f1ed;--muted:#9b9c99;
+  --line:rgba(255,255,255,.11);--line-strong:rgba(255,255,255,.22);
+  --today:#d55d53;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior:none}
-.app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.app{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
 header{
   flex:0 0 auto;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;
-  padding:calc(12px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);
-  background:rgba(244,242,236,.94);backdrop-filter:blur(14px);z-index:20
+  padding:calc(11px + env(safe-area-inset-top)) 14px 9px;border-bottom:1px solid var(--line);
+  background:rgba(23,24,25,.96);backdrop-filter:blur(14px);z-index:20
 }
-.eyebrow{font:700 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:var(--muted);margin-bottom:6px}
-h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
+.eyebrow{font:700 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.15em;color:var(--muted);margin-bottom:6px}
+h1{margin:0;font-size:20px;line-height:1;font-weight:560;letter-spacing:-.03em}
 .mode{text-align:right}
 #modeLabel{display:block;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
-#scaleLabel{display:block;margin-top:5px;font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+#rangeLabel{display:block;margin-top:5px;font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
 .hint{
-  flex:0 0 auto;padding:6px 11px;border-bottom:1px solid var(--line);background:var(--paper);
+  flex:0 0 auto;padding:6px 11px;border-bottom:1px solid var(--line);background:var(--panel);
   color:var(--muted);font:9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace
 }
 #viewport{
   position:relative;flex:1 1 auto;min-height:0;overflow:auto;
-  touch-action:pan-y;-webkit-overflow-scrolling:touch;background:var(--paper)
+  touch-action:pan-y;-webkit-overflow-scrolling:touch;background:var(--bg)
 }
 #surface{position:relative;min-height:100%}
 #svgRenderer{
-  position:sticky;top:0;display:block;width:100%;height:100%;pointer-events:none;background:var(--paper)
+  position:sticky;top:0;display:block;width:100%;height:100%;pointer-events:none;background:var(--bg)
 }
 .anchor-guide{
-  position:sticky;left:0;right:0;height:1px;background:var(--accent);z-index:30;pointer-events:none;opacity:0
+  position:absolute;left:0;right:0;height:1px;background:rgba(213,93,83,.9);
+  z-index:30;pointer-events:none;opacity:0
 }
 .anchor-guide::before{
-  content:"CENTER";position:absolute;left:7px;top:-11px;padding:1px 3px;background:var(--paper);color:var(--accent);
+  content:"PINCH CENTER";position:absolute;left:7px;top:-11px;padding:1px 3px;background:var(--bg);color:var(--today);
   font:700 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em
 }
-.anchor-guide.show{opacity:.85}
+.anchor-guide.show{opacity:.9}
 .zoom-meter{
-  position:sticky;float:right;right:7px;bottom:calc(9px + env(safe-area-inset-bottom));width:6px;height:78px;
-  margin-top:-88px;margin-right:7px;border-radius:999px;background:rgba(32,32,29,.1);z-index:30;pointer-events:none
+  position:absolute;right:7px;bottom:calc(9px + env(safe-area-inset-bottom));width:5px;height:72px;
+  border-radius:999px;background:rgba(255,255,255,.12);z-index:30;pointer-events:none
 }
-.zoom-meter i{position:absolute;left:1px;right:1px;bottom:1px;border-radius:999px;background:var(--ink);height:50%}
+.zoom-meter i{position:absolute;left:1px;right:1px;bottom:1px;border-radius:999px;background:#ddd;height:50%}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div>
-      <div class="eyebrow">SVG / STABLE MODE</div>
+      <div class="eyebrow">BALMUDA STRUCTURE / SAMPLE DATA</div>
       <h1 id="focusTitle">2026.09</h1>
     </div>
     <div class="mode">
       <span id="modeLabel">WEEK</span>
-      <span id="scaleLabel">7 DAYS</span>
+      <span id="rangeLabel">7 DAYS</span>
     </div>
   </header>
 
-  <div class="hint">安定版：1本指＝iPhoneネイティブスクロール / 2本指＝指中央で尺度変更</div>
+  <div class="hint">1本指＝縦スクロール / 2本指＝指中央で尺度変更 / Dayのみ縦＝時刻</div>
 
   <div id="viewport">
     <div id="surface">
       <svg id="svgRenderer" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="anchor-guide" id="anchorGuide"></div>
-      <div class="zoom-meter"><i id="zoomMeter"></i></div>
     </div>
+    <div class="anchor-guide" id="anchorGuide"></div>
+    <div class="zoom-meter"><i id="zoomMeter"></i></div>
   </div>
 </div>
 
@@ -79,7 +81,8 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
 
   var DAY_MS=86400000;
   var startDate=new Date('2026-01-01T00:00:00+09:00');
-  var endDate=new Date('2027-01-01T00:00:00+09:00');
+  var endDate=new Date('2027-04-01T00:00:00+09:00');
+  var todayKey='2026-09-21';
 
   var viewport=document.getElementById('viewport');
   var surface=document.getElementById('surface');
@@ -88,194 +91,445 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
   var zoomMeter=document.getElementById('zoomMeter');
   var focusTitle=document.getElementById('focusTitle');
   var modeLabel=document.getElementById('modeLabel');
-  var scaleLabel=document.getElementById('scaleLabel');
-  var PINCH_GAIN=.17;
-  var PINCH_FOLLOW=1.00;
-  var PINCH_RELEASE=.00;
+  var rangeLabel=document.getElementById('rangeLabel');
 
-  var sampleEvents=[
-    ['2026-09-17','09:00','10:30','職員会議',''],
-    ['2026-09-17','13:30','15:00','研修','soft'],
-    ['2026-09-18','10:00','12:00','打ち合わせ',''],
-    ['2026-09-18','16:00','17:15','迎え','personal'],
-    ['2026-09-19','09:30','11:00','家族の予定','personal'],
-    ['2026-09-19','13:00','14:30','個人制作','soft'],
-    ['2026-09-20','11:00','12:00','買い物','personal'],
-    ['2026-09-21','08:30','09:15','朝会',''],
-    ['2026-09-21','14:00','16:00','園内研修',''],
-    ['2026-09-22','10:00','11:30','面談',''],
-    ['2026-09-23','12:00','15:00','外出','personal'],
-    ['2026-09-24','09:00','10:00','ミーティング',''],
-    ['2026-09-25','15:30','17:00','資料作成','soft'],
-    ['2026-10-03','09:00','13:00','運動会',''],
-    ['2026-10-10','11:00','12:00','家族','personal'],
-    ['2026-11-06','13:00','15:00','研修',''],
-    ['2026-12-18','10:00','11:00','会議','']
-  ].map(function(e,i){return{id:i,date:e[0],start:e[1],end:e[2],title:e[3],kind:e[4]}});
-
-  var eventsByDate=new Map();
-  sampleEvents.forEach(function(ev){
-    if(!eventsByDate.has(ev.date))eventsByDate.set(ev.date,[]);
-    eventsByDate.get(ev.date).push(ev);
-  });
+  var COLORS=['#7f8ed9','#d57a52','#77a788','#b184c8','#c8aa58','#78a7c7','#cf6f70'];
+  var WEATHER=['☀','☁','☂','☀','☁','☀','☁'];
 
   var allDays=[];
   for(var t=startDate.getTime();t<endDate.getTime();t+=DAY_MS)allDays.push(new Date(t));
 
-  var minRow=2.35,maxRow=168;
-  var zoom=.54,visualZoom=zoom,targetZoom=zoom;
-  var pinch=null,raf=0,release=null;
-
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-  function mix(a,b,t){return a+(b-a)*t}
-  function rowHeightFor(z){return mix(minRow,maxRow,Math.pow(z,2.15))}
-  function dateKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-  function timePct(s){var p=s.split(':').map(Number);return((p[0]*60+p[1])/1440)*100}
-  function modeForZoom(z){
-    if(z>=.88)return['DAY','1 DAY'];
-    if(z>=.73)return['DAYS','3 DAYS'];
-    if(z>=.56)return['WEEK','7 DAYS'];
-    if(z>=.40)return['WEEKS','3 WEEKS'];
-    if(z>=.22)return['MONTH','1-2 MONTHS'];
-    return['YEAR','1 YEAR'];
+  function dateKey(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   }
-  function eventColor(kind){return kind==='personal'?'#b8665d':kind==='soft'?'#77746d':'#20201d'}
+  function minutes(s){
+    var p=s.split(':').map(Number);return p[0]*60+p[1];
+  }
+  function timePct(s){return minutes(s)/1440}
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+  function lerp(a,b,t){return a+(b-a)*t}
+  function logLerp(a,b,t){return Math.exp(lerp(Math.log(a),Math.log(b),t))}
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-  function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
-  function centerY(a,b){var r=viewport.getBoundingClientRect();return((a.clientY+b.clientY)/2)-r.top}
 
-  function setGuide(y,show){
-    anchorGuide.style.top=Math.max(0,viewport.scrollTop+y)+'px';
-    anchorGuide.classList.toggle('show',!!show);
+  var eventsByDate=new Map();
+  var allDayByDate=new Map();
+  function addEvent(date,start,end,title,color){
+    if(!eventsByDate.has(date))eventsByDate.set(date,[]);
+    eventsByDate.get(date).push({date:date,start:start,end:end,title:title,color:color});
+  }
+  function addAllDay(date,title,color){
+    if(!allDayByDate.has(date))allDayByDate.set(date,[]);
+    allDayByDate.get(date).push({date:date,title:title,color:color});
+  }
+
+  // Deterministic sample density so Month / Year views have meaningful texture.
+  allDays.forEach(function(d,i){
+    var key=dateKey(d),dow=d.getDay();
+    if(dow!==0 && ((i*7)%11)<7){
+      addEvent(key,'09:00','10:00',i%5===0?'朝MTG':'作業時間',COLORS[i%COLORS.length]);
+    }
+    if(((i*13)%17)<8){
+      var h=11+(i%6);
+      addEvent(key,String(h).padStart(2,'0')+':00',String(Math.min(23,h+1)).padStart(2,'0')+':30',
+        ['資料作成','打ち合わせ','研修','制作','面談','レビュー'][i%6],COLORS[(i+2)%COLORS.length]);
+    }
+    if(((i*5)%23)<5){
+      addEvent(key,'15:00','17:00',['外出','園内研修','家族','撮影'][i%4],COLORS[(i+4)%COLORS.length]);
+    }
+    if(i%9===0)addAllDay(key,['リモート','行事','休み'][i%3],COLORS[(i+1)%COLORS.length]);
+  });
+
+  // Named sample around the initial focus.
+  [
+    ['2026-09-19','09:30','11:00','家族の予定',COLORS[6]],
+    ['2026-09-19','13:00','14:30','個人制作',COLORS[4]],
+    ['2026-09-20','11:00','12:00','買い物',COLORS[2]],
+    ['2026-09-21','08:30','09:15','朝会',COLORS[0]],
+    ['2026-09-21','14:00','16:00','園内研修',COLORS[1]],
+    ['2026-09-22','10:00','11:30','面談',COLORS[3]],
+    ['2026-09-23','12:00','15:00','外出',COLORS[5]],
+    ['2026-09-24','09:00','10:00','ミーティング',COLORS[0]],
+    ['2026-09-25','15:30','17:00','資料作成',COLORS[2]],
+    ['2026-10-03','09:00','13:00','運動会',COLORS[1]]
+  ].forEach(function(e){addEvent(e[0],e[1],e[2],e[3],e[4])});
+
+  var zoom=.63;
+  var visualZoom=zoom;
+  var targetZoom=zoom;
+  var pinch=null;
+  var raf=0;
+  var PINCH_GAIN=.18;
+
+  function modeFor(z){
+    if(z>=.93)return'DAY';
+    if(z>=.76)return'DAYS';
+    if(z>=.57)return'WEEK';
+    if(z>=.39)return'WEEKS';
+    if(z>=.17)return'MONTH';
+    return'YEAR';
+  }
+
+  var stageStops=[
+    {z:0.00,days:365},
+    {z:0.17,days:30},
+    {z:0.39,days:14},
+    {z:0.57,days:7},
+    {z:0.76,days:4},
+    {z:0.92,days:2.1}
+  ];
+
+  function visibleDaysFor(z){
+    if(z>=.93)return 1;
+    for(var i=0;i<stageStops.length-1;i++){
+      var a=stageStops[i],b=stageStops[i+1];
+      if(z>=a.z && z<=b.z){
+        var t=(z-a.z)/(b.z-a.z);
+        return logLerp(a.days,b.days,t);
+      }
+    }
+    return z<stageStops[0].z?365:2.1;
+  }
+
+  function rowHeightFor(z){
+    return viewport.clientHeight/visibleDaysFor(z);
+  }
+
+  function hourHeightFor(z){
+    var t=clamp((z-.93)/.07,0,1);
+    return lerp(42,56,t);
+  }
+
+  function dayBlockHeightFor(z){
+    return 42+24*hourHeightFor(z);
+  }
+
+  function dayIndexAtScroll(z,yInViewport){
+    var m=modeFor(z);
+    if(m==='DAY'){
+      var block=dayBlockHeightFor(z);
+      return clamp(Math.floor((viewport.scrollTop+yInViewport)/block),0,allDays.length-1);
+    }
+    return clamp(Math.floor((viewport.scrollTop+yInViewport)/rowHeightFor(z)),0,allDays.length-1);
   }
 
   function setSurfaceHeight(z){
-    surface.style.height=(allDays.length*rowHeightFor(z)+viewport.clientHeight*.40)+'px';
+    if(modeFor(z)==='DAY'){
+      surface.style.height=(allDays.length*dayBlockHeightFor(z)+viewport.clientHeight*.25)+'px';
+    }else{
+      surface.style.height=(allDays.length*rowHeightFor(z)+viewport.clientHeight*.35)+'px';
+    }
   }
 
-  function updateLabels(z){
-    var m=modeForZoom(z);
-    modeLabel.textContent=m[0];scaleLabel.textContent=m[1];zoomMeter.style.height=(z*100)+'%';
+  function scrollForAnchor(z,dayIndex,anchorY){
+    if(modeFor(z)==='DAY'){
+      // Enter Day around the useful daytime region rather than midnight.
+      return dayIndex*dayBlockHeightFor(z)+42+8.5*hourHeightFor(z)-anchorY;
+    }
+    return dayIndex*rowHeightFor(z)-anchorY;
+  }
 
-    var h=rowHeightFor(z);
-    var idx=clamp(Math.floor((viewport.scrollTop+viewport.clientHeight*.38)/h),0,allDays.length-1);
+  function rangeLabelFor(z){
+    var m=modeFor(z);
+    if(m==='DAY')return'1 DAY';
+    var d=visibleDaysFor(z);
+    if(m==='DAYS')return Math.round(d)+' DAYS';
+    if(m==='WEEK')return'7 DAYS';
+    if(m==='WEEKS')return Math.round(d)+' DAYS';
+    if(m==='MONTH')return Math.round(d)+' DAYS';
+    return'1 YEAR';
+  }
+
+  function updateHeader(z){
+    var m=modeFor(z);
+    modeLabel.textContent=m;
+    rangeLabel.textContent=rangeLabelFor(z);
+    zoomMeter.style.height=(z*100)+'%';
+
+    var idx=dayIndexAtScroll(z,viewport.clientHeight*.38);
     var d=allDays[idx];
     focusTitle.textContent=d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0');
   }
 
-  function draw(z){
+  function setGuide(y,show){
+    anchorGuide.style.top=Math.max(0,y)+'px';
+    anchorGuide.classList.toggle('show',!!show);
+  }
+
+  function weatherForIndex(i){
+    return {
+      icon:WEATHER[i%WEATHER.length],
+      high:13+(i%9),
+      low:6+(i%7)
+    };
+  }
+
+  function drawMonthRail(out,z,rowH,scroll,hv,railW){
+    var first=Math.max(0,Math.floor(scroll/rowH)-35);
+    var last=Math.min(allDays.length-1,Math.ceil((scroll+hv)/rowH)+35);
+    var seen={};
+
+    for(var i=first;i<=last;i++){
+      var d=allDays[i],monthKey=d.getFullYear()+'-'+d.getMonth();
+      if(seen[monthKey])continue;
+      seen[monthKey]=true;
+
+      var start=i;
+      while(start>0 && allDays[start-1].getMonth()===d.getMonth() && allDays[start-1].getFullYear()===d.getFullYear())start--;
+      var end=i;
+      while(end<allDays.length-1 && allDays[end+1].getMonth()===d.getMonth() && allDays[end+1].getFullYear()===d.getFullYear())end++;
+
+      var y1=start*rowH-scroll;
+      var y2=(end+1)*rowH-scroll;
+      var cy=(y1+y2)/2;
+      if(y2<0||y1>hv)continue;
+
+      var label=d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0');
+      var size=modeFor(z)==='YEAR'?13:9;
+      out.push('<text x="'+(railW*.42)+'" y="'+cy+'" fill="#8e8f8d" font-size="'+size+'" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 '+(railW*.42)+' '+cy+')" font-family="ui-monospace,Menlo,monospace">'+label+'</text>');
+      out.push('<line x1="'+railW+'" y1="'+Math.max(0,y1)+'" x2="'+railW+'" y2="'+Math.min(hv,y2)+'" stroke="rgba(255,255,255,.12)" stroke-width="1"/>');
+    }
+  }
+
+  function drawNonDay(z){
     var w=viewport.clientWidth,hv=viewport.clientHeight,rowH=rowHeightFor(z),scroll=viewport.scrollTop;
-    svg.style.height=hv+'px';
-    svg.setAttribute('viewBox','0 0 '+w+' '+hv);
-    svg.setAttribute('width',w);svg.setAttribute('height',hv);
+    var mode=modeFor(z);
+    var railW=30,dateW=42,allDayW=50,timeLeft=railW+dateW+allDayW,right=7;
+    var timeW=Math.max(80,w-timeLeft-right);
+    var topAxis=17;
 
     var first=clamp(Math.floor(scroll/rowH)-2,0,allDays.length-1);
     var last=clamp(Math.ceil((scroll+hv)/rowH)+2,0,allDays.length-1);
-    var compact=z<.44,year=z<.20,left=58,right=8,tw=w-left-right;
-    var out=['<rect width="'+w+'" height="'+hv+'" fill="#fbfaf6"/>'];
+    var out=['<rect width="'+w+'" height="'+hv+'" fill="#171819"/>'];
+
+    drawMonthRail(out,z,rowH,scroll,hv,railW);
+
+    // Fixed top time axis.
+    out.push('<rect x="'+(railW+dateW+allDayW)+'" y="0" width="'+timeW+'" height="'+topAxis+'" fill="#171819" opacity=".96"/>');
+    var ticks=mode==='YEAR'?[0,12,24]:mode==='MONTH'?[0,6,12,18,24]:[0,3,6,9,12,15,18,21,24];
+    ticks.forEach(function(h){
+      var x=timeLeft+timeW*(h/24);
+      out.push('<line x1="'+x+'" y1="'+topAxis+'" x2="'+x+'" y2="'+hv+'" stroke="rgba(255,255,255,.085)" stroke-width="1"/>');
+      if(h<24)out.push('<text x="'+(x+2)+'" y="11" fill="#b2b3af" font-size="7" font-family="ui-monospace,Menlo,monospace">'+String(h).padStart(2,'0')+':00</text>');
+    });
 
     for(var i=first;i<=last;i++){
-      var d=allDays[i],key=dateKey(d),y=i*rowH-scroll;
-      var stroke=d.getDate()===1?'rgba(32,32,29,.28)':'rgba(32,32,29,.13)';
-      out.push('<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="'+stroke+'" stroke-width="1"/>');
+      var d=allDays[i],key=dateKey(d);
+      var y=i*rowH-scroll+topAxis;
+      if(y>hv||y+rowH<topAxis)continue;
 
-      if(!year){
-        var dc=key==='2026-09-19'?'#b8665d':'#8f8d85';
-        out.push('<text x="8" y="'+(y+11)+'" fill="'+dc+'" font-size="'+(compact?7:9)+'" font-family="ui-monospace,Menlo,monospace">'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0')+'</text>');
+      var isToday=key===todayKey;
+      var dow=d.getDay();
+      var rowStroke=d.getDate()===1?'rgba(255,255,255,.24)':'rgba(255,255,255,.10)';
+      out.push('<line x1="'+railW+'" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="'+rowStroke+'" stroke-width="1"/>');
+
+      // Date / weekday / weather information changes by scale.
+      var dateColor=isToday?'#d55d53':(dow===0?'#c97069':dow===6?'#6e99c8':'#e5e5e0');
+      var dateSize=mode==='YEAR'?8:mode==='MONTH'?10:15;
+      if(mode!=='YEAR'||d.getDate()===1||d.getDay()===1){
+        out.push('<text x="'+(railW+7)+'" y="'+(y+Math.min(rowH*.55,17))+'" fill="'+dateColor+'" font-size="'+dateSize+'" font-family="-apple-system,sans-serif">'+d.getDate()+'</text>');
       }
 
-      if(d.getDate()===1&&rowH>10){
-        out.push('<text x="8" y="'+(y+11)+'" fill="#20201d" font-size="9" font-weight="700" font-family="ui-monospace,Menlo,monospace">'+(d.getMonth()+1)+'月</text>');
+      if((mode==='DAYS'||mode==='WEEK') && rowH>34){
+        var wd=['日','月','火','水','木','金','土'][dow];
+        var weather=weatherForIndex(i);
+        out.push('<text x="'+(railW+27)+'" y="'+(y+15)+'" fill="#8d8e8b" font-size="7" font-family="-apple-system,sans-serif">('+wd+')</text>');
+        out.push('<text x="'+(railW+8)+'" y="'+(y+31)+'" fill="#9b9c99" font-size="11">'+weather.icon+'</text>');
+        if(mode==='DAYS' && rowH>70){
+          out.push('<text x="'+(railW+24)+'" y="'+(y+30)+'" fill="#9b9c99" font-size="7" font-family="ui-monospace,Menlo,monospace">'+weather.high+'°</text>');
+        }
       }
 
-      out.push('<line x1="'+left+'" y1="'+y+'" x2="'+left+'" y2="'+(y+rowH)+'" stroke="rgba(32,32,29,.13)" stroke-width="1"/>');
+      // All-day fixed column.
+      out.push('<line x1="'+(railW+dateW)+'" y1="'+y+'" x2="'+(railW+dateW)+'" y2="'+(y+rowH)+'" stroke="rgba(255,255,255,.10)" stroke-width="1"/>');
+      out.push('<line x1="'+timeLeft+'" y1="'+y+'" x2="'+timeLeft+'" y2="'+(y+rowH)+'" stroke="rgba(255,255,255,.16)" stroke-width="1"/>');
 
-      if(!compact){
-        [0.25,0.5,0.75].forEach(function(p){
-          var x=left+tw*p;
-          out.push('<line x1="'+x+'" y1="'+y+'" x2="'+x+'" y2="'+(y+rowH)+'" stroke="rgba(32,32,29,.13)" stroke-width="1"/>');
+      var allDay=allDayByDate.get(key)||[];
+      if(allDay.length && rowH>7){
+        var ah=Math.max(2,Math.min(8,rowH*.22));
+        allDay.slice(0,2).forEach(function(ev,j){
+          var ay=y+rowH*.18+j*(ah+2);
+          out.push('<rect x="'+(railW+dateW+3)+'" y="'+ay+'" width="'+(allDayW-6)+'" height="'+ah+'" rx="'+Math.min(2,ah/2)+'" fill="'+ev.color+'" opacity=".9"/>');
+          if(rowH>22 && mode!=='YEAR'){
+            out.push('<text x="'+(railW+dateW+5)+'" y="'+(ay+ah-1)+'" fill="#e8e8e4" font-size="6.5" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+          }
         });
       }
 
-      (eventsByDate.get(key)||[]).forEach(function(ev){
-        var x=left+tw*timePct(ev.start)/100;
-        var ew=Math.max(2,tw*(timePct(ev.end)-timePct(ev.start))/100);
-        var eh=year?2:compact?5:12,ey=y+rowH/2-eh/2;
-        out.push('<rect x="'+x+'" y="'+ey+'" width="'+ew+'" height="'+eh+'" rx="'+(year?0:Math.min(6,eh/2))+'" fill="'+eventColor(ev.kind)+'"/>');
-        if(!compact&&!year&&ew>24){
-          out.push('<text x="'+(x+4)+'" y="'+(ey+9)+'" fill="#fbfaf6" font-size="8" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+      var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
+      var maxVisible=mode==='DAYS'?4:mode==='WEEK'?4:mode==='WEEKS'?3:mode==='MONTH'?3:99;
+      var shown=arr.slice(0,maxVisible);
+      var laneH=mode==='DAYS'?Math.min(14,rowH*.22):
+                mode==='WEEK'?Math.min(12,rowH*.22):
+                mode==='WEEKS'?Math.min(7,rowH*.22):
+                mode==='MONTH'?Math.max(2,Math.min(5,rowH*.28)):1.35;
+
+      shown.forEach(function(ev,j){
+        var x=timeLeft+timeW*timePct(ev.start);
+        var ew=Math.max(mode==='YEAR'?1:2,timeW*(timePct(ev.end)-timePct(ev.start)));
+        var laneCount=Math.max(1,Math.min(shown.length,4));
+        var gap=mode==='YEAR'?0.4:1.2;
+        var blockH=Math.max(1,laneH);
+        var contentH=laneCount*blockH+(laneCount-1)*gap;
+        var ey=y+Math.max(1,(rowH-contentH)/2)+j*(blockH+gap);
+        if(mode==='YEAR')ey=y+(j%3)*1.6;
+
+        out.push('<rect x="'+x+'" y="'+ey+'" width="'+ew+'" height="'+blockH+'" rx="'+(mode==='YEAR'?0:Math.min(2,blockH/2))+'" fill="'+ev.color+'" opacity="'+(mode==='YEAR'?'.72':'.95')+'"/>');
+
+        var showTitle=false;
+        if(mode==='DAYS'||mode==='WEEK')showTitle=rowH>30 && ew>24;
+        if(mode==='WEEKS')showTitle=rowH>24 && ew>34;
+        // Latest BALMUDA behavior: Month may show a title when events do not overlap.
+        if(mode==='MONTH')showTitle=arr.length===1 && rowH>12 && ew>36;
+
+        if(showTitle){
+          out.push('<text x="'+(x+3)+'" y="'+(ey+Math.min(blockH-1,8))+'" fill="#efefeb" font-size="'+(mode==='MONTH'?6.2:7)+'" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
         }
       });
+
+      if(arr.length>maxVisible && (mode==='DAYS'||mode==='WEEK'||mode==='WEEKS')){
+        out.push('<text x="'+(w-14)+'" y="'+(y+Math.min(rowH-3,13))+'" fill="#b9bab7" font-size="8" text-anchor="end" font-family="ui-monospace,Menlo,monospace">+'+(arr.length-maxVisible)+'</text>');
+      }
+
+      if(isToday){
+        out.push('<line x1="'+railW+'" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="#d55d53" stroke-width="1.2" opacity=".85"/>');
+      }
     }
 
     svg.innerHTML=out.join('');
-    updateLabels(z);
+  }
+
+  function drawDay(z){
+    var w=viewport.clientWidth,hv=viewport.clientHeight,scroll=viewport.scrollTop;
+    var railW=34,dateW=50,left=railW+dateW+6,right=8,mainW=w-left-right;
+    var hourH=hourHeightFor(z),headerH=42,blockH=dayBlockHeightFor(z);
+
+    var first=clamp(Math.floor(scroll/blockH)-1,0,allDays.length-1);
+    var last=clamp(Math.ceil((scroll+hv)/blockH)+1,0,allDays.length-1);
+    var out=['<rect width="'+w+'" height="'+hv+'" fill="#171819"/>'];
+
+    for(var i=first;i<=last;i++){
+      var d=allDays[i],key=dateKey(d),base=i*blockH-scroll;
+      if(base>hv||base+blockH<0)continue;
+
+      var dow=['日','月','火','水','木','金','土'][d.getDay()];
+      var weather=weatherForIndex(i);
+
+      out.push('<line x1="0" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="rgba(255,255,255,.25)" stroke-width="1"/>');
+      out.push('<text x="13" y="'+(base+headerH*.55)+'" fill="#8e8f8d" font-size="9" text-anchor="middle" transform="rotate(-90 13 '+(base+headerH*.55)+')" font-family="ui-monospace,Menlo,monospace">'+d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'</text>');
+      out.push('<text x="'+(railW+7)+'" y="'+(base+17)+'" fill="'+(key===todayKey?'#d55d53':'#ededE9')+'" font-size="17" font-family="-apple-system,sans-serif">'+d.getDate()+'</text>');
+      out.push('<text x="'+(railW+29)+'" y="'+(base+16)+'" fill="#9b9c99" font-size="7" font-family="-apple-system,sans-serif">('+dow+')</text>');
+      out.push('<text x="'+(railW+7)+'" y="'+(base+33)+'" fill="#9b9c99" font-size="10">'+weather.icon+'</text>');
+      out.push('<text x="'+(railW+25)+'" y="'+(base+32)+'" fill="#9b9c99" font-size="7" font-family="ui-monospace,Menlo,monospace">'+weather.high+'°</text>');
+
+      var allDay=allDayByDate.get(key)||[];
+      out.push('<text x="'+left+'" y="'+(base+12)+'" fill="#858682" font-size="7" font-family="-apple-system,sans-serif">終日</text>');
+      allDay.slice(0,2).forEach(function(ev,j){
+        var ax=left+28+j*(mainW*.32);
+        out.push('<rect x="'+ax+'" y="'+(base+5)+'" width="'+(mainW*.28)+'" height="13" rx="2" fill="'+ev.color+'" opacity=".92"/>');
+        out.push('<text x="'+(ax+3)+'" y="'+(base+14)+'" fill="#efefeb" font-size="7" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+      });
+
+      var timeBase=base+headerH;
+      for(var h=0;h<=24;h++){
+        var y=timeBase+h*hourH;
+        out.push('<line x1="'+dateW+'" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="'+(h%3===0?'rgba(255,255,255,.16)':'rgba(255,255,255,.075)')+'" stroke-width="1"/>');
+        if(h<24){
+          out.push('<text x="'+(left-7)+'" y="'+(y+8)+'" fill="#a3a4a1" font-size="7" text-anchor="end" font-family="ui-monospace,Menlo,monospace">'+String(h).padStart(2,'0')+':00</text>');
+        }
+        if(h%3===0 && h<24){
+          var temp=weather.low+Math.round((weather.high-weather.low)*Math.sin(Math.PI*h/24));
+          out.push('<text x="'+(railW+4)+'" y="'+(y+9)+'" fill="#70716e" font-size="6.5" font-family="ui-monospace,Menlo,monospace">'+temp+'°</text>');
+        }
+      }
+
+      var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
+      arr.forEach(function(ev,j){
+        var sy=timeBase+(minutes(ev.start)/60)*hourH;
+        var ey=timeBase+(minutes(ev.end)/60)*hourH;
+        var cols=Math.min(3,Math.max(1,arr.length));
+        var col=j%cols;
+        var bw=(mainW-6)/cols;
+        var x=left+col*bw;
+        var bh=Math.max(16,ey-sy);
+        out.push('<rect x="'+x+'" y="'+sy+'" width="'+(bw-4)+'" height="'+bh+'" rx="2" fill="'+ev.color+'" opacity=".32"/>');
+        out.push('<rect x="'+x+'" y="'+sy+'" width="3" height="'+bh+'" rx="1.5" fill="'+ev.color+'"/>');
+        out.push('<text x="'+(x+7)+'" y="'+(sy+12)+'" fill="#efefeb" font-size="8" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+      });
+
+      if(key===todayKey){
+        var nowMinutes=7*60+31;
+        var ny=timeBase+(nowMinutes/60)*hourH;
+        out.push('<line x1="'+dateW+'" y1="'+ny+'" x2="'+w+'" y2="'+ny+'" stroke="#d55d53" stroke-width="1.2"/>');
+        out.push('<circle cx="'+left+'" cy="'+ny+'" r="3" fill="#d55d53"/>');
+      }
+    }
+
+    svg.innerHTML=out.join('');
+  }
+
+  function draw(z){
+    var w=viewport.clientWidth,hv=viewport.clientHeight;
+    svg.style.height=hv+'px';
+    svg.setAttribute('viewBox','0 0 '+w+' '+hv);
+    svg.setAttribute('width',w);
+    svg.setAttribute('height',hv);
+
+    if(modeFor(z)==='DAY')drawDay(z);
+    else drawNonDay(z);
+
+    updateHeader(z);
   }
 
   function scheduleDraw(){
     if(raf)return;
-    raf=requestAnimationFrame(function(){raf=0;draw(visualZoom)});
+    raf=requestAnimationFrame(function(){
+      raf=0;
+      draw(visualZoom);
+    });
+  }
+
+  function dist(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}
+  function centerY(a,b){
+    var r=viewport.getBoundingClientRect();
+    return ((a.clientY+b.clientY)/2)-r.top;
   }
 
   function startPinch(e){
-    release=null;
     var ay=centerY(e.touches[0],e.touches[1]);
-    var h=rowHeightFor(zoom);
+    var anchorDay=dayIndexAtScroll(zoom,ay);
     pinch={
       startDist:dist(e.touches[0],e.touches[1]),
       startZoom:zoom,
       anchorY:ay,
-      anchorIndex:(viewport.scrollTop+ay)/h,
-      lastTarget:zoom,lastTime:performance.now(),velocity:0
+      anchorDay:anchorDay
     };
-    targetZoom=zoom;visualZoom=zoom;setGuide(ay,true);
+    targetZoom=zoom;
+    visualZoom=zoom;
+    setGuide(ay,true);
   }
 
   function updatePinch(e){
     var ay=centerY(e.touches[0],e.touches[1]);
     var ratio=dist(e.touches[0],e.touches[1])/pinch.startDist;
-    var nextTarget=clamp(pinch.startZoom+Math.log(ratio)*PINCH_GAIN,0,1);
-
-    var now=performance.now(),dt=Math.max(8,now-pinch.lastTime);
-    pinch.velocity=(nextTarget-pinch.lastTarget)/(dt/16.67);
-    pinch.lastTarget=nextTarget;pinch.lastTime=now;
-    pinch.anchorY=ay;targetZoom=nextTarget;
-
-    if(PINCH_FOLLOW>=.999)visualZoom=targetZoom;
-    else visualZoom+=(targetZoom-visualZoom)*PINCH_FOLLOW;
+    targetZoom=clamp(pinch.startZoom+Math.log(ratio)*PINCH_GAIN,0,1);
+    visualZoom=targetZoom;
 
     setSurfaceHeight(visualZoom);
-    viewport.scrollTop=pinch.anchorIndex*rowHeightFor(visualZoom)-ay;
+    viewport.scrollTop=clamp(scrollForAnchor(visualZoom,pinch.anchorDay,ay),0,Math.max(0,surface.offsetHeight-viewport.clientHeight));
+    pinch.anchorY=ay;
     setGuide(ay,true);
     scheduleDraw();
   }
 
   function finishPinch(){
     if(!pinch)return;
-    visualZoom=targetZoom;zoom=targetZoom;
+    zoom=targetZoom;
+    visualZoom=zoom;
     setSurfaceHeight(zoom);
-    viewport.scrollTop=pinch.anchorIndex*rowHeightFor(zoom)-pinch.anchorY;
-
-    var v=pinch.velocity*PINCH_RELEASE;
-    if(Math.abs(v)>.00008){
-      release={v:v,anchorY:pinch.anchorY,anchorIndex:pinch.anchorIndex};
-      requestAnimationFrame(runRelease);
-    }
-
-    pinch=null;setGuide(0,false);draw(zoom);
-  }
-
-  function runRelease(){
-    if(!release)return;
-    var next=clamp(zoom+release.v,0,1);
-    if(next===zoom){release=null;return}
-    zoom=next;visualZoom=zoom;targetZoom=zoom;
-    setSurfaceHeight(zoom);
-    viewport.scrollTop=release.anchorIndex*rowHeightFor(zoom)-release.anchorY;
-    release.v*=.86;
+    viewport.scrollTop=clamp(scrollForAnchor(zoom,pinch.anchorDay,pinch.anchorY),0,Math.max(0,surface.offsetHeight-viewport.clientHeight));
+    pinch=null;
+    setGuide(0,false);
     draw(zoom);
-    if(Math.abs(release.v)>.00008)requestAnimationFrame(runRelease);
-    else release=null;
   }
 
   viewport.addEventListener('touchstart',function(e){
@@ -294,7 +548,7 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
   },{passive:true});
 
   viewport.addEventListener('touchcancel',function(){
-    pinch=null;release=null;targetZoom=zoom;visualZoom=zoom;setGuide(0,false);draw(zoom);
+    pinch=null;targetZoom=zoom;visualZoom=zoom;setGuide(0,false);draw(zoom);
   },{passive:true});
 
   viewport.addEventListener('scroll',function(){
@@ -305,19 +559,23 @@ h1{margin:0;font-size:21px;line-height:1;font-weight:650;letter-spacing:-.03em}
     if(!(e.ctrlKey||e.metaKey))return;
     e.preventDefault();
     var r=viewport.getBoundingClientRect(),ay=e.clientY-r.top;
-    var idx=(viewport.scrollTop+ay)/rowHeightFor(zoom);
-    zoom=clamp(zoom-e.deltaY*.0012,0,1);visualZoom=zoom;targetZoom=zoom;
+    var day=dayIndexAtScroll(zoom,ay);
+    zoom=clamp(zoom-e.deltaY*.0012,0,1);
+    visualZoom=zoom;targetZoom=zoom;
     setSurfaceHeight(zoom);
-    viewport.scrollTop=idx*rowHeightFor(zoom)-ay;
+    viewport.scrollTop=clamp(scrollForAnchor(zoom,day,ay),0,Math.max(0,surface.offsetHeight-viewport.clientHeight));
     draw(zoom);
   },{passive:false});
 
-  window.addEventListener('resize',function(){setSurfaceHeight(zoom);draw(zoom)});
+  window.addEventListener('resize',function(){
+    setSurfaceHeight(zoom);
+    draw(zoom);
+  });
 
   setSurfaceHeight(zoom);
   requestAnimationFrame(function(){
-    var target=allDays.findIndex(function(d){return dateKey(d)==='2026-09-19'});
-    viewport.scrollTop=Math.max(0,target*rowHeightFor(zoom)-viewport.clientHeight*.34);
+    var target=allDays.findIndex(function(d){return dateKey(d)===todayKey});
+    viewport.scrollTop=Math.max(0,target*rowHeightFor(zoom)-viewport.clientHeight*.30);
     draw(zoom);
   });
 })();
