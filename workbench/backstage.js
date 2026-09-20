@@ -7,6 +7,7 @@
   const PROJECT_DIR = 'projects';
   const TOKEN_KEY = 'zen-note-github-token';
   const SYMMETRIC_RELATIONS = new Set(['related', 'integrates_with']);
+  const SHEETS_FULL_SCALE = 30;
 
   const $ = (id) => document.getElementById(id);
   const list = $('projectList');
@@ -164,7 +165,7 @@
   }
 
   function fillPercent(project) {
-    return Math.min(100, Math.max(0, sheetsValue(project)));
+    return Math.min(100, Math.max(0, (sheetsValue(project) / SHEETS_FULL_SCALE) * 100));
   }
 
   function projectTags(project) {
@@ -202,7 +203,7 @@
         <span class="project-inner">
           <span class="project-top"><span class="project-title">${esc(project.title)}</span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
           ${current ? `<span class="project-current">${esc(current)}</span>` : ''}
-          <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / 100</span></span>
+          <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span></span>
         </span>
       </button>`;
     }).join('');
@@ -476,9 +477,9 @@
           <h1 class="detail-title">${esc(project.title)}</h1>
           <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span></div>
         </div>
-        <div class="detail-meter" aria-label="${sheets} sheets / 100">
+        <div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
         <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
-          <div class="detail-meter-label">${sheets} / 100 sheets</div>
+          <div class="detail-meter-label">${sheets} / ${SHEETS_FULL_SCALE} sheets</div>
         </div>
       </div>
       <div class="detail-view-tabs" role="tablist" aria-label="Project view">
