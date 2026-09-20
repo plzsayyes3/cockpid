@@ -16,7 +16,7 @@
     thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '6', title: '6 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html' },
+    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260920-project-town-visible1' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: '9', title: '9 / KEYBOARD', type: 'page', src: 'keyboard.html' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
