@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#f3f0e8">
 <title>COCKPID — Projects</title>
 <link rel="stylesheet" href="backstage.css?v=20260920-project-town-visible1">
+<style>
+.backstage-actions{display:flex;align-items:center;gap:8px}
+.town-open-btn{height:38px;padding:0 13px;border:1px solid var(--line);border-radius:19px;background:rgba(255,255,255,.52);cursor:pointer;font-size:9px;font-weight:800;letter-spacing:.12em}
+.town-open-btn:hover{border-color:#bdb2a3;background:var(--paper)}
+</style>
 </head>
 <body>
 <div class="backstage-app">
@@ -15,7 +20,10 @@
       <h1>Projects</h1>
       <p>Projectの一覧・現在地・次の判断をひとつの場所で確認します。</p>
     </div>
-    <button class="reload-btn" id="reloadBtn" type="button" aria-label="再読み込み">↻</button>
+    <div class="backstage-actions">
+      <button class="town-open-btn" id="openTownBtn" type="button" aria-label="Project Townを開く">TOWN</button>
+      <button class="reload-btn" id="reloadBtn" type="button" aria-label="再読み込み">↻</button>
+    </div>
   </header>
 
   <section class="desk-strip" aria-labelledby="deskTitle">
@@ -51,5 +59,21 @@
 <script src="project-status-model.js?v=20260920-project-town-visible1"></script>
 <script src="project-status-view.js?v=20260920-project-town-visible1"></script>
 <script src="backstage.js?v=20260920-project-town-visible1"></script>
+<script>
+(() => {
+  const button = document.getElementById('openTownBtn');
+  if (!button) return;
+  button.addEventListener('click', () => {
+    try {
+      const router = window.parent && window.parent !== window ? window.parent.COCKPID_ROUTER : window.COCKPID_ROUTER;
+      if (router && typeof router.openApp === 'function') {
+        router.openApp('projecttown');
+        return;
+      }
+    } catch (_) {}
+    window.location.assign('project-town.html');
+  });
+})();
+</script>
 </body>
 </html>
