@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-<title>BALMUDA Scheduler Fluid Prototype</title>
+<title>BALMUDA Scheduler Axis Morph Prototype</title>
 <style>
 :root{
-  --bg:#171819;--panel:#1d1e20;--ink:#f1f1ed;--muted:#939491;
-  --line:rgba(255,255,255,.10);--lineStrong:rgba(255,255,255,.22);--today:#d45f55;
+  --bg:#171819;--panel:#1d1e20;--ink:#f1f1ed;--muted:#92938f;
+  --line:rgba(255,255,255,.10);--today:#d45f55;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overscroll-behavior:none}
@@ -37,7 +37,7 @@ h1{margin:0;font-size:20px;line-height:1;font-weight:560;letter-spacing:-.03em}
 <div class="app">
   <header>
     <div>
-      <div class="eyebrow">FLUID SCALE / SAMPLE DATA</div>
+      <div class="eyebrow">AXIS MORPH / SAME OBJECTS</div>
       <h1 id="focusTitle">2026.09</h1>
     </div>
     <div class="mode">
@@ -45,7 +45,7 @@ h1{margin:0;font-size:20px;line-height:1;font-weight:560;letter-spacing:-.03em}
       <span id="rangeLabel">7 DAYS</span>
     </div>
   </header>
-  <div class="hint">1本指＝ネイティブスクロール / 2本指＝連続ズーム / 指の中心位置を小数日まで保持</div>
+  <div class="hint">Days→Dayで、時間の縦線・予定バー・ラベルが同じオブジェクトのまま移動／回転／伸縮</div>
   <div id="viewport">
     <div id="surface"><svg id="svgRenderer" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="anchor-guide" id="anchorGuide"></div>
@@ -73,7 +73,7 @@ var modeLabel=document.getElementById('modeLabel');
 var rangeLabel=document.getElementById('rangeLabel');
 
 var allDays=[];
-for(var t=startDate.getTime();t<endDate.getTime();t+=DAY_MS) allDays.push(new Date(t));
+for(var t=startDate.getTime();t<endDate.getTime();t+=DAY_MS)allDays.push(new Date(t));
 
 var eventsByDate=new Map();
 var allDayByDate=new Map();
@@ -97,16 +97,15 @@ function addAllDay(date,title,color){
 
 allDays.forEach(function(d,i){
   var key=dateKey(d),dow=d.getDay();
-  if(dow!==0 && ((i*7)%11)<7) addEvent(key,'09:00','10:00',i%5===0?'朝MTG':'作業時間',COLORS[i%COLORS.length]);
+  if(dow!==0&&((i*7)%11)<7)addEvent(key,'09:00','10:00',i%5===0?'朝MTG':'作業時間',COLORS[i%COLORS.length]);
   if(((i*13)%17)<8){
     var h=11+(i%6);
     addEvent(key,String(h).padStart(2,'0')+':00',String(Math.min(23,h+1)).padStart(2,'0')+':30',
       ['資料作成','打ち合わせ','研修','制作','面談','レビュー'][i%6],COLORS[(i+2)%COLORS.length]);
   }
-  if(((i*5)%23)<5) addEvent(key,'15:00','17:00',['外出','園内研修','家族','撮影'][i%4],COLORS[(i+4)%COLORS.length]);
-  if(i%9===0) addAllDay(key,['リモート','行事','休み'][i%3],COLORS[(i+1)%COLORS.length]);
+  if(((i*5)%23)<5)addEvent(key,'15:00','17:00',['外出','園内研修','家族','撮影'][i%4],COLORS[(i+4)%COLORS.length]);
+  if(i%9===0)addAllDay(key,['リモート','行事','休み'][i%3],COLORS[(i+1)%COLORS.length]);
 });
-
 [
  ['2026-09-19','09:30','11:00','家族の予定',COLORS[6]],
  ['2026-09-19','13:00','14:30','個人制作',COLORS[4]],
@@ -119,8 +118,8 @@ allDays.forEach(function(d,i){
  ['2026-09-25','15:30','17:00','資料作成',COLORS[2]]
 ].forEach(function(e){addEvent(e[0],e[1],e[2],e[3],e[4])});
 
-var zoom=.60,targetZoom=zoom,visualZoom=zoom,pinch=null,raf=0;
-var PINCH_GAIN=.18;
+var zoom=.62,targetZoom=zoom,visualZoom=zoom,pinch=null,raf=0;
+var PINCH_GAIN=.19;
 
 var stops=[
   {z:0.00,days:365},
@@ -128,26 +127,24 @@ var stops=[
   {z:0.39,days:14},
   {z:0.57,days:7},
   {z:0.76,days:4},
-  {z:0.90,days:2.2}
+  {z:0.84,days:2.6}
 ];
 
 function visibleDaysFor(z){
-  if(z>=.90) return 2.2;
+  var zz=Math.min(z,.84);
   for(var i=0;i<stops.length-1;i++){
     var a=stops[i],b=stops[i+1];
-    if(z>=a.z&&z<=b.z){
-      return logLerp(a.days,b.days,(z-a.z)/(b.z-a.z));
-    }
+    if(zz>=a.z&&zz<=b.z)return logLerp(a.days,b.days,(zz-a.z)/(b.z-a.z));
   }
-  return 365;
+  return zz<=0?365:2.6;
 }
-function dayBlend(z){return smooth(.86,.98,z)}
-function baseRowHeight(z){return viewport.clientHeight/visibleDaysFor(Math.min(z,.90))}
-function dayTargetHeight(z){return 42+24*lerp(31,44,smooth(.90,1,z))}
-function unitHeightFor(z){
-  var b=dayBlend(z);
-  return lerp(baseRowHeight(z),dayTargetHeight(z),b);
+function morphFor(z){return smooth(.82,.975,z)}
+function timelineRowHeight(z){return viewport.clientHeight/visibleDaysFor(z)}
+function dayBlockHeight(z){
+  var hour=lerp(30,46,smooth(.90,1,z));
+  return 40+24*hour;
 }
+function unitHeightFor(z){return lerp(timelineRowHeight(z),dayBlockHeight(z),morphFor(z))}
 function modeFor(z){
   if(z>=.93)return'DAY';
   if(z>=.76)return'DAYS';
@@ -159,10 +156,9 @@ function modeFor(z){
 function rangeFor(z){
   var m=modeFor(z);
   if(m==='DAY')return'1 DAY';
-  var d=visibleDaysFor(z);
   if(m==='WEEK')return'7 DAYS';
   if(m==='YEAR')return'1 YEAR';
-  return Math.round(d)+' DAYS';
+  return Math.round(visibleDaysFor(z))+' DAYS';
 }
 function setSurfaceHeight(z){
   surface.style.height=(allDays.length*unitHeightFor(z)+viewport.clientHeight*.35)+'px';
@@ -185,169 +181,133 @@ function updateHeader(z){
   var d=allDays[idx];
   focusTitle.textContent=d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0');
 }
-function labelAlpha(z){return smooth(.08,.33,z)}
-function weatherAlpha(z){return smooth(.50,.60,z)*(1-smooth(.78,.88,z))}
-function tempAlpha(z){return smooth(.70,.80,z)*(1-smooth(.88,.95,z))}
-function titleAlpha(z){return smooth(.24,.56,z)}
-function grid3Alpha(z){return smooth(.31,.48,z)}
-function grid6Alpha(z){return smooth(.12,.25,z)}
-function dayDetailAlpha(z){return dayBlend(z)}
-function eventHeight(z,u){
-  var dense=lerp(1.2,5,smooth(.08,.35,z));
-  var detail=lerp(dense,12,smooth(.45,.72,z));
-  return Math.min(detail,Math.max(1.2,u*.20));
+function rectLerp(a,b,t){
+  return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),w:lerp(a.w,b.w,t),h:lerp(a.h,b.h,t),r:lerp(a.r||0,b.r||0,t)};
 }
-
-function renderTimeline(z,opacity){
-  if(opacity<=.001)return'';
-  var w=viewport.clientWidth,hv=viewport.clientHeight,u=unitHeightFor(z),scroll=viewport.scrollTop;
-  var first=clamp(Math.floor(scroll/u)-2,0,allDays.length-1);
-  var last=clamp(Math.ceil((scroll+hv)/u)+2,0,allDays.length-1);
-  var railW=27,dateW=42,allDayW=46,timeLeft=railW+dateW+allDayW,right=7;
-  var timeW=Math.max(80,w-timeLeft-right);
-  var out=['<g opacity="'+opacity+'">'];
-
-  var g3=grid3Alpha(z),g6=grid6Alpha(z);
-  for(var hh=0;hh<=24;hh+=3){
-    var x=timeLeft+timeW*(hh/24);
-    var a=(hh%12===0)?1:(hh%6===0?g6:g3);
-    if(a>.01) out.push('<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+hv+'" stroke="rgba(255,255,255,'+(0.05+0.05*a)+')" stroke-width="1"/>');
-  }
-
-  var monthSeen={};
-  for(var mi=first;mi<=last;mi++){
-    var md=allDays[mi],mk=md.getFullYear()+'-'+md.getMonth();
-    if(monthSeen[mk])continue;
-    monthSeen[mk]=true;
-    var ms=mi;while(ms>0&&allDays[ms-1].getMonth()===md.getMonth()&&allDays[ms-1].getFullYear()===md.getFullYear())ms--;
-    var me=mi;while(me<allDays.length-1&&allDays[me+1].getMonth()===md.getMonth()&&allDays[me+1].getFullYear()===md.getFullYear())me++;
-    var y1=ms*u-scroll,y2=(me+1)*u-scroll,cy=(y1+y2)/2;
-    if(y2<0||y1>hv)continue;
-    var ma=lerp(.62,.85,smooth(.04,.35,z));
-    out.push('<text x="'+(railW*.42)+'" y="'+cy+'" fill="rgba(160,161,157,'+ma+')" font-size="'+lerp(12,8,smooth(.1,.5,z))+'" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 '+(railW*.42)+' '+cy+')" font-family="ui-monospace,Menlo,monospace">'+md.getFullYear()+'.'+String(md.getMonth()+1).padStart(2,'0')+'</text>');
-  }
-
-  for(var i=first;i<=last;i++){
-    var d=allDays[i],key=dateKey(d),y=i*u-scroll,dow=d.getDay();
-    if(y>hv||y+u<0)continue;
-
-    var monthStart=d.getDate()===1;
-    out.push('<line x1="'+railW+'" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="rgba(255,255,255,'+(monthStart?.20:.085)+')" stroke-width="1"/>');
-    out.push('<line x1="'+(railW+dateW)+'" y1="'+y+'" x2="'+(railW+dateW)+'" y2="'+(y+u)+'" stroke="rgba(255,255,255,.07)" stroke-width="1"/>');
-    out.push('<line x1="'+timeLeft+'" y1="'+y+'" x2="'+timeLeft+'" y2="'+(y+u)+'" stroke="rgba(255,255,255,.13)" stroke-width="1"/>');
-
-    var la=labelAlpha(z);
-    if(la>.01){
-      var showDate=(z>.12)||monthStart||(dow===1);
-      if(showDate){
-        var dc=key===todayKey?'#d45f55':(dow===0?'#c8736c':dow===6?'#759ac5':'#e4e4df');
-        out.push('<text x="'+(railW+7)+'" y="'+(y+Math.min(u*.55,16))+'" fill="'+dc+'" opacity="'+la+'" font-size="'+lerp(8,15,smooth(.18,.62,z))+'" font-family="-apple-system,sans-serif">'+d.getDate()+'</text>');
-      }
-    }
-
-    var wa=weatherAlpha(z);
-    if(wa>.01&&u>26){
-      var icon=['☀','☁','☂','☀'][i%4];
-      out.push('<text x="'+(railW+7)+'" y="'+(y+Math.min(u-4,31))+'" fill="#9b9c99" opacity="'+wa+'" font-size="10">'+icon+'</text>');
-    }
-    var ta=tempAlpha(z);
-    if(ta>.01&&u>45){
-      out.push('<text x="'+(railW+23)+'" y="'+(y+Math.min(u-4,30))+'" fill="#9b9c99" opacity="'+ta+'" font-size="7" font-family="ui-monospace,Menlo,monospace">'+(17+i%7)+'°</text>');
-    }
-
-    var ad=allDayByDate.get(key)||[];
-    if(ad.length&&u>5){
-      var ah=Math.max(2,Math.min(7,u*.18));
-      ad.slice(0,2).forEach(function(ev,j){
-        var ay=y+u*.18+j*(ah+1);
-        out.push('<rect x="'+(railW+dateW+3)+'" y="'+ay+'" width="'+(allDayW-6)+'" height="'+ah+'" rx="'+Math.min(2,ah/2)+'" fill="'+ev.color+'" opacity="'+lerp(.65,.95,smooth(.15,.5,z))+'"/>');
-      });
-    }
-
-    var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
-    var eh=eventHeight(z,u),gap=Math.max(.5,Math.min(1.2,eh*.12));
-    var titleA=titleAlpha(z);
-    var maxLanes=Math.max(1,Math.floor((u-2)/(eh+gap)));
-    var shown=arr.slice(0,Math.min(arr.length,maxLanes));
-
-    shown.forEach(function(ev,j){
-      var x=timeLeft+timeW*timePct(ev.start);
-      var ew=Math.max(1.5,timeW*(timePct(ev.end)-timePct(ev.start)));
-      var contentH=shown.length*eh+(shown.length-1)*gap;
-      var ey=y+Math.max(1,(u-contentH)/2)+j*(eh+gap);
-      out.push('<rect x="'+x+'" y="'+ey+'" width="'+ew+'" height="'+eh+'" rx="'+Math.min(2,eh/2)+'" fill="'+ev.color+'" opacity="'+lerp(.70,.96,smooth(.15,.55,z))+'"/>');
-      var monthUnique=(z<.39&&arr.length===1);
-      var allowTitle=(z>=.39)||monthUnique;
-      if(allowTitle&&titleA>.02&&eh>4&&ew>28){
-        out.push('<text x="'+(x+3)+'" y="'+(ey+Math.min(eh-1,8))+'" fill="#efefeb" opacity="'+titleA+'" font-size="'+lerp(6.1,7.2,smooth(.35,.7,z))+'" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
-      }
-    });
-
-    if(key===todayKey) out.push('<line x1="'+railW+'" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="#d45f55" stroke-width="1.1" opacity=".84"/>');
-  }
-
-  out.push('</g>');
-  return out.join('');
-}
-
-function renderDay(z,opacity){
-  if(opacity<=.001)return'';
-  var w=viewport.clientWidth,hv=viewport.clientHeight,u=unitHeightFor(z),scroll=viewport.scrollTop;
-  var first=clamp(Math.floor(scroll/u)-1,0,allDays.length-1);
-  var last=clamp(Math.ceil((scroll+hv)/u)+1,0,allDays.length-1);
-  var railW=31,dateW=48,left=railW+dateW+7,right=8,mainW=w-left-right;
-  var headerH=Math.min(42,Math.max(28,u*.08));
-  var hourH=Math.max(4,(u-headerH)/24);
-  var out=['<g opacity="'+opacity+'">'];
-
-  for(var i=first;i<=last;i++){
-    var d=allDays[i],key=dateKey(d),base=i*u-scroll;
-    if(base>hv||base+u<0)continue;
-    var dow=['日','月','火','水','木','金','土'][d.getDay()];
-
-    out.push('<line x1="0" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="rgba(255,255,255,.23)" stroke-width="1"/>');
-    out.push('<text x="12" y="'+(base+headerH*.55)+'" fill="#858682" font-size="8.5" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 12 '+(base+headerH*.55)+')" font-family="ui-monospace,Menlo,monospace">'+d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'</text>');
-    out.push('<text x="'+(railW+6)+'" y="'+(base+17)+'" fill="'+(key===todayKey?'#d45f55':'#ecece8')+'" font-size="17" font-family="-apple-system,sans-serif">'+d.getDate()+'</text>');
-    out.push('<text x="'+(railW+28)+'" y="'+(base+16)+'" fill="#989996" font-size="7" font-family="-apple-system,sans-serif">('+dow+')</text>');
-
-    var timeBase=base+headerH;
-    for(var h=0;h<=24;h++){
-      var yy=timeBase+h*hourH;
-      var major=h%3===0;
-      out.push('<line x1="'+dateW+'" y1="'+yy+'" x2="'+w+'" y2="'+yy+'" stroke="rgba(255,255,255,'+(major?.14:.055)+')" stroke-width="1"/>');
-      if(h<24&&hourH>14){
-        out.push('<text x="'+(left-7)+'" y="'+(yy+8)+'" fill="#9d9e9b" font-size="7" text-anchor="end" font-family="ui-monospace,Menlo,monospace">'+String(h).padStart(2,'0')+':00</text>');
-      }
-    }
-
-    var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
-    var cols=Math.min(3,Math.max(1,arr.length));
-    arr.forEach(function(ev,j){
-      var sy=timeBase+(minutes(ev.start)/60)*hourH;
-      var ey=timeBase+(minutes(ev.end)/60)*hourH;
-      var col=j%cols,bw=(mainW-6)/cols,x=left+col*bw,bh=Math.max(8,ey-sy);
-      out.push('<rect x="'+x+'" y="'+sy+'" width="'+(bw-4)+'" height="'+bh+'" rx="2" fill="'+ev.color+'" opacity=".31"/>');
-      out.push('<rect x="'+x+'" y="'+sy+'" width="3" height="'+bh+'" rx="1.5" fill="'+ev.color+'"/>');
-      if(bh>12)out.push('<text x="'+(x+7)+'" y="'+(sy+11)+'" fill="#efefeb" font-size="8" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
-    });
-  }
-  out.push('</g>');
-  return out.join('');
-}
+function pointLerp(a,b,t){return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t)}}
 
 function draw(z){
-  var w=viewport.clientWidth,hv=viewport.clientHeight;
+  var w=viewport.clientWidth,hv=viewport.clientHeight,u=unitHeightFor(z),scroll=viewport.scrollTop;
+  var p=morphFor(z);
+  var first=clamp(Math.floor(scroll/u)-2,0,allDays.length-1);
+  var last=clamp(Math.ceil((scroll+hv)/u)+2,0,allDays.length-1);
+
   svg.style.height=hv+'px';
   svg.setAttribute('viewBox','0 0 '+w+' '+hv);
   svg.setAttribute('width',w);svg.setAttribute('height',hv);
 
-  var b=dayDetailAlpha(z);
-  var timelineOpacity=1-b;
-  var dayOpacity=b;
-  var html='<rect width="'+w+'" height="'+hv+'" fill="#171819"/>';
-  html+=renderTimeline(z,timelineOpacity);
-  html+=renderDay(z,dayOpacity);
-  svg.innerHTML=html;
+  var railW=27,dateW=40,allDayW=40,timeLeft=railW+dateW+allDayW,right=7;
+  var timeW=Math.max(90,w-timeLeft-right);
+  var dayLeft=railW+dateW+8,dayRight=8,dayMainW=w-dayLeft-dayRight;
+  var dayHeader=40;
+  var hourH=Math.max(4,(u-dayHeader)/24);
+
+  var out=['<rect width="'+w+'" height="'+hv+'" fill="#171819"/>'];
+
+  for(var i=first;i<=last;i++){
+    var d=allDays[i],key=dateKey(d),base=i*u-scroll,dow=d.getDay();
+    if(base>hv||base+u<0)continue;
+
+    var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
+    var monthStart=d.getDate()===1;
+    var rowAlpha=lerp(.11,.22,p);
+
+    // Date-row boundary remains the same object and simply spreads apart as the day expands.
+    out.push('<line x1="'+railW+'" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="rgba(255,255,255,'+(monthStart?.24:rowAlpha)+')" stroke-width="1"/>');
+
+    // Focus date label moves into the Day header instead of being replaced.
+    var dateFrom={x:railW+7,y:base+Math.min(u*.55,16)};
+    var dateTo={x:railW+7,y:base+17};
+    var dp=pointLerp(dateFrom,dateTo,p);
+    var dc=key===todayKey?'#d45f55':(dow===0?'#c8736c':dow===6?'#759ac5':'#e4e4df');
+    var dateAlpha=clamp(lerp(smooth(.08,.25,z),1,p),0,1);
+    out.push('<text x="'+dp.x+'" y="'+dp.y+'" fill="'+dc+'" opacity="'+dateAlpha+'" font-size="'+lerp(lerp(8,15,smooth(.18,.62,z)),17,p)+'" font-family="-apple-system,sans-serif">'+d.getDate()+'</text>');
+
+    var wd=['日','月','火','水','木','金','土'][dow];
+    out.push('<text x="'+(railW+30)+'" y="'+lerp(base+15,base+16,p)+'" fill="#91928f" opacity="'+smooth(.55,.90,z)+'" font-size="7" font-family="-apple-system,sans-serif">('+wd+')</text>');
+
+    // Time grid: the SAME line rotates from vertical (Days) to horizontal (Day).
+    var gridAlpha=lerp(smooth(.20,.45,z),1,p);
+    for(var hh=0;hh<=24;hh+=3){
+      var xN=timeLeft+timeW*(hh/24);
+      var n1={x:xN,y:base},n2={x:xN,y:base+u};
+      var yD=base+dayHeader+(u-dayHeader)*(hh/24);
+      var d1={x:dateW,y:yD},d2={x:w,y:yD};
+      var l1=pointLerp(n1,d1,p),l2=pointLerp(n2,d2,p);
+      out.push('<line x1="'+l1.x+'" y1="'+l1.y+'" x2="'+l2.x+'" y2="'+l2.y+'" stroke="rgba(255,255,255,'+(0.055+0.075*gridAlpha)+')" stroke-width="1"/>');
+
+      // Time label follows the grid line from top-axis position to left-axis position.
+      if(hh<24){
+        var tlFrom={x:xN+2,y:base+9};
+        var tlTo={x:dayLeft-7,y:yD+8};
+        var tp=pointLerp(tlFrom,tlTo,p);
+        var ta=lerp(smooth(.32,.58,z),1,p);
+        out.push('<text x="'+tp.x+'" y="'+tp.y+'" fill="#9d9e9b" opacity="'+ta+'" font-size="7" text-anchor="'+(p>.55?'end':'start')+'" font-family="ui-monospace,Menlo,monospace">'+String(hh).padStart(2,'0')+':00</text>');
+      }
+    }
+
+    // Month rail drifts toward the day header edge instead of disappearing abruptly.
+    if(monthStart||p>.72){
+      var monthAlpha=monthStart?lerp(.72,.35,p):smooth(.72,.96,p)*.28;
+      out.push('<text x="'+(railW*.42)+'" y="'+(base+Math.min(u*.5,34))+'" fill="#8e8f8d" opacity="'+monthAlpha+'" font-size="'+lerp(9,7,p)+'" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 '+(railW*.42)+' '+(base+Math.min(u*.5,34))+')" font-family="ui-monospace,Menlo,monospace">'+d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'</text>');
+    }
+
+    // All-day event moves from a fixed left column into the day header.
+    var allDay=allDayByDate.get(key)||[];
+    allDay.slice(0,2).forEach(function(ev,j){
+      var from={x:railW+dateW+3,y:base+u*.18+j*7,w:allDayW-6,h:6,r:2};
+      var to={x:dayLeft+34+j*(dayMainW*.31),y:base+5,w:dayMainW*.27,h:13,r:2};
+      var rr=rectLerp(from,to,p);
+      out.push('<rect x="'+rr.x+'" y="'+rr.y+'" width="'+rr.w+'" height="'+rr.h+'" rx="'+rr.r+'" fill="'+ev.color+'" opacity=".92"/>');
+      if(rr.h>9){
+        out.push('<text x="'+(rr.x+3)+'" y="'+(rr.y+rr.h-3)+'" fill="#efefeb" opacity="'+smooth(.68,.90,z)+'" font-size="7" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+      }
+    });
+
+    // Timed events: one object, one identity, two coordinate systems, continuous interpolation.
+    var timelineEh=Math.max(1.4,Math.min(12,u*.18));
+    var lanes=Math.max(1,arr.length);
+    var laneGap=Math.max(.6,Math.min(1.2,timelineEh*.12));
+    var contentH=lanes*timelineEh+(lanes-1)*laneGap;
+    var cols=Math.min(3,Math.max(1,arr.length));
+    var dayColW=(dayMainW-6)/cols;
+
+    arr.forEach(function(ev,j){
+      var xN=timeLeft+timeW*timePct(ev.start);
+      var wN=Math.max(2,timeW*(timePct(ev.end)-timePct(ev.start)));
+      var yN=base+Math.max(1,(u-contentH)/2)+j*(timelineEh+laneGap);
+      var nonDay={x:xN,y:yN,w:wN,h:timelineEh,r:Math.min(2,timelineEh/2)};
+
+      var sy=base+dayHeader+(minutes(ev.start)/1440)*(u-dayHeader);
+      var ey=base+dayHeader+(minutes(ev.end)/1440)*(u-dayHeader);
+      var col=j%cols;
+      var day={x:dayLeft+col*dayColW,y:sy,w:dayColW-4,h:Math.max(9,ey-sy),r:2};
+
+      var rr=rectLerp(nonDay,day,p);
+      var fillOpacity=lerp(.94,.32,p);
+      out.push('<rect x="'+rr.x+'" y="'+rr.y+'" width="'+rr.w+'" height="'+rr.h+'" rx="'+rr.r+'" fill="'+ev.color+'" opacity="'+fillOpacity+'"/>');
+
+      // Day-view left accent grows out of the same rectangle.
+      if(p>.18){
+        out.push('<rect x="'+rr.x+'" y="'+rr.y+'" width="'+lerp(0,3,p)+'" height="'+rr.h+'" rx="1.5" fill="'+ev.color+'" opacity="'+p+'"/>');
+      }
+
+      // Label rides inside the moving rectangle.
+      var labelFrom={x:nonDay.x+3,y:nonDay.y+Math.min(nonDay.h-1,8)};
+      var labelTo={x:day.x+7,y:day.y+11};
+      var lp=pointLerp(labelFrom,labelTo,p);
+      var titleA=clamp(lerp(smooth(.34,.58,z),1,p),0,1);
+      if(rr.w>25&&rr.h>4){
+        out.push('<text x="'+lp.x+'" y="'+lp.y+'" fill="#efefeb" opacity="'+titleA+'" font-size="'+lerp(6.4,8,p)+'" font-family="-apple-system,sans-serif">'+esc(ev.title)+'</text>');
+      }
+    });
+
+    if(key===todayKey){
+      out.push('<line x1="'+railW+'" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="#d45f55" stroke-width="1.15" opacity=".84"/>');
+    }
+  }
+
+  svg.innerHTML=out.join('');
   updateHeader(z);
 }
 
@@ -363,6 +323,7 @@ function startPinch(e){
     startDist:dist(e.touches[0],e.touches[1]),
     startZoom:zoom,
     anchorY:ay,
+    // Preserve the exact fractional location inside a day.
     anchorIndex:(viewport.scrollTop+ay)/u
   };
   targetZoom=zoom;visualZoom=zoom;setGuide(ay,true);
