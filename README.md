@@ -86,7 +86,7 @@ Runtime routingの正本:
 | 7 | Projects | `workbench/backstage.html` — Overview / Town status |
 | 8 | Thinking | `workbench/thinking.html` — ideas / themes / questions / hypotheses / actions |
 | — | Project Town | `workbench/project-town.html` — standalone compatibility view |
-| 9 | Keyboard | `workbench/keyboard.html` — 薙刀式ツールへの入口 |
+| 9 | Keyboard | external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` — 作業台App枠内に薙刀式練習サイトを直接表示 |
 | 0 | Secret Desk | local easter egg |
 
 `5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Keyboard` が現在値です。Stanはヘッダーの電池型Settingsアイコン横にあるマイクアイコンから開けます。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
@@ -115,7 +115,7 @@ Projectのactivity / momentum等を眺める表示です。Projectsの詳細画�
 
 ## Stan / スタンちゃん
 
-`workbench/stan/` はヘッダーのマイクアイコンから開く独立全画面のstandby surfaceです。9番は `workbench/keyboard.html` から薙刀式ツールへ進みます。
+`workbench/stan/` はヘッダーのマイクアイコンから開く独立全画面のstandby surfaceです。9番は `Keyboard` の薙刀式練習サイトを作業台App枠内に直接表示します。`workbench/keyboard.html` は既存ブックマーク向けの互換リダイレクトとして残します。
 
 現在実装済み:
 
