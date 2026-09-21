@@ -18,7 +18,7 @@
     board: { key: null, title: 'BOARD', type: 'board' },
     backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260920-project-town-visible1' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
-    keyboard: { key: '9', title: '9 / KEYBOARD', type: 'page', src: 'keyboard.html' },
+    keyboard: { key: '9', title: '9 / KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
