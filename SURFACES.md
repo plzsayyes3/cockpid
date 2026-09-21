@@ -68,7 +68,7 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 7 | Projects | ✅ | iframe → `backstage.html` | Overview + Town status view, see §3.6 |
 | 8 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
-| 9 | Keyboard | ✅ | page → `keyboard.html` | entry to the Naginata keyboard tool |
+| 9 | Keyboard | ✅ | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイトを作業台App枠内に直接表示。`keyboard.html` は互換リダイレクト |
 | 0 | ??? (secret) | ✅ | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
 
 Runtime dock tail is therefore `5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Keyboard`, followed by
