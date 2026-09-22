@@ -18,6 +18,9 @@
   let topMergeButton = null;
   let areaRouteButton = null;
   let areaRoutePanel = null;
+  let areaRouteAreas = new Map();
+  let selectedRouteArea = null;
+  const memoRoute = window.COCKPID_MEMO_ROUTE;
 
   function inboxSource() {
     return window.COCKPID_SOURCES?.get('inbox') || { repo: 'mynotebook', dir: '00_inbox' };
@@ -158,6 +161,23 @@
     return areaRouteButton;
   }
 
+  function branchCount(area, key) {
+    const collection = `${key}s`;
+    return Array.isArray(area?.[collection]) ? area[collection].length : 0;
+  }
+
+  function renderBranchChoices(area) {
+    if (!areaRoutePanel || !memoRoute) return;
+    selectedRouteArea = area;
+    const branches = memoRoute.branchTypes();
+    areaRoutePanel.innerHTML = `<span class="memo-area-route-label">${esc(area.title || area.id)} · Project / Assignment / Task / Reference / Principle</span>${branches.map((branch) => `<button type="button" data-memo-branch="${branch.key}">${branch.label}${branchCount(area, branch.key) ? ` · ${branchCount(area, branch.key)}` : ''}</button>`).join('')}`;
+  }
+
+  function renderSelectedRoute(route) {
+    if (!areaRoutePanel || !memoRoute || !route) return;
+    areaRoutePanel.innerHTML = `<span class="memo-area-route-label">選択中: ${esc(memoRoute.displayLabel(route))} · 保存先はInboxのまま</span><button type="button" data-memo-route-reset="true">Areaを選び直す</button>`;
+  }
+
   async function showAreaRouting() {
     if (!areaRoutePanel) return;
     areaRouteButton.setAttribute('aria-expanded', 'true');
@@ -166,6 +186,7 @@
     try {
       const view = await window.COCKPID_AREA_VIEW?.load?.();
       const areas = Array.isArray(view?.areas) ? view.areas : [];
+      areaRouteAreas = new Map(areas.map((area) => [String(area.id), area]));
       areaRoutePanel.innerHTML = areas.length
         ? `<span class="memo-area-route-label">IDEAの次の分岐</span>${areas.map((area) => `<button type="button" data-area-route-id="${String(area.id).replace(/[^A-Za-z0-9_-]/g, '')}">${esc(area.title || area.id)}</button>`).join('')}`
         : '<span class="memo-area-route-label">未分類のままInboxへ置きます。</span>';
@@ -265,7 +286,9 @@
     inboxList.innerHTML = files.slice(0, 60).map((file) => {
       const fallback = `https://github.com/plzsayyes3/${encodeURIComponent(source.repo)}/blob/main/${encodeWebPath(source.dir)}/${encodeURIComponent(file.name)}`;
       const href = file.html_url || fallback;
-      return `<a class="memo-inbox-item" href="${href}" target="_blank" rel="noopener noreferrer"><span class="memo-inbox-item-main"><b>${esc(file.name)}</b><span>${esc(labelFor(file.name))}</span></span><span class="memo-inbox-item-open">OPEN ↗</span></a>`;
+      const route = memoRoute?.forMemo(file.name);
+      const routeLabel = route ? `<span class="memo-inbox-item-route">${esc(memoRoute.displayLabel(route))}</span>` : '';
+      return `<a class="memo-inbox-item" href="${href}" target="_blank" rel="noopener noreferrer"><span class="memo-inbox-item-main"><b>${esc(file.name)}</b><span>${esc(labelFor(file.name))}</span>${routeLabel}</span><span class="memo-inbox-item-open">OPEN ↗</span></a>`;
     }).join('');
   }
 
@@ -530,11 +553,25 @@
   });
   areaRoutePanel?.addEventListener('click', (event) => {
     const button = event.target.closest?.('[data-area-route-id]');
-    if (!button) return;
-    const route = document.getElementById('memoStatus');
-    if (route) route.textContent = `Area候補: ${button.textContent} · 保存先はInboxのまま`;
-    areaRoutePanel.hidden = true;
-    areaButton.setAttribute('aria-expanded', 'false');
+    if (button) {
+      const area = areaRouteAreas.get(button.dataset.areaRouteId);
+      if (area) renderBranchChoices(area);
+      return;
+    }
+    const branchButton = event.target.closest?.('[data-memo-branch]');
+    if (branchButton && selectedRouteArea && memoRoute) {
+      const route = memoRoute.selectBranch(selectedRouteArea, branchButton.dataset.memoBranch);
+      memoRoute.setCurrent(route);
+      renderSelectedRoute(route);
+      const status = document.getElementById('memoStatus');
+      if (status) status.textContent = `分岐: ${memoRoute.displayLabel(route)} · 保存先はInboxのまま`;
+      return;
+    }
+    const resetButton = event.target.closest?.('[data-memo-route-reset]');
+    if (resetButton) {
+      selectedRouteArea = null;
+      showAreaRouting();
+    }
   });
   captureTab.addEventListener('click', () => setMode('capture'));
   inboxTab.addEventListener('click', () => setMode('inbox'));

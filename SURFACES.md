@@ -35,7 +35,7 @@
 | **CALENDAR / TODAY** | Today's schedule, prev/today/next date nav, link out to Google Calendar | reads → `mynotebook/02_techo` (routed through a compatibility adapter — see §7) |
 | **NEWS** | A short list/teaser, opens the News app on click | reads → external: `https://plzsayyes3.github.io/My_Internet_place/data/latest.json` |
 | **Resident** (the little pet in the corner) | Cosmetic companion; its speech bubble text is scraped from other panels' already-rendered DOM (`.movement-item-title` etc.), plus one direct fetch of `my-storage-note/memory/extracted/idea` | position persisted in `localStorage: cockpid.workbench.pet.position.v1` |
-| **Memo drawer** (CAPTURE / INBOX tabs) | CAPTURE writes a new note; INBOX is read-only, looks for the `#### ショートメモ` heading specifically | `mynotebook/00_inbox` (write), `mynotebook/00_inbox` (read, view-only) |
+| **Memo drawer** (CAPTURE / INBOX tabs) | CAPTURE writes a new note; after Area selection it records/displays a Project / Assignment / Task / Reference / Principle route in a browser sidecar; INBOX is read-only and looks for the `#### ショートメモ` heading specifically | `mynotebook/00_inbox` (write), `mynotebook/00_inbox` (read, view-only), `localStorage['cockpid.memo-routes.v1']` (route sidecar) |
 | **Settings modal** | General / Paths·Data / GitHub / Notifications / Apps tabs. Paths tab is informational only (shows which folders are/aren't wired up); GitHub tab is where the token lives | see §4 |
 
 ON HAND's `Task` lane is the review surface for Canonical Shared Tasks and execution-shaped
@@ -126,11 +126,13 @@ are separate files with separate audiences; don't conflate them.
 
 ### 3.6 Projects / Backstage (key 7)
 
-The Area adapter first reads `my-storage-note/views/areas.json`. It renders declared Areas
-with sibling Project, Assignment, and Task collections and keeps records without an Area in
-an explicit unassigned section. If the Area projection is unavailable or invalid, the adapter
-falls back to `my-storage-note/views/projects.json`, preserving the Project-only detail and
-handoff contract. This fallback is read-only and does not rewrite canonical Objects.
+The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source.
+It renders declared Areas with sibling Project, Assignment, and Task collections and keeps
+records without an Area in an explicit unassigned section. If a custom Project source is
+configured, that existing source is preferred before Area-first loading. If the Area projection
+is unavailable or invalid, the adapter falls back to the configured Project source, preserving
+the Project-only detail and handoff contract. This fallback is read-only and does not rewrite
+canonical Objects.
 
 `backstage.js`'s own constants say `REPO = 'gpts'`, `PROJECT_DIR = 'projects'` — this looks
 like it's reading the *legacy*, about-to-be-frozen `gpts` repository directly, which would
@@ -146,7 +148,8 @@ contain old gpts/projects labels/constants for compatibility adapters").
 
 The detail panel has an `OVERVIEW` mode for Current / Next, Workstreams, Relations, and links,
 plus a `TOWN / STATUS` mode backed by the shared `project-status-model.js`. Both modes use the
-same selected Project record; a Town rendering failure does not hide the Project list.
+same selected Project record; a Town rendering failure does not hide the Project list. Backstage
+is explicitly Project-only; Area/Project Town provides the sibling Assignment and Task context.
 
 ### 3.7 Project Town (standalone compatibility URL)
 

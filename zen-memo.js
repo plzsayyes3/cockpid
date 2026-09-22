@@ -122,6 +122,7 @@
       });
 
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
+      window.COCKPID_MEMO_ROUTE?.recordMemo(name);
 
       status.textContent = `POSTED · ${name}`;
       el('memoText').value = '';

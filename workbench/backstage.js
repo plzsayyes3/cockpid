@@ -574,7 +574,7 @@
 
       renderDesk();
       renderList();
-      status.textContent = `${projects.length} projects · source: ${result.kind === 'area' ? 'my-storage-note / views/areas.json' : 'Project fallback'}`;
+      status.textContent = `${projects.length} projects · ${result.kind === 'area' ? 'Area-first Project index' : 'Project fallback · Project-only detail'}`;
 
       const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
       if (hashId && allProjects.some((project) => project.id === hashId)) {
@@ -637,6 +637,7 @@
     return { projects: loaded.filter(Boolean) };
   }
 
+  window.COCKPID_BACKSTAGE = Object.freeze({ loadProjects, showProject });
   bindEvents();
-  loadProjects();
+  if (!window.__COCKPID_BACKSTAGE_NO_AUTOLOAD__) loadProjects();
 })();

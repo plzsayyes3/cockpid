@@ -149,3 +149,24 @@ test('actual Project detail and handoff contract remains Project-only for fallba
   await harness.clickHandoff('custom-project');
   assert.match(harness.copiedText, /legacy-repo\/custom-projects\/custom-project\.md/);
 });
+
+test('Project Town keeps custom Project source records when Area-first is bypassed', async () => {
+  let selectedSource = '';
+  const harness = context({
+    projectSource: { repo: 'custom-repo', dir: 'custom-projects' },
+    areaLoader: async () => {
+      selectedSource = 'custom-projects';
+      return {
+        kind: 'project',
+        fallback: true,
+        source: { repo: 'custom-repo', dir: 'custom-projects' },
+        view: { projects: [{ id: 'custom-project', title: 'Custom Project', path: 'custom-projects/custom-project.md' }] }
+      };
+    }
+  });
+
+  await harness.controller.load();
+
+  assert.equal(selectedSource, 'custom-projects');
+  assert.match(harness.elements.get('projectList').innerHTML, /Custom Project/);
+});

@@ -262,6 +262,7 @@
         body: JSON.stringify({ message: `cockpid workbench: capture ${name}`, content: encodeUtf8(`${text}\n`) })
       });
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
+      window.COCKPID_MEMO_ROUTE?.recordMemo(name);
       captureText.value = '';
       captureBtn.textContent = '保存済み ✓';
       captureStatus(`保存しました · ${name}`);

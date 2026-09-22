@@ -110,19 +110,27 @@ HOMEは「全部を監視するMission Control」ではなく、必要な道具�
 Projects, Assignments, and Tasks are read from the Area projection when
 `my-storage-note/views/areas.json` is available. The Project surface groups
 sibling records under declared Areas and keeps records without an Area in an
-explicit unassigned section. The adapter preserves the legacy Project detail
-and handoff behavior; if the Area projection cannot be loaded, it falls back to
-the canonical `views/projects.json` Project view without changing source data.
+explicit unassigned section. Backstage is intentionally a Project-only index and
+detail/handoff surface; Assignment and Task siblings remain visible through the
+Area/Project Town views and are not silently promoted into Backstage's Project
+list. The adapter preserves the legacy Project detail and handoff behavior; if
+the Area projection cannot be loaded, it falls back to the configured Project
+source without changing source data. A custom Project source always wins over
+Area-first loading for compatibility.
 
 ### Projects / Backstage
 
-Projectの一覧・詳細画面です。旧Backstageを親画面として、OverviewとTown / Statusを切り替えます。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。
+Projectの一覧・詳細画面です。旧Backstageを親画面として、OverviewとTown / Statusを切り替えます。BackstageはArea-firstのProject-only index/detail/handoffで、Assignment・Taskの兄弟はArea/Project Town側の導線で確認します。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。カスタムProject source設定がある場合は既存sourceを優先します。
 
 Canonical Projectは `my-storage-note/objects/projects/` です。
 
 ### Project Town / Status
 
 Projectのactivity / momentum等を眺める表示です。Projectsの詳細画面に統合され、Project read modelはBackstageと同じKnowledge Systemを基準にします。`workbench/project-town.html` は既存ブックマーク向けの独立入口として残します。
+
+### Memo Area routing
+
+WorkbenchのMemo / Inboxでは、Area選択後にProject / Assignment / Task / Reference / Principleの分岐を記録・表示します。routeはブラウザの`cockpid.memo-routes.v1` sidecarに保存し、Inbox本文・ファイル名・保存先の既存semanticsは変更しません。
 
 ## Stan / スタンちゃん
 
