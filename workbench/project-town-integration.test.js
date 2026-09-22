@@ -23,11 +23,13 @@ function element() {
 
 function context({ areaLoader, fetchImpl = async () => ({ ok: true, json: async () => [] }), projectSource = null } = {}) {
   const elements = new Map(['projectList', 'projectRoom', 'projectCount', 'townSummary', 'detailContent', 'detailState', 'reloadBtn', 'messageTitle', 'messageText'].map((id) => [id, element()]));
+  const listeners = new Map();
+  let copiedText = '';
   const document = {
     hidden: false,
     getElementById: (id) => elements.get(id) || null,
     querySelectorAll: () => [],
-    addEventListener() {}
+    addEventListener: (type, listener) => listeners.set(type, listener)
   };
   const window = {
     __COCKPID_PROJECT_TOWN_NO_AUTOLOAD__: true,
@@ -47,7 +49,7 @@ function context({ areaLoader, fetchImpl = async () => ({ ok: true, json: async 
     window,
     document,
     localStorage: { getItem: () => '' },
-    navigator: { clipboard: { writeText: async () => {} } },
+    navigator: { clipboard: { writeText: async (text) => { copiedText = String(text); } } },
     fetch: fetchImpl,
     console,
     setTimeout,
@@ -60,7 +62,17 @@ function context({ areaLoader, fetchImpl = async () => ({ ok: true, json: async 
     btoa
   };
   vm.runInNewContext(source, vmContext);
-  return { controller: window.COCKPID_PROJECT_TOWN, elements };
+  return {
+    controller: window.COCKPID_PROJECT_TOWN,
+    elements,
+    get copiedText() { return copiedText; },
+    async clickHandoff(id) {
+      const listener = listeners.get('click');
+      const target = { closest: (selector) => selector === '[data-handoff-id]' ? { dataset: { handoffId: id } } : null };
+      listener({ target, preventDefault() {}, stopPropagation() {} });
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+  };
 }
 
 function areaView() {
@@ -87,6 +99,8 @@ test('actual Project Town load path prefers Area data and renders the live room'
   assert.match(harness.elements.get('projectRoom').innerHTML, /ASSIGNMENT/);
   assert.match(harness.elements.get('projectRoom').innerHTML, /TASK/);
   assert.match(harness.elements.get('projectRoom').innerHTML, /data-project-id="area-project"/);
+  await harness.clickHandoff('area-project');
+  assert.match(harness.copiedText, /my-storage-note\/objects\/projects\/area-project\.md/);
 });
 
 test('actual Project Town load path invokes legacy fallback when Area loading fails', async () => {
@@ -113,6 +127,8 @@ test('actual Project Town load path invokes legacy fallback when Area loading fa
   assert.match(requested[0], /legacy-repo\/contents\/custom-projects/);
   assert.match(harness.elements.get('projectList').innerHTML, /Custom P/);
   assert.equal(Number(harness.elements.get('projectCount').textContent), 1);
+  await harness.clickHandoff('custom-project');
+  assert.match(harness.copiedText, /legacy-repo\/custom-projects\/custom-project\.md/);
 });
 
 test('actual Project detail and handoff contract remains Project-only for fallback records', async () => {
@@ -130,8 +146,6 @@ test('actual Project detail and handoff contract remains Project-only for fallba
   const detail = harness.elements.get('detailContent').innerHTML;
 
   assert.match(detail, /data-handoff-id="custom-project"/);
-  assert.match(harness.controller.handoffPrompt({
-    id: 'custom-project', title: 'Custom P', path: 'custom-projects/custom-project.md',
-    source: { repo: 'legacy-repo', dir: 'custom-projects' }
-  }), /legacy-repo\/custom-projects\/custom-project\.md/);
+  await harness.clickHandoff('custom-project');
+  assert.match(harness.copiedText, /legacy-repo\/custom-projects\/custom-project\.md/);
 });
