@@ -23,6 +23,39 @@
     secret: { key: '0', title: '0 / ???', type: 'game' }
   });
 
+
+  const dockIcons = Object.freeze({
+    calendar: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3.5v3M17 3.5v3M3.5 9h17M8 13h2M14 13h2M8 17h2"/></svg>',
+    tasks: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l2.3 2.3L16 8.8"/></svg>',
+    zen: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5zM15 4.5V9h4"/><path d="M8 16l6.8-6.8 1.8 1.8L9.8 17.8 7 18.5z"/></svg>',
+    news: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h11v14H5zM16 8h3v9a2 2 0 0 1-2 2h-1M8 9h5M8 12h5M8 15h3"/></svg>',
+    onhand: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="10" height="9" rx="2"/><path d="M3.5 15.5h4l2-1.5h4.5c1.3 0 2 .8 2 1.7M7.5 18.5h7.2c1.1 0 2-.3 2.8-1l3-2.5M3.5 15.5v4"/></svg>',
+    dictionary: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-.7 5.4-.2 8 1.5v12c-2.6-1.7-5-2.2-8-1.5zM20 5.5c-3-.7-5.4-.2-8 1.5v12c2.6-1.7 5-2.2 8-1.5z"/></svg>',
+    backstage: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h7l2-2h8v14h-17z"/><rect x="8" y="10" width="8" height="5" rx="1"/></svg>',
+    thinking: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M12 11L6 16M12 11l6 5"/></svg>',
+    keyboard: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1M6 13h1M10 13h1M14 13h1M18 13h1M8 16h8"/></svg>',
+    secret: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.2"/><path d="M10.8 12v5.5M13.2 12v5.5M10.8 17.5h2.4"/></svg>'
+  });
+
+  const dockLabels = Object.freeze({
+    calendar: 'Calendar',
+    tasks: 'Tasks',
+    zen: 'Zen',
+    news: 'News',
+    onhand: 'On Hand',
+    dictionary: 'Dictionary',
+    backstage: 'Projects',
+    thinking: 'Thinking',
+    keyboard: 'Keyboard',
+    secret: 'Secret'
+  });
+
+  function dockMarkup(appName, key, fallbackLabel) {
+    const label = dockLabels[appName] || fallbackLabel || appName;
+    const icon = dockIcons[appName] || '';
+    return `${icon}<b class="dock-key">${key}</b><span class="dock-label">${label}</span>`;
+  }
+
   const keyToApp = Object.freeze(Object.fromEntries(
     Object.entries(apps)
       .filter(([, app]) => app.key)
@@ -59,13 +92,21 @@
       button.className = 'app-btn';
       button.dataset.app = appName;
       button.setAttribute('aria-label', label);
-      button.innerHTML = `<b>${key}</b><span>${label}</span>`;
+      button.innerHTML = dockMarkup(appName, key, label);
       if (zero) dock.insertBefore(button, zero);
       else dock.appendChild(button);
     });
   }
 
   rebuildDockTail();
+
+  document.querySelectorAll('.dock .app-btn').forEach((button) => {
+    const appName = button.dataset.app;
+    const key = button.querySelector('b')?.textContent?.trim() || apps[appName]?.key || '';
+    if (!appName || !dockIcons[appName]) return;
+    button.setAttribute('aria-label', dockLabels[appName] || appName);
+    button.innerHTML = dockMarkup(appName, key, button.querySelector('span')?.textContent?.trim());
+  });
 
   let boardLoader = null;
   let dictionaryLoader = null;
