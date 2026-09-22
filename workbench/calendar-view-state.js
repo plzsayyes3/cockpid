@@ -9,7 +9,7 @@
   const next = document.getElementById('nextView');
   if (!anchor || !tabs.length) return;
 
-  const validViews = new Set(['day', 'week', 'month', 'timeline']);
+  const validViews = new Set(['day', 'week', 'month', 'timeline', 'timeline2']);
   const validDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value || '');
   const currentView = () => tabs.find((button) => button.classList.contains('active'))?.dataset.view || 'day';
 
