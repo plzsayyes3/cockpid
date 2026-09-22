@@ -49,14 +49,14 @@
   .pet{bottom:124px}
   .dock{bottom:20px;grid-template-rows:repeat(2,42px);gap:8px}
   .app-btn{height:42px;display:grid;grid-template-columns:auto 22px;grid-template-rows:22px auto;align-items:center;justify-content:center;column-gap:4px;row-gap:2px;padding:3px 4px;text-align:center}
-  .app-btn .dock-key{display:block;grid-column:1;grid-row:1;font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.04em;color:currentColor;opacity:.58}
+  .app-btn .dock-key{display:grid;grid-column:1;grid-row:1;place-items:center;width:15px;height:15px;border:1.4px solid currentColor;border-radius:5px;font:800 9px/1 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;letter-spacing:-.06em;color:currentColor;opacity:.82;transform:translateY(.5px)}
   .app-btn .dock-icon{display:block;grid-column:2;grid-row:1;width:22px;height:22px}
   .app-btn .dock-label{grid-column:1/-1;grid-row:2;font-size:6.5px;line-height:1;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 }
 @media(max-width:340px){
   .dock{gap:6px}
   .app-btn{grid-template-columns:auto 20px;grid-template-rows:20px auto;column-gap:3px;row-gap:1px;padding:3px 2px}
-  .app-btn .dock-key{font-size:8px}
+  .app-btn .dock-key{width:14px;height:14px;border-radius:4px;font-size:8px}
   .app-btn .dock-icon{width:20px;height:20px}
   .app-btn .dock-label{font-size:6px}
 }
