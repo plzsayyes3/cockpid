@@ -40,3 +40,21 @@
   .shell{padding-bottom:124px}
   .dock{grid-template-rows:repeat(2,36px);gap:8px}
 }
+
+
+/* Mobile dock icon treatment */
+.dock-icon{display:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:720px){
+  .shell{padding-bottom:136px}
+  .dock{bottom:20px;grid-template-rows:repeat(2,42px);gap:8px}
+  .app-btn{height:42px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:3px 4px;text-align:center}
+  .app-btn .dock-key{display:none}
+  .app-btn .dock-icon{display:block;flex:0 0 22px}
+  .app-btn .dock-label{font-size:6.5px;line-height:1;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:340px){
+  .dock{gap:6px}
+  .app-btn{padding:3px 2px;gap:1px}
+  .app-btn .dock-icon{width:20px;height:20px;flex-basis:20px}
+  .app-btn .dock-label{font-size:6px}
+}
