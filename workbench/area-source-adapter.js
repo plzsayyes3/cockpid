@@ -18,12 +18,42 @@
     if (!view?.unassigned || typeof view.unassigned !== 'object' || Array.isArray(view.unassigned)) {
       throw new Error('Area view has no unassigned bucket');
     }
-    for (const bucket of [view.unassigned, ...view.areas]) {
+    const validateBucket = (bucket, label) => {
       for (const type of ['projects', 'assignments', 'tasks']) {
-        if (bucket[type] !== undefined && !Array.isArray(bucket[type])) throw new Error(`Area view has invalid ${type}`);
+        if (!Array.isArray(bucket[type])) throw new Error(`Area view has invalid ${label}.${type}`);
+        bucket[type].forEach((record, index) => {
+          if (!record || typeof record !== 'object' || Array.isArray(record) || typeof record.id !== 'string' || !record.id.trim()) {
+            throw new Error(`Area view has invalid ${label}.${type}[${index}]`);
+          }
+        });
       }
-    }
+    };
+    validateBucket(view.unassigned, 'unassigned');
+    const ids = new Set();
+    view.areas.forEach((area, index) => {
+      if (!area || typeof area !== 'object' || Array.isArray(area) || typeof area.id !== 'string' || !area.id.trim()) {
+        throw new Error(`Area view has invalid areas[${index}] id`);
+      }
+      if (ids.has(area.id)) throw new Error(`Area view has duplicate Area id: ${area.id}`);
+      ids.add(area.id);
+      validateBucket(area, `areas[${index}]`);
+    });
     return view;
+  }
+
+  function projectFallbackLoader(init) {
+    const loader = window.COCKPID_PROJECT_VIEW?.load;
+    if (typeof loader !== 'function') throw new Error('Project fallback loader unavailable');
+    return loader(init);
+  }
+
+  async function loadWithFallback(init, fallbackLoader = projectFallbackLoader) {
+    try {
+      return { kind: 'area', fallback: false, source: AREA_SOURCE, view: await load(init) };
+    } catch (error) {
+      const view = await fallbackLoader(init);
+      return { kind: 'project', fallback: true, source: fallback(), view, error };
+    }
   }
 
   function load(init, force = false) {
@@ -43,7 +73,7 @@
   }
 
   const fallback = () => window.COCKPID_PROJECT_SOURCE_FALLBACK || window.COCKPID_PROJECT_SOURCE || null;
-  window.COCKPID_AREA_VIEW = Object.freeze({ load, source: AREA_SOURCE, fallback });
+  window.COCKPID_AREA_VIEW = Object.freeze({ load, loadWithFallback, loadOrFallback: loadWithFallback, source: AREA_SOURCE, fallback });
   Object.defineProperty(window, 'COCKPID_AREA_VIEW_PROMISE', {
     configurable: true,
     get: () => load()

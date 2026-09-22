@@ -105,6 +105,11 @@
     return viewPromise;
   }
 
+  window.COCKPID_PROJECT_VIEW = Object.freeze({
+    load: loadProjectView,
+    source: window.COCKPID_PROJECT_SOURCE
+  });
+
   function defaultProjectRequest(input) {
     const raw = rawUrl(input);
     if (!raw) return null;
