@@ -1,0 +1,23 @@
+{
+  "name": "作業台 — Workbench",
+  "short_name": "作業台",
+  "description": "作業台のホーム画面",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f1f0eb",
+  "theme_color": "#f1f0eb",
+  "icons": [
+    {
+      "src": "./icons/workbench-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/workbench-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
