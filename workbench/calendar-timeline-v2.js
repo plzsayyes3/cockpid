@@ -35,6 +35,28 @@
   function monthKey(parts) {
     return `${parts.year}-${pad(parts.month)}`;
   }
+  function weekStart(parts) {
+    const date = toDate(parts);
+    const offset = (date.getUTCDay() + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - offset);
+    return fromDate(date);
+  }
+  function isoWeek(parts) {
+    const date = toDate(parts);
+    const day = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date - yearStart) / DAY_MS) + 1) / 7);
+  }
+  function uniqueItems(items) {
+    const seen = new Set();
+    return (items || []).filter((item) => {
+      const key = [item.start ?? '', item.end ?? '', item.title || '', item.checked ? 1 : 0, item.task ? 1 : 0].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   function colorFor(item) {
     const seed = `${item.title || ''}|${item.start ?? ''}|${item.end ?? ''}`;
     let hash = 0;
@@ -118,14 +140,12 @@
     for (let parts = start; ; parts = addDays(parts, 1)) {
       const data = monthData.get(monthKey(parts));
       const rawItems = data?.days?.get(parts.day) || [];
-      const seen = new Set();
-      const items = rawItems.filter((item) => {
-        const key = [item.start ?? '', item.end ?? '', item.title || '', item.checked ? 1 : 0, item.task ? 1 : 0].join('|');
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      }).map((item) => ({ ...item, color: colorFor(item) }));
-      days.push({ parts, key: dateKey(parts), items });
+      const items = uniqueItems(rawItems).map((item) => ({ ...item, color: colorFor(item) }));
+      const week = isoWeek(parts);
+      const owner = monthData.get(monthKey(weekStart(parts)));
+      const monthUndated = uniqueItems(data?.monthUndated || []);
+      const weekUndated = uniqueItems(owner?.weekUndated?.get(week) || []);
+      days.push({ parts, key: dateKey(parts), items, week, monthUndated, weekUndated });
       if (dateKey(parts) === dateKey(end)) break;
     }
     return days;
@@ -155,6 +175,14 @@
           <div class="timeline2-surface"><svg class="timeline2-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
         </div>
         <div class="timeline2-center"></div>
+        <div class="timeline2-unscheduled">
+          <button type="button" class="timeline2-unscheduled-toggle" aria-expanded="false">
+            <span class="timeline2-unscheduled-name">UNSCHEDULED</span>
+            <b class="timeline2-unscheduled-count">0</b>
+            <span class="timeline2-unscheduled-context"></span>
+          </button>
+          <div class="timeline2-unscheduled-panel" hidden></div>
+        </div>
         <div class="timeline2-scale">SCALE ${savedScale}</div>
       </div>`;
 
@@ -164,6 +192,11 @@
     const svg = container.querySelector('.timeline2-svg');
     const centerLine = container.querySelector('.timeline2-center');
     const scaleNode = container.querySelector('.timeline2-scale');
+    const unscheduled = container.querySelector('.timeline2-unscheduled');
+    const unscheduledToggle = container.querySelector('.timeline2-unscheduled-toggle');
+    const unscheduledCount = container.querySelector('.timeline2-unscheduled-count');
+    const unscheduledContext = container.querySelector('.timeline2-unscheduled-context');
+    const unscheduledPanel = container.querySelector('.timeline2-unscheduled-panel');
     const signal = abort.signal;
 
     let zoom = clamp(savedScale / 100, 0, 1);
@@ -210,6 +243,33 @@
       return { x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t) };
     }
 
+    let unscheduledKey = '';
+    function undatedRows(items) {
+      return items.map((item) => `<div class="timeline2-unscheduled-item${item.checked ? ' is-checked' : ''}">${esc(item.title)}</div>`).join('');
+    }
+    function updateUnscheduled(day) {
+      if (!day) return;
+      const key = `${day.parts.year}-${day.parts.month}-W${day.week}|${day.weekUndated.length}|${day.monthUndated.length}`;
+      if (key === unscheduledKey) return;
+      unscheduledKey = key;
+
+      const weekItems = day.weekUndated;
+      const monthItems = day.monthUndated;
+      const total = weekItems.length + monthItems.length;
+      unscheduledCount.textContent = String(total);
+      unscheduledContext.textContent = `W${day.week} · ${day.parts.month}月`;
+      unscheduled.classList.toggle('is-empty', total === 0);
+
+      const sections = [];
+      if (weekItems.length) {
+        sections.push(`<section><div class="timeline2-unscheduled-label">WEEK ${day.week}</div>${undatedRows(weekItems)}</section>`);
+      }
+      if (monthItems.length) {
+        sections.push(`<section><div class="timeline2-unscheduled-label">${day.parts.year}年${day.parts.month}月</div>${undatedRows(monthItems)}</section>`);
+      }
+      unscheduledPanel.innerHTML = sections.length ? sections.join('') : '<div class="timeline2-unscheduled-empty">この範囲に日付未定はありません</div>';
+    }
+
     function updateScale(z) {
       savedScale = Math.round(z * 100);
       scaleNode.textContent = `SCALE ${savedScale}`;
@@ -226,6 +286,8 @@
       const sizeP = sizeMorphFor(z);
       const first = clamp(Math.floor(scroll / u) - 2, 0, days.length - 1);
       const last = clamp(Math.ceil((scroll + hv) / u) + 2, 0, days.length - 1);
+      const focusIndex = clamp(Math.floor((scroll + hv * .5) / u), 0, days.length - 1);
+      updateUnscheduled(days[focusIndex]);
 
       svg.style.height = `${hv}px`;
       svg.setAttribute('viewBox', `0 0 ${w} ${hv}`);
@@ -369,6 +431,13 @@
       setCenter(0,false);
       draw(zoom);
     }
+
+    unscheduledToggle.addEventListener('click', () => {
+      const open = unscheduledToggle.getAttribute('aria-expanded') === 'true';
+      unscheduledToggle.setAttribute('aria-expanded', String(!open));
+      unscheduledPanel.hidden = open;
+      unscheduled.classList.toggle('is-open', !open);
+    }, { signal });
 
     viewport.addEventListener('touchstart', (event) => {
       if (event.touches.length === 2) startPinch(event);
