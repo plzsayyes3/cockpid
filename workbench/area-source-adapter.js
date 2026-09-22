@@ -33,8 +33,10 @@
             throw new Error(`Area view has invalid ${label}.${type}[${index}]`);
           }
           if (areaId !== null && record.area_id !== areaId) throw new Error(`Area view has invalid ${label}.${type}[${index}].area_id`);
-          if (label === 'unassigned' && typeof record.area_id === 'string' && record.area_id.trim()) {
-            throw new Error(`Area view has invalid unassigned.${type}[${index}].area_id`);
+          if (label === 'unassigned' && record.area_id != null) {
+            if (typeof record.area_id !== 'string' || record.area_id.trim()) {
+              throw new Error(`Area view has invalid unassigned.${type}[${index}].area_id`);
+            }
           }
           if (type === 'tasks') {
             const hasProject = typeof record.project_id === 'string' && record.project_id.trim();

@@ -152,6 +152,18 @@ test('rejects unassigned records with a non-empty area_id', async () => {
   await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /unassigned.*area_id/);
 });
 
+test('rejects non-string non-null area_id values in unassigned records', async () => {
+  for (const areaId of [0, false, {}, []]) {
+    const adapter = adapterContext(async () => ({
+      ok: true,
+      json: async () => ({ content: encoded(validAreaView({
+        unassigned: { projects: [{ id: 'p1', area_id: areaId }], assignments: [], tasks: [] }
+      })) })
+    }));
+    await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /unassigned.*area_id/);
+  }
+});
+
 test('rejects non-canonical metadata, timestamps, and Area object paths', async () => {
   const malformedViews = [
     validAreaView({ source: { repository: 'other/repo', authority: 'objects' } }),
