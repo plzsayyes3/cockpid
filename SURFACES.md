@@ -390,9 +390,9 @@ last touched on 2026-09-12, "Use configured Short Memo destination"). Not stale.
 
 ## 10. Final Area migration verification (2026-09-23)
 
-Canonical verification passed with `python3 scripts/build_views.py`, the 9-test Python suite,
+Canonical verification passed with `python3 scripts/build_views.py`, the 10-test Python suite,
 and the `views/areas.json` unassigned-bucket audit. Cockpid JavaScript syntax checks passed for
-every `workbench/*.js` file. The full Cockpid suite is 38 passing and 1 failing: the pre-existing
+every `workbench/*.js` file. The full Cockpid suite is 50 passing and 1 failing: the pre-existing
 Keyboard routing contract still expects the legacy `keyboard.html` page route, while the live
 router points key 9 at the external Keyboard iframe. This documentation task does not change
 that unrelated routing behavior.
