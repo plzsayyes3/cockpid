@@ -12,6 +12,7 @@
 
   const Model = window.ProjectTownModel;
   const Motion = window.ProjectTownMotion;
+  const AreaModel = window.COCKPID_AREA_MODEL;
   if (!Model || !Motion) {
     console.error('Project Town dependency missing', { Model: Boolean(Model), Motion: Boolean(Motion) });
     return;
@@ -27,7 +28,10 @@
     motivation,
     decisionText,
     detailMessage,
-    handoffPrompt
+    handoffPrompt,
+    renderAreaSummary,
+    projectRecordsFromAreaView,
+    projectRecordsFromLegacyView
   } = Model;
 
   const $ = (id) => document.getElementById(id);
@@ -49,6 +53,8 @@
   }
 
   let projects = [];
+  let areaView = null;
+  let usingAreaView = false;
   let selected = '';
   let lastRefreshAt = 0;
   let refreshTimer = 0;
@@ -117,8 +123,20 @@
   function renderRoom() {
     dom.room.classList.add('town-shared-room');
     const people = projects.slice(0, ROOM_LIMIT).map(workerMarkup).join('');
+    const areaSections = usingAreaView && areaView
+      ? (AreaModel?.groupItems(areaView) || []).map(({ area, projects: areaProjects, assignments, tasks }) => renderAreaSummary({
+        ...area,
+        projects: areaProjects,
+        assignments,
+        tasks
+      })).join('')
+      : '';
+    const unassigned = usingAreaView && areaView ? AreaModel?.unassigned(areaView) : null;
+    const unassignedSection = unassigned && (unassigned.projects.length || unassigned.assignments.length || unassigned.tasks.length)
+      ? renderAreaSummary({ id: 'unassigned', title: '未分類', ...unassigned })
+      : '';
 
-    dom.room.innerHTML = `<span class="town-zone-label work">💻 作業エリア</span><span class="town-zone-label research">▥ 調査エリア</span><span class="town-zone-label wait">◷ 外部待ち</span><span class="town-zone-label review">成果物はこちらへ ↓</span><span class="town-work-desk"></span><span class="town-shelf"></span><span class="town-wait-spot"></span><span class="town-review-counter"></span><span class="town-rest-sofa"></span>${people || '<div class="room-loading">Projectがありません</div>'}`;
+    dom.room.innerHTML = `${areaSections}${unassignedSection}<div class="project-town-stage"><span class="town-zone-label work">💻 作業エリア</span><span class="town-zone-label research">▥ 調査エリア</span><span class="town-zone-label wait">◷ 外部待ち</span><span class="town-zone-label review">成果物はこちらへ ↓</span><span class="town-work-desk"></span><span class="town-shelf"></span><span class="town-wait-spot"></span><span class="town-review-counter"></span><span class="town-rest-sofa"></span>${people || '<div class="room-loading">Projectがありません</div>'}</div>`;
 
     Motion.start({
       room: dom.room,
@@ -194,28 +212,23 @@
   async function load({ silent = false } = {}) {
     if (!silent) {
       dom.reload.disabled = true;
-      dom.summary.textContent = 'gpts / projects を読んでいます…';
+      dom.summary.textContent = 'Area / Project を読んでいます…';
     }
 
     try {
-      const entries = await api(
-        `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${BRANCH}&_=${Date.now()}`
+      const headers = { Accept: 'application/vnd.github+json' };
+      const token = localStorage.getItem(TOKEN_KEY) || '';
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const result = await window.COCKPID_AREA_VIEW.loadWithFallback(
+        { headers, cache: 'no-store' },
+        loadLegacyProjects
       );
-
-      let failedReads = 0;
-      const loaded = await Promise.all(
-        (Array.isArray(entries) ? entries : [])
-          .filter(isProjectCandidate)
-          .map(async (entry) => {
-            try {
-              return await loadProject(entry);
-            } catch (error) {
-              failedReads += 1;
-              console.warn('Project Town skip', entry.path, error);
-              return null;
-            }
-          })
-      );
+      usingAreaView = result.kind === 'area';
+      areaView = usingAreaView ? result.view : null;
+      const loaded = usingAreaView
+        ? projectRecordsFromAreaView(result.view, result.source)
+        : projectRecordsFromLegacyView(result.view);
+      const failedReads = Number(result.view?.failedReads || 0);
 
       const previous = selected;
       projects = loaded
@@ -230,6 +243,7 @@
       renderRoom();
       renderList();
       updateSummary();
+      if (usingAreaView) dom.summary.textContent = `Area中心 / ${dom.summary.textContent}`;
       if (failedReads) dom.summary.textContent += ` / PARTIAL ${failedReads} READ ERROR`;
       if (selected) showProject(selected);
     } catch (error) {
@@ -241,6 +255,30 @@
     } finally {
       dom.reload.disabled = false;
     }
+  }
+
+  async function loadLegacyProjects() {
+    const entries = await api(
+      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${BRANCH}&_=${Date.now()}`
+    );
+    let failedReads = 0;
+    const loaded = await Promise.all(
+      (Array.isArray(entries) ? entries : [])
+        .filter(isProjectCandidate)
+        .map(async (entry) => {
+          try {
+            return await loadProject(entry);
+          } catch (error) {
+            failedReads += 1;
+            console.warn('Project Town skip', entry.path, error);
+            return null;
+          }
+        })
+    );
+    return {
+      projects: loaded.filter(Boolean).sort((a, b) => String(b.last_touched || '').localeCompare(String(a.last_touched || ''))),
+      failedReads
+    };
   }
 
   function scheduleRefresh() {

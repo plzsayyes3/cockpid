@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#004058">
-<title>COCKPID — Project Town</title>
+<title>COCKPID — Area Town</title>
 <link rel="preload" as="image" href="assets/project-town/character.png">
 <link rel="stylesheet" href="project-town.css">
 <link rel="stylesheet" href="project-town-activity.css">
@@ -15,8 +15,8 @@
 <div class="town-app">
   <header class="town-topbar">
     <div>
-      <div class="town-kicker">PROJECT TOWN</div>
-      <h1>プロジェクトの町</h1>
+      <div class="town-kicker">AREA TOWN</div>
+      <h1>Area中心の町</h1>
     </div>
     <div class="town-summary" id="townSummary">読み込み中…</div>
     <button class="pixel-button" id="reloadBtn" type="button">↻</button>
@@ -26,20 +26,20 @@
     <div class="skyline" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
     <div class="studio-sign">PROJECT STUDIO</div>
     <div class="room" id="projectRoom">
-      <div class="room-loading">gpts / projects を読んでいます…</div>
+      <div class="room-loading">Area / Project を読んでいます…</div>
     </div>
   </section>
 
   <main class="town-main">
     <section class="pixel-panel project-list-panel">
-      <div class="panel-title"><span>🌱 プロジェクト一覧</span><span id="projectCount">—</span></div>
+      <div class="panel-title"><span>🌱 Project一覧</span><span id="projectCount">—</span></div>
       <div class="project-list" id="projectList"></div>
     </section>
   </main>
 
   <footer class="town-message">
     <div class="portrait" aria-hidden="true"><span class="hair"></span><span class="face"></span><span class="body"></span></div>
-    <div><b id="messageTitle">ようこそ、プロジェクトの町へ。</b><p id="messageText">何をしているかと、どれくらい勢いがあるかを分けて眺めます。</p></div>
+    <div><b id="messageTitle">ようこそ、Areaの町へ。</b><p id="messageText">Areaの文脈の中で、Project・Assignment・Taskを眺めます。</p></div>
   </footer>
 </div>
 
@@ -55,6 +55,8 @@
 </div>
 
 <script src="project-source-adapter.js"></script>
+<script src="area-source-adapter.js"></script>
+<script src="area-model.js"></script>
 <script src="project-status-model.js?v=20260918-projects1"></script>
 <script src="project-town-model.js?v=20260918-projects1"></script>
 <script src="project-town-characters.js"></script>

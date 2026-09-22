@@ -79,6 +79,18 @@ button{font:inherit}
 .project-list{max-height:420px;overflow:auto}
 .project-row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 88px 105px;gap:8px;align-items:center;background:#fffdf4;border:0;border-bottom:2px solid #c7bfa8;padding:10px;text-align:left;color:#13233b}
 .project-row.active,.project-row:hover{background:#e7f3ff}
+.area-summary{grid-column:1/-1;background:#fffdf4;border:3px solid #315d91;box-shadow:3px 3px 0 #13233b;padding:10px}
+.area-summary-head{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid #c7bfa8;padding-bottom:7px;margin-bottom:8px}
+.area-summary-head h2{margin:0;font-size:18px}
+.area-kicker,.area-collection h3{font-size:10px;letter-spacing:.12em;font-weight:900;color:#315d91}
+.area-collection{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;align-items:start;margin-top:7px}
+.area-collection h3{margin:4px 0 0}
+.area-records{display:flex;flex-wrap:wrap;gap:6px}
+.area-record{display:block;border:2px solid #c7bfa8;background:#fff;padding:6px 8px;color:#13233b;text-align:left;font:inherit}
+button.area-record{cursor:pointer}
+button.area-record:hover{background:#e7f3ff;border-color:#315d91}
+.area-empty{padding:6px 8px;color:#847a6a;font-size:12px}
+.project-town-stage{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;min-height:180px}
 .project-name{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .state-chip{border:2px solid #253754;padding:3px 5px;text-align:center;font-size:10px;font-weight:900}
 .state-chip[data-state="hot"]{background:#fff06b}.state-chip[data-state="active"]{background:#d8efff}.state-chip[data-state="thinking"]{background:#e6dcff}.state-chip[data-state="waiting"]{background:#f6dda1}.state-chip[data-state="paused"]{background:#ddd7ca}

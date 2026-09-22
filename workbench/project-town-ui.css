@@ -9,3 +9,4 @@
 /* A phone-like touch device must never fall back to the desktop landscape grid. */
 .mobile-ui .town-app{grid-template-columns:none!important;grid-template-rows:none!important}
 .mobile-ui .project-list-panel,.mobile-ui .studio,.mobile-ui .town-message{grid-column:auto!important;grid-row:auto!important}
+.mobile-ui .area-collection{grid-template-columns:1fr;gap:3px}.mobile-ui .area-summary-head h2{font-size:14px}.mobile-ui .project-town-stage{grid-template-columns:repeat(2,minmax(0,1fr))}
