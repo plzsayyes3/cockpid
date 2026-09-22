@@ -148,11 +148,13 @@ function dayBlockHeight(z){
 }
 function unitHeightFor(z){return lerp(timelineRowHeight(z),dayBlockHeight(z),sizeMorphFor(z))}
 
-// Keep the normal axis until one full day is about one screen tall.
-// Then perform the axis swap in a deliberately narrow band.
+// Axis swap is driven by visible-day count, not by row height.
+// Keep the ordinary multi-day axis through ~4 DAYS, then rotate quickly.
+// By the time the UI reads 3 DAYS, the time axis is already fully vertical
+// and stays vertical all the way into DAY.
 function axisMorphFor(z){
-  var dayToScreen=unitHeightFor(z)/Math.max(1,viewport.clientHeight);
-  return smooth(1.00,1.10,dayToScreen);
+  var days=visibleDaysFor(z);
+  return 1-smooth(3.60,4.20,days);
 }
 function modeFor(z){
   if(unitHeightFor(z)>=viewport.clientHeight*1.06)return'DAY';
