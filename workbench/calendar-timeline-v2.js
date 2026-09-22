@@ -175,14 +175,6 @@
           <div class="timeline2-surface"><svg class="timeline2-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
         </div>
         <div class="timeline2-center"></div>
-        <div class="timeline2-unscheduled">
-          <button type="button" class="timeline2-unscheduled-toggle" aria-expanded="false">
-            <span class="timeline2-unscheduled-name">UNSCHEDULED</span>
-            <b class="timeline2-unscheduled-count">0</b>
-            <span class="timeline2-unscheduled-context"></span>
-          </button>
-          <div class="timeline2-unscheduled-panel" hidden></div>
-        </div>
         <div class="timeline2-scale">SCALE ${savedScale}</div>
       </div>`;
 
@@ -192,11 +184,6 @@
     const svg = container.querySelector('.timeline2-svg');
     const centerLine = container.querySelector('.timeline2-center');
     const scaleNode = container.querySelector('.timeline2-scale');
-    const unscheduled = container.querySelector('.timeline2-unscheduled');
-    const unscheduledToggle = container.querySelector('.timeline2-unscheduled-toggle');
-    const unscheduledCount = container.querySelector('.timeline2-unscheduled-count');
-    const unscheduledContext = container.querySelector('.timeline2-unscheduled-context');
-    const unscheduledPanel = container.querySelector('.timeline2-unscheduled-panel');
     const signal = abort.signal;
 
     let zoom = clamp(savedScale / 100, 0, 1);
@@ -243,33 +230,6 @@
       return { x:lerp(a.x,b.x,t), y:lerp(a.y,b.y,t) };
     }
 
-    let unscheduledKey = '';
-    function undatedRows(items) {
-      return items.map((item) => `<div class="timeline2-unscheduled-item${item.checked ? ' is-checked' : ''}">${esc(item.title)}</div>`).join('');
-    }
-    function updateUnscheduled(day) {
-      if (!day) return;
-      const key = `${day.parts.year}-${day.parts.month}-W${day.week}|${day.weekUndated.length}|${day.monthUndated.length}`;
-      if (key === unscheduledKey) return;
-      unscheduledKey = key;
-
-      const weekItems = day.weekUndated;
-      const monthItems = day.monthUndated;
-      const total = weekItems.length + monthItems.length;
-      unscheduledCount.textContent = String(total);
-      unscheduledContext.textContent = `W${day.week} · ${day.parts.month}月`;
-      unscheduled.classList.toggle('is-empty', total === 0);
-
-      const sections = [];
-      if (weekItems.length) {
-        sections.push(`<section><div class="timeline2-unscheduled-label">WEEK ${day.week}</div>${undatedRows(weekItems)}</section>`);
-      }
-      if (monthItems.length) {
-        sections.push(`<section><div class="timeline2-unscheduled-label">${day.parts.year}年${day.parts.month}月</div>${undatedRows(monthItems)}</section>`);
-      }
-      unscheduledPanel.innerHTML = sections.length ? sections.join('') : '<div class="timeline2-unscheduled-empty">この範囲に日付未定はありません</div>';
-    }
-
     function updateScale(z) {
       savedScale = Math.round(z * 100);
       scaleNode.textContent = `SCALE ${savedScale}`;
@@ -286,9 +246,6 @@
       const sizeP = sizeMorphFor(z);
       const first = clamp(Math.floor(scroll / u) - 2, 0, days.length - 1);
       const last = clamp(Math.ceil((scroll + hv) / u) + 2, 0, days.length - 1);
-      const focusIndex = clamp(Math.floor((scroll + hv * .5) / u), 0, days.length - 1);
-      updateUnscheduled(days[focusIndex]);
-
       svg.style.height = `${hv}px`;
       svg.setAttribute('viewBox', `0 0 ${w} ${hv}`);
       svg.setAttribute('width', w);
@@ -326,6 +283,41 @@
 
         const weekdays = ['日','月','火','水','木','金','土'];
         out.push(`<text x="${railW+30}" y="${lerp(base+15,base+16,p)}" fill="#91928f" opacity="${smooth(.55,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">(${weekdays[dow]})</text>`);
+
+        // Unscheduled objects live under the date that owns their scope:
+        // week items on Monday, month items on the 1st.
+        const scopedUndated = [];
+        if (dow === 1) {
+          day.weekUndated.forEach((item) => scopedUndated.push({ scope:'W', item }));
+        }
+        if (monthStart) {
+          day.monthUndated.forEach((item) => scopedUndated.push({ scope:'M', item }));
+        }
+        if (scopedUndated.length) {
+          const compact = u < 34;
+          const markerX = railW + 7;
+          const markerY = base + Math.min(27, Math.max(12, u * .68));
+          if (compact) {
+            out.push(`<circle cx="${markerX+3}" cy="${markerY}" r="2.6" fill="#c9c8c3" opacity=".82"/>`);
+            if (u > 17) {
+              out.push(`<text x="${markerX+9}" y="${markerY+2.7}" fill="#a9aaa6" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length}</text>`);
+            }
+          } else {
+            const chipX = markerX;
+            const chipW = Math.min(Math.max(76, dateW + allDayW + 18), Math.max(76, w - chipX - 10));
+            scopedUndated.slice(0, 3).forEach((entry, idx) => {
+              const chipY = base + 25 + idx * 17;
+              const chipH = 14;
+              const alpha = entry.item.checked ? .34 : .88;
+              out.push(`<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="4" fill="rgba(255,255,255,.075)" stroke="rgba(255,255,255,.08)" opacity="${alpha}"/>`);
+              out.push(`<text x="${chipX+5}" y="${chipY+9.8}" fill="#8f908c" opacity="${alpha}" font-size="6.5" font-family="ui-monospace,monospace">${entry.scope}</text>`);
+              out.push(`<text x="${chipX+17}" y="${chipY+9.8}" fill="#deded9" opacity="${alpha}" font-size="7.2" font-family="-apple-system,sans-serif">${esc(entry.item.title)}</text>`);
+            });
+            if (scopedUndated.length > 3) {
+              out.push(`<text x="${chipX+5}" y="${base+25+3*17+8}" fill="#8f908c" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length-3}</text>`);
+            }
+          }
+        }
 
         for (let hour = 0; hour <= 24; hour += 3) {
           const xN = timeLeft + timeW * (hour / 24);
@@ -431,13 +423,6 @@
       setCenter(0,false);
       draw(zoom);
     }
-
-    unscheduledToggle.addEventListener('click', () => {
-      const open = unscheduledToggle.getAttribute('aria-expanded') === 'true';
-      unscheduledToggle.setAttribute('aria-expanded', String(!open));
-      unscheduledPanel.hidden = open;
-      unscheduled.classList.toggle('is-open', !open);
-    }, { signal });
 
     viewport.addEventListener('touchstart', (event) => {
       if (event.touches.length === 2) startPinch(event);
