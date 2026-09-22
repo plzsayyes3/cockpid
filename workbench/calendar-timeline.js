@@ -97,11 +97,20 @@
     }
 
     const monthData = new Map();
+    const anchorMonth = monthKey(anchor);
     await Promise.all(monthKeys.map(async (key) => {
       if (signal.aborted) return;
       const [year, month] = key.split('-').map(Number);
-      const data = await loadMonth({ year, month, day: 1 });
-      monthData.set(key, data);
+      try {
+        const data = await loadMonth({ year, month, day: 1 });
+        monthData.set(key, data);
+      } catch (error) {
+        // Sparse Techo history/future months are valid for the timeline.
+        // Only the anchor month is essential; missing surrounding months become empty.
+        if (key === anchorMonth) throw error;
+        console.info('Timeline month unavailable', key);
+        monthData.set(key, null);
+      }
     }));
     if (signal.aborted) return [];
 
