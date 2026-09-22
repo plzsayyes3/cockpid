@@ -50,6 +50,14 @@
     return nested.concat(records(source.unassigned?.[type]), records(source[type]));
   }
 
+  function validation(view) {
+    const source = view && typeof view === 'object' ? view : {};
+    return TYPES.reduce((result, type) => {
+      result[type] = records(source.validation?.[type]);
+      return result;
+    }, emptyGroup());
+  }
+
   function findRecord(view, type, id) {
     if (id == null || id === '') return null;
     return allRecords(view, type).find((record) => String(record?.id || '') === String(id)) || null;
@@ -86,7 +94,7 @@
     }
   });
 
-  const api = { groupItems, unassigned, AreaContext };
+  const api = { groupItems, unassigned, validation, AreaContext };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') {
     window.COCKPID_AREA_MODEL = Object.freeze(api);

@@ -28,6 +28,37 @@ function adapterContext(fetchImpl, projectSource = null) {
   return context.window;
 }
 
+test('prefers a configured custom Project source before Area-first loading', async () => {
+  let areaCalls = 0;
+  let fallbackCalls = 0;
+  const context = {
+    window: {
+      fetch: async () => {
+        areaCalls += 1;
+        return { ok: true, json: async () => ({ content: encoded(validAreaView()) }) };
+      },
+      COCKPID_PROJECT_SOURCE: { repo: 'custom-repo', dir: 'custom-projects' },
+    },
+    atob,
+    btoa,
+    TextDecoder,
+    TextEncoder,
+    Uint8Array,
+    Date,
+  };
+  vm.runInNewContext(adapterSource, context);
+
+  const result = await context.window.COCKPID_AREA_VIEW.loadWithFallback({}, async () => {
+    fallbackCalls += 1;
+    return { projects: [{ id: 'custom-project' }] };
+  });
+
+  assert.equal(result.kind, 'project');
+  assert.equal(result.source.repo, 'custom-repo');
+  assert.equal(areaCalls, 0);
+  assert.equal(fallbackCalls, 1);
+});
+
 function validAreaView(overrides = {}) {
   return {
     schema_version: 1,
@@ -35,6 +66,8 @@ function validAreaView(overrides = {}) {
     source: { repository: 'plzsayyes3/my-storage-note', authority: 'objects' },
     areas: [{ id: 'childcare', title: '保育園運営', object_path: 'objects/areas/childcare.md', projects: [], assignments: [], tasks: [] }],
     unassigned: { projects: [], assignments: [], tasks: [] },
+    validation: { projects: [], assignments: [], tasks: [] },
+    validation_warnings: [],
     ...overrides,
   };
 }
@@ -52,6 +85,20 @@ test('groups sibling records by Area and preserves unassigned records', () => {
   }), {
     projects: [{ id: 'p2' }], assignments: [], tasks: []
   });
+});
+
+test('keeps validation records outside Area sibling groups', () => {
+  const invalidTask = { id: 'task-1', area_id: 'childcare', project_id: 'p1', assignment_id: 'a1' };
+  const view = {
+    areas: [{ id: 'childcare', title: '保育園運営', projects: [], assignments: [], tasks: [] }],
+    unassigned: { projects: [], assignments: [], tasks: [] },
+    validation: { projects: [], assignments: [], tasks: [invalidTask] },
+    validation_warnings: [{ task_id: 'task-1', warnings: ['project_id and assignment_id are mutually exclusive'] }],
+  };
+
+  assert.deepEqual(AreaModel.groupItems(view)[0].tasks, []);
+  assert.deepEqual(AreaModel.unassigned(view), { projects: [], assignments: [], tasks: [] });
+  assert.deepEqual(AreaModel.validation(view), { projects: [], assignments: [], tasks: [invalidTask] });
 });
 
 test('preserves Area sibling collections without mutating the view', () => {
@@ -127,6 +174,33 @@ test('rejects a Task with mutually exclusive Project and Assignment parents', as
   const adapter = adapterContext(async () => ({ ok: true, json: async () => ({ content: encoded(view) }) }));
 
   await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /parentage|project_id and assignment_id/);
+});
+
+test('accepts Canonical validation records and preserves their warnings', async () => {
+  const invalidTask = { id: 'task-1', area_id: 'childcare', project_id: 'project-1', assignment_id: 'assignment-1' };
+  const view = validAreaView({
+    validation: { projects: [], assignments: [], tasks: [invalidTask] },
+    validation_warnings: [{ task_id: 'task-1', warnings: ['project_id and assignment_id are mutually exclusive'] }],
+  });
+  const adapter = adapterContext(async () => ({ ok: true, json: async () => ({ content: encoded(view) }) }));
+
+  const loaded = await adapter.COCKPID_AREA_VIEW.load();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(loaded.validation)), view.validation);
+  assert.deepEqual(JSON.parse(JSON.stringify(loaded.validation_warnings)), view.validation_warnings);
+});
+
+test('accepts unknown Area records in unassigned and preserves the warning', async () => {
+  const view = validAreaView({
+    unassigned: { projects: [{ id: 'p1', area_id: 'unknown-area' }], assignments: [], tasks: [] },
+    validation_warnings: [{ object_type: 'project', object_id: 'p1', area_id: 'unknown-area', message: 'unknown Area ID: unknown-area' }],
+  });
+  const adapter = adapterContext(async () => ({ ok: true, json: async () => ({ content: encoded(view) }) }));
+
+  const loaded = await adapter.COCKPID_AREA_VIEW.load();
+
+  assert.deepEqual(JSON.parse(JSON.stringify(loaded.unassigned.projects)), view.unassigned.projects);
+  assert.deepEqual(JSON.parse(JSON.stringify(loaded.validation_warnings)), view.validation_warnings);
 });
 
 test('rejects Area records without an exact matching area_id', async () => {

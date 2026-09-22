@@ -25,7 +25,16 @@
     if (!view?.unassigned || typeof view.unassigned !== 'object' || Array.isArray(view.unassigned)) {
       throw new Error('Area view has no unassigned bucket');
     }
-    const validateBucket = (bucket, label, areaId = null) => {
+    const warningAllowsUnknownArea = (type, record) => (
+      !view.areas.some((area) => area?.id === record.area_id)
+      && Array.isArray(view.validation_warnings)
+      && view.validation_warnings.some((warning) => (
+        warning?.object_type === type.slice(0, -1)
+        && String(warning.object_id || '') === record.id
+        && warning.area_id === record.area_id
+      ))
+    );
+    const validateBucket = (bucket, label, areaId = null, options = {}) => {
       for (const type of ['projects', 'assignments', 'tasks']) {
         if (!Array.isArray(bucket[type])) throw new Error(`Area view has invalid ${label}.${type}`);
         bucket[type].forEach((record, index) => {
@@ -34,7 +43,10 @@
           }
           if (areaId !== null && record.area_id !== areaId) throw new Error(`Area view has invalid ${label}.${type}[${index}].area_id`);
           if (label === 'unassigned' && record.area_id != null) {
-            if (typeof record.area_id !== 'string' || record.area_id.trim()) {
+            if (typeof record.area_id !== 'string') {
+              throw new Error(`Area view has invalid unassigned.${type}[${index}].area_id`);
+            }
+            if (record.area_id.trim() && !warningAllowsUnknownArea(type, record)) {
               throw new Error(`Area view has invalid unassigned.${type}[${index}].area_id`);
             }
           }
@@ -47,7 +59,7 @@
             if (record.assignment_id != null && record.assignment_id !== '' && !hasAssignment) {
               throw new Error(`Area view has invalid ${label}.${type}[${index}].assignment_id`);
             }
-            if (hasProject && hasAssignment) {
+            if (hasProject && hasAssignment && !options.allowInvalidTaskParentage) {
               throw new Error(`Area view has invalid task parentage at ${label}.${type}[${index}]`);
             }
           }
@@ -55,6 +67,15 @@
       }
     };
     validateBucket(view.unassigned, 'unassigned');
+    if (view.validation != null) {
+      if (typeof view.validation !== 'object' || Array.isArray(view.validation)) {
+        throw new Error('Area view has invalid validation bucket');
+      }
+      validateBucket(view.validation, 'validation', null, { allowInvalidTaskParentage: true });
+    }
+    if (view.validation_warnings != null && !Array.isArray(view.validation_warnings)) {
+      throw new Error('Area view has invalid validation_warnings');
+    }
     const ids = new Set();
     view.areas.forEach((area, index) => {
       if (!area || typeof area !== 'object' || Array.isArray(area) || typeof area.id !== 'string' || !area.id.trim()) {
@@ -76,6 +97,15 @@
   }
 
   async function loadWithFallback(init, fallbackLoader = projectFallbackLoader) {
+    const configuredProjectSource = window.COCKPID_PROJECT_SOURCE;
+    const hasCustomProjectSource = configuredProjectSource
+      && configuredProjectSource.mode !== 'view'
+      && configuredProjectSource.repo
+      && configuredProjectSource.dir;
+    if (hasCustomProjectSource) {
+      const view = await fallbackLoader(init);
+      return { kind: 'project', fallback: true, source: fallback(), view, error: null };
+    }
     try {
       return { kind: 'area', fallback: false, source: AREA_SOURCE, view: await load(init) };
     } catch (error) {
