@@ -35,6 +35,28 @@
   function monthKey(parts) {
     return `${parts.year}-${pad(parts.month)}`;
   }
+  function weekStart(parts) {
+    const date = toDate(parts);
+    const offset = (date.getUTCDay() + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - offset);
+    return fromDate(date);
+  }
+  function isoWeek(parts) {
+    const date = toDate(parts);
+    const day = date.getUTCDay() || 7;
+    date.setUTCDate(date.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return Math.ceil((((date - yearStart) / DAY_MS) + 1) / 7);
+  }
+  function uniqueItems(items) {
+    const seen = new Set();
+    return (items || []).filter((item) => {
+      const key = [item.start ?? '', item.end ?? '', item.title || '', item.checked ? 1 : 0, item.task ? 1 : 0].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   function colorFor(item) {
     const seed = `${item.title || ''}|${item.start ?? ''}|${item.end ?? ''}`;
     let hash = 0;
@@ -118,14 +140,12 @@
     for (let parts = start; ; parts = addDays(parts, 1)) {
       const data = monthData.get(monthKey(parts));
       const rawItems = data?.days?.get(parts.day) || [];
-      const seen = new Set();
-      const items = rawItems.filter((item) => {
-        const key = [item.start ?? '', item.end ?? '', item.title || '', item.checked ? 1 : 0, item.task ? 1 : 0].join('|');
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      }).map((item) => ({ ...item, color: colorFor(item) }));
-      days.push({ parts, key: dateKey(parts), items });
+      const items = uniqueItems(rawItems).map((item) => ({ ...item, color: colorFor(item) }));
+      const week = isoWeek(parts);
+      const owner = monthData.get(monthKey(weekStart(parts)));
+      const monthUndated = uniqueItems(data?.monthUndated || []);
+      const weekUndated = uniqueItems(owner?.weekUndated?.get(week) || []);
+      days.push({ parts, key: dateKey(parts), items, week, monthUndated, weekUndated });
       if (dateKey(parts) === dateKey(end)) break;
     }
     return days;
@@ -226,7 +246,6 @@
       const sizeP = sizeMorphFor(z);
       const first = clamp(Math.floor(scroll / u) - 2, 0, days.length - 1);
       const last = clamp(Math.ceil((scroll + hv) / u) + 2, 0, days.length - 1);
-
       svg.style.height = `${hv}px`;
       svg.setAttribute('viewBox', `0 0 ${w} ${hv}`);
       svg.setAttribute('width', w);
@@ -264,6 +283,41 @@
 
         const weekdays = ['日','月','火','水','木','金','土'];
         out.push(`<text x="${railW+30}" y="${lerp(base+15,base+16,p)}" fill="#91928f" opacity="${smooth(.55,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">(${weekdays[dow]})</text>`);
+
+        // Unscheduled objects live under the date that owns their scope:
+        // week items on Monday, month items on the 1st.
+        const scopedUndated = [];
+        if (dow === 1) {
+          day.weekUndated.forEach((item) => scopedUndated.push({ scope:'W', item }));
+        }
+        if (monthStart) {
+          day.monthUndated.forEach((item) => scopedUndated.push({ scope:'M', item }));
+        }
+        if (scopedUndated.length) {
+          const compact = u < 34;
+          const markerX = railW + 7;
+          const markerY = base + Math.min(27, Math.max(12, u * .68));
+          if (compact) {
+            out.push(`<circle cx="${markerX+3}" cy="${markerY}" r="2.6" fill="#c9c8c3" opacity=".82"/>`);
+            if (u > 17) {
+              out.push(`<text x="${markerX+9}" y="${markerY+2.7}" fill="#a9aaa6" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length}</text>`);
+            }
+          } else {
+            const chipX = markerX;
+            const chipW = Math.min(Math.max(76, dateW + allDayW + 18), Math.max(76, w - chipX - 10));
+            scopedUndated.slice(0, 3).forEach((entry, idx) => {
+              const chipY = base + 25 + idx * 17;
+              const chipH = 14;
+              const alpha = entry.item.checked ? .34 : .88;
+              out.push(`<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="4" fill="rgba(255,255,255,.075)" stroke="rgba(255,255,255,.08)" opacity="${alpha}"/>`);
+              out.push(`<text x="${chipX+5}" y="${chipY+9.8}" fill="#8f908c" opacity="${alpha}" font-size="6.5" font-family="ui-monospace,monospace">${entry.scope}</text>`);
+              out.push(`<text x="${chipX+17}" y="${chipY+9.8}" fill="#deded9" opacity="${alpha}" font-size="7.2" font-family="-apple-system,sans-serif">${esc(entry.item.title)}</text>`);
+            });
+            if (scopedUndated.length > 3) {
+              out.push(`<text x="${chipX+5}" y="${base+25+3*17+8}" fill="#8f908c" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length-3}</text>`);
+            }
+          }
+        }
 
         for (let hour = 0; hour <= 24; hour += 3) {
           const xN = timeLeft + timeW * (hour / 24);
