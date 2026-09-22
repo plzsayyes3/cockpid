@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="calendar-daybook.css">
 <link rel="stylesheet" href="week-horizontal.css">
 <link rel="stylesheet" href="calendar-timeline.css?v=20260922-timeline-prod">
+<link rel="stylesheet" href="calendar-timeline-v2.css?v=20260922-timeline-v2">
 <link rel="stylesheet" href="../zen-memo.css">
 <style>
 .month-grid{grid-template-rows:30px}
@@ -37,6 +38,7 @@
           <button class="view-tab" data-view="week">WEEK</button>
           <button class="view-tab" data-view="month">MONTH</button>
           <button class="view-tab" data-view="timeline">TIMELINE</button>
+          <button class="view-tab" data-view="timeline2">TIMELINE 2</button>
         </nav>
         <div class="view-nav">
           <button class="nav-btn" id="prevView" aria-label="前へ">‹</button>
@@ -66,8 +68,9 @@
 <script src="../zen-memo.js?v=20260918-workbench-review"></script>
 <script src="google-calendar-sync.js"></script>
 <script src="calendar-timeline.js?v=20260922-timeline-prod"></script>
-<script src="calendar-daybook.js?v=20260922-timeline-prod"></script>
-<script src="calendar-view-state.js?v=20260922-timeline-prod"></script>
+<script src="calendar-timeline-v2.js?v=20260922-timeline-v2"></script>
+<script src="calendar-daybook.js?v=20260922-timeline-v2"></script>
+<script src="calendar-view-state.js?v=20260922-timeline-v2"></script>
 <script>
 document.getElementById('fullMonthOpen')?.addEventListener('click',()=>{
   const value=document.getElementById('anchorDate')?.value||'';
