@@ -377,6 +377,8 @@
       label.textContent = `${start.month}/${start.day} – ${end.month}/${end.day}`;
     } else if (state.view === 'timeline') {
       label.textContent = 'SCALE 62';
+    } else if (state.view === 'timeline2') {
+      label.textContent = 'V2 · SCALE 62';
     } else label.textContent = `${state.anchor.year}.${pad(state.anchor.month)}`;
   }
 
@@ -384,6 +386,7 @@
     const seq = ++renderSeq;
     syncControls();
     if (state.view !== 'timeline') window.COCKPID_TIMELINE?.destroy?.();
+    if (state.view !== 'timeline2') window.COCKPID_TIMELINE_V2?.destroy?.();
     if (!token()) {
       viewContent.innerHTML = '<div class="message">GitHub token が必要です。</div>';
       sourceStatus.textContent = 'TOKEN REQUIRED';
@@ -412,6 +415,19 @@
             $('rightDateLabel').textContent = `${mode} · SCALE ${scale}`;
           }
         });
+      } else if (state.view === 'timeline2') {
+        const timeline2 = window.COCKPID_TIMELINE_V2;
+        if (!timeline2?.render) throw new Error('Timeline 2 renderer unavailable');
+        await timeline2.render({
+          container: viewContent,
+          anchor: state.anchor,
+          loadMonth,
+          isCurrent: () => seq === renderSeq && state.view === 'timeline2',
+          onScale: ({ scale, mode, range }) => {
+            if (seq !== renderSeq || state.view !== 'timeline2') return;
+            $('rightDateLabel').textContent = `V2 · ${mode} · SCALE ${scale}`;
+          }
+        });
       } else {
         await renderMonth(state.anchor, seq);
       }
@@ -432,7 +448,7 @@
   function move(amount) {
     if (state.view === 'day') state.anchor = addDays(state.anchor, amount);
     else if (state.view === 'week') state.anchor = addDays(state.anchor, amount * 7);
-    else if (state.view === 'timeline') state.anchor = addDays(state.anchor, amount * 30);
+    else if (state.view === 'timeline' || state.view === 'timeline2') state.anchor = addDays(state.anchor, amount * 30);
     else state.anchor = shiftMonth(state.anchor, amount);
     renderRight();
   }
