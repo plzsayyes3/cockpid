@@ -129,6 +129,43 @@ test('rejects a Task with mutually exclusive Project and Assignment parents', as
   await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /parentage|project_id and assignment_id/);
 });
 
+test('rejects Area records without an exact matching area_id', async () => {
+  for (const record of [{ id: 'p1' }, { id: 'p1', area_id: 'other-area' }]) {
+    const adapter = adapterContext(async () => ({
+      ok: true,
+      json: async () => ({ content: encoded(validAreaView({
+        areas: [{ ...validAreaView().areas[0], projects: [record] }]
+      })) })
+    }));
+    await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /area_id/);
+  }
+});
+
+test('rejects unassigned records with a non-empty area_id', async () => {
+  const adapter = adapterContext(async () => ({
+    ok: true,
+    json: async () => ({ content: encoded(validAreaView({
+      unassigned: { projects: [{ id: 'p1', area_id: 'childcare' }], assignments: [], tasks: [] }
+    })) })
+  }));
+
+  await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /unassigned.*area_id/);
+});
+
+test('rejects non-canonical metadata, timestamps, and Area object paths', async () => {
+  const malformedViews = [
+    validAreaView({ source: { repository: 'other/repo', authority: 'objects' } }),
+    validAreaView({ source: { repository: 'plzsayyes3/my-storage-note', authority: 'filesystem' } }),
+    validAreaView({ generated_at: '2026-09-23' }),
+    validAreaView({ areas: [{ ...validAreaView().areas[0], object_path: 'objects/areas/other.md' }] }),
+  ];
+
+  for (const view of malformedViews) {
+    const adapter = adapterContext(async () => ({ ok: true, json: async () => ({ content: encoded(view) }) }));
+    await assert.rejects(adapter.COCKPID_AREA_VIEW.load(), /Area view/);
+  }
+});
+
 test('returns a typed loaded Project result when Area loading fails', async () => {
   const projectView = { projects: [{ id: 'legacy-project' }] };
   let fallbackCalls = 0;

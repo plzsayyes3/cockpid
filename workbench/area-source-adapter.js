@@ -15,21 +15,26 @@
 
   function validateView(view) {
     if (view?.schema_version !== 1) throw new Error('Area view has unsupported schema_version');
-    if (typeof view.generated_at !== 'string' || !view.generated_at.trim()) throw new Error('Area view has invalid generated_at');
-    if (!view.source || typeof view.source !== 'object' || Array.isArray(view.source)) throw new Error('Area view has invalid source');
-    for (const field of ['repository', 'authority']) {
-      if (typeof view.source[field] !== 'string' || !view.source[field].trim()) throw new Error(`Area view has invalid source.${field}`);
+    if (typeof view.generated_at !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(view.generated_at) || Number.isNaN(Date.parse(view.generated_at))) {
+      throw new Error('Area view has invalid generated_at');
     }
+    if (!view.source || typeof view.source !== 'object' || Array.isArray(view.source)) throw new Error('Area view has invalid source');
+    if (view.source.repository !== 'plzsayyes3/my-storage-note') throw new Error('Area view has invalid source.repository');
+    if (view.source.authority !== 'objects') throw new Error('Area view has invalid source.authority');
     if (!Array.isArray(view?.areas)) throw new Error('Area view is invalid');
     if (!view?.unassigned || typeof view.unassigned !== 'object' || Array.isArray(view.unassigned)) {
       throw new Error('Area view has no unassigned bucket');
     }
-    const validateBucket = (bucket, label) => {
+    const validateBucket = (bucket, label, areaId = null) => {
       for (const type of ['projects', 'assignments', 'tasks']) {
         if (!Array.isArray(bucket[type])) throw new Error(`Area view has invalid ${label}.${type}`);
         bucket[type].forEach((record, index) => {
           if (!record || typeof record !== 'object' || Array.isArray(record) || typeof record.id !== 'string' || !record.id.trim()) {
             throw new Error(`Area view has invalid ${label}.${type}[${index}]`);
+          }
+          if (areaId !== null && record.area_id !== areaId) throw new Error(`Area view has invalid ${label}.${type}[${index}].area_id`);
+          if (label === 'unassigned' && typeof record.area_id === 'string' && record.area_id.trim()) {
+            throw new Error(`Area view has invalid unassigned.${type}[${index}].area_id`);
           }
           if (type === 'tasks') {
             const hasProject = typeof record.project_id === 'string' && record.project_id.trim();
@@ -54,10 +59,10 @@
         throw new Error(`Area view has invalid areas[${index}] id`);
       }
       if (typeof area.title !== 'string' || !area.title.trim()) throw new Error(`Area view has invalid areas[${index}] title`);
-      if (typeof area.object_path !== 'string' || !area.object_path.trim()) throw new Error(`Area view has invalid areas[${index}] object_path`);
+      if (area.object_path !== `objects/areas/${area.id}.md`) throw new Error(`Area view has invalid areas[${index}] object_path`);
       if (ids.has(area.id)) throw new Error(`Area view has duplicate Area id: ${area.id}`);
       ids.add(area.id);
-      validateBucket(area, `areas[${index}]`);
+      validateBucket(area, `areas[${index}]`, area.id);
     });
     return view;
   }
