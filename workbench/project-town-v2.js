@@ -59,6 +59,14 @@
   let lastRefreshAt = 0;
   let refreshTimer = 0;
 
+  function legacySource() {
+    const configured = window.COCKPID_PROJECT_SOURCE;
+    if (configured?.mode !== 'view' && configured?.repo && configured?.dir) {
+      return { repo: configured.repo, dir: configured.dir };
+    }
+    return { repo: REPO, dir: DIR };
+  }
+
   async function api(url) {
     const headers = { Accept: 'application/vnd.github+json' };
     const token = localStorage.getItem(TOKEN_KEY) || '';
@@ -94,8 +102,9 @@
   }
 
   async function loadProject(entry) {
+    const source = legacySource();
     const payload = await api(
-      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${entry.path}?ref=${BRANCH}&_=${Date.now()}`
+      `https://api.github.com/repos/${OWNER}/${source.repo}/contents/${entry.path}?ref=${BRANCH}&_=${Date.now()}`
     );
     if (!payload.content) return null;
 
@@ -227,7 +236,7 @@
       areaView = usingAreaView ? result.view : null;
       const loaded = usingAreaView
         ? projectRecordsFromAreaView(result.view, result.source)
-        : projectRecordsFromLegacyView(result.view);
+        : projectRecordsFromLegacyView(result.view, result.source);
       const failedReads = Number(result.view?.failedReads || 0);
 
       const previous = selected;
@@ -258,8 +267,9 @@
   }
 
   async function loadLegacyProjects() {
+    const source = legacySource();
     const entries = await api(
-      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${BRANCH}&_=${Date.now()}`
+      `https://api.github.com/repos/${OWNER}/${source.repo}/contents/${source.dir}?ref=${BRANCH}&_=${Date.now()}`
     );
     let failedReads = 0;
     const loaded = await Promise.all(
@@ -321,6 +331,16 @@
     Motion.stop();
   }, { once: true });
 
-  load();
-  scheduleRefresh();
+  window.COCKPID_PROJECT_TOWN = Object.freeze({
+    load,
+    renderRoom,
+    renderList,
+    showProject,
+    handoffPrompt
+  });
+
+  if (!window.__COCKPID_PROJECT_TOWN_NO_AUTOLOAD__) {
+    load();
+    scheduleRefresh();
+  }
 })();
