@@ -22,6 +22,7 @@ h1{margin:0;font-size:20px;line-height:1;font-weight:560;letter-spacing:-.03em}
 .mode{text-align:right}
 #modeLabel{display:block;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
 #rangeLabel{display:block;margin-top:5px;font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+#scaleValue{display:block;margin-top:5px;font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d7d7d2;letter-spacing:.04em}
 .hint{flex:0 0 auto;padding:6px 11px;border-bottom:1px solid var(--line);background:var(--panel);color:var(--muted);font:9px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}
 #viewport{position:relative;flex:1 1 auto;min-height:0;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;background:var(--bg)}
 #surface{position:relative;min-height:100%}
@@ -43,6 +44,7 @@ h1{margin:0;font-size:20px;line-height:1;font-weight:560;letter-spacing:-.03em}
     <div class="mode">
       <span id="modeLabel">WEEK</span>
       <span id="rangeLabel">7 DAYS</span>
+      <span id="scaleValue">SCALE 62</span>
     </div>
   </header>
   <div class="hint">Days→Dayで、時間の縦線・予定バー・ラベルが同じオブジェクトのまま移動／回転／伸縮</div>
@@ -71,6 +73,7 @@ var zoomMeter=document.getElementById('zoomMeter');
 var focusTitle=document.getElementById('focusTitle');
 var modeLabel=document.getElementById('modeLabel');
 var rangeLabel=document.getElementById('rangeLabel');
+var scaleValue=document.getElementById('scaleValue');
 
 var allDays=[];
 for(var t=startDate.getTime();t<endDate.getTime();t+=DAY_MS)allDays.push(new Date(t));
@@ -187,6 +190,7 @@ function updateHeader(z){
   modeLabel.textContent=modeFor(z);
   rangeLabel.textContent=rangeFor(z);
   zoomMeter.style.height=(z*100)+'%';
+  scaleValue.textContent='SCALE '+Math.round(z*100);
   var u=unitHeightFor(z);
   var idx=clamp(Math.floor((viewport.scrollTop+viewport.clientHeight*.38)/u),0,allDays.length-1);
   var d=allDays[idx];
