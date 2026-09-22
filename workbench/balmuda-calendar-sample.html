@@ -140,7 +140,6 @@ function visibleDaysFor(z){
 }
 // Axis orientation and day expansion are intentionally decoupled.
 // The axis swap finishes early in DAYS; the day continues expanding afterward.
-function axisMorphFor(z){return smooth(.74,.86,z)}
 function sizeMorphFor(z){return smooth(.82,.975,z)}
 function timelineRowHeight(z){return viewport.clientHeight/visibleDaysFor(z)}
 function dayBlockHeight(z){
@@ -148,8 +147,15 @@ function dayBlockHeight(z){
   return 40+24*hour;
 }
 function unitHeightFor(z){return lerp(timelineRowHeight(z),dayBlockHeight(z),sizeMorphFor(z))}
+
+// Keep the normal axis until one full day is about one screen tall.
+// Then perform the axis swap in a deliberately narrow band.
+function axisMorphFor(z){
+  var dayToScreen=unitHeightFor(z)/Math.max(1,viewport.clientHeight);
+  return smooth(1.00,1.10,dayToScreen);
+}
 function modeFor(z){
-  if(z>=.93)return'DAY';
+  if(unitHeightFor(z)>=viewport.clientHeight*1.06)return'DAY';
   if(z>=.76)return'DAYS';
   if(z>=.57)return'WEEK';
   if(z>=.39)return'WEEKS';
