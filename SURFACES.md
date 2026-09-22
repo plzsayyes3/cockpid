@@ -126,7 +126,8 @@ are separate files with separate audiences; don't conflate them.
 
 ### 3.6 Projects / Backstage (key 7)
 
-The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source.
+The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source,
+using the shared `zen-note-github-token` when the Canonical repository is private.
 It renders declared Areas with sibling Project, Assignment, and Task collections and keeps
 records without an Area in an explicit unassigned section. If a custom Project source is
 configured, that existing source is preferred before Area-first loading. If the Area projection
@@ -204,7 +205,7 @@ One shared `localStorage` key across the *entire* workbench and its apps:
 reading/writing/clearing it, and the data clients checked (`onhand-core.js`,
 `onhand-scheduling-bridge.js`, `board.js`, `backstage.js`, etc.) use that same token. Stan's
 `stan-github.js` uses the same key for voice memo writes to `plzsayyes3/mynotebook/00_inbox`.
-The token needs read access where required and write access for capture/memo/Stan Inbox,
+The token needs read access to private Canonical repositories where required and write access for capture/memo/Stan Inbox,
 Canonical Shared Task completion, ON HAND state, TaskLiner and Techo routing paths.
 
 ---
@@ -392,7 +393,7 @@ last touched on 2026-09-12, "Use configured Short Memo destination"). Not stale.
 
 Canonical verification passed with `python3 scripts/build_views.py`, the 10-test Python suite,
 and the `views/areas.json` unassigned-bucket audit. Cockpid JavaScript syntax checks passed for
-every `workbench/*.js` file. The full Cockpid suite is 50 passing and 1 failing: the pre-existing
+every `workbench/*.js` file. The full Cockpid suite is 51 passing and 1 failing: the pre-existing
 Keyboard routing contract still expects the legacy `keyboard.html` page route, while the live
 router points key 9 at the external Keyboard iframe. This documentation task does not change
 that unrelated routing behavior.

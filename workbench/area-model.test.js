@@ -13,14 +13,18 @@ function encoded(value) {
   return btoa(binary);
 }
 
-function adapterContext(fetchImpl, projectSource = null) {
+function adapterContext(fetchImpl, projectSource = null, token = '') {
   const context = {
-    window: { fetch: fetchImpl },
+    window: {
+      fetch: fetchImpl,
+      localStorage: { getItem: (key) => key === 'zen-note-github-token' ? token : null },
+    },
     atob,
     btoa,
     TextDecoder,
     TextEncoder,
     Uint8Array,
+    Headers,
     Date,
   };
   if (projectSource) context.window.COCKPID_PROJECT_VIEW = projectSource;
@@ -129,6 +133,18 @@ test('decodes and caches a valid Area Contents response', async () => {
   assert.strictEqual(first, second);
   assert.deepEqual(JSON.parse(JSON.stringify(await first)), view);
   assert.equal(calls, 1);
+});
+
+test('sends the saved Workbench token when reading the private Canonical Area view', async () => {
+  let requestInit;
+  const adapter = adapterContext(async (_url, init) => {
+    requestInit = init;
+    return { ok: true, json: async () => ({ content: encoded(validAreaView()) }) };
+  }, null, 'github_pat_private_read');
+
+  await adapter.COCKPID_AREA_VIEW.load();
+
+  assert.equal(requestInit.headers.get('Authorization'), 'Bearer github_pat_private_read');
 });
 
 test('rejects malformed Area views instead of normalizing them', async () => {

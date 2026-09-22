@@ -2,6 +2,7 @@
   'use strict';
 
   const OWNER = 'plzsayyes3';
+  const TOKEN_KEY = 'zen-note-github-token';
   const AREA_SOURCE = Object.freeze({ repo: 'my-storage-note', path: 'views/areas.json', mode: 'view' });
   const originalFetch = window.fetch.bind(window);
   let areaPromise = null;
@@ -117,7 +118,16 @@
   function load(init, force = false) {
     if (force || !areaPromise) {
       const url = `https://api.github.com/repos/${OWNER}/${AREA_SOURCE.repo}/contents/${AREA_SOURCE.path}?ref=main&_=${Date.now()}`;
-      areaPromise = originalFetch(url, init).then(async (response) => {
+      const requestInit = { ...(init || {}) };
+      let token = '';
+      try { token = window.localStorage?.getItem(TOKEN_KEY) || ''; } catch (_) { /* token storage may be unavailable */ }
+      if (token) {
+        const headers = new Headers(requestInit.headers || {});
+        headers.set('Accept', 'application/vnd.github+json');
+        headers.set('Authorization', `Bearer ${token}`);
+        requestInit.headers = headers;
+      }
+      areaPromise = originalFetch(url, requestInit).then(async (response) => {
         if (!response.ok) throw new Error(`Area view ${response.status}`);
         const payload = await response.json();
         if (!payload?.content) throw new Error('Area view has no content');
