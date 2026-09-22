@@ -20,7 +20,8 @@
 ## 1. Entry point
 
 `index.html` (repo root) is a hard redirect (`meta refresh` + JS `location.replace`) to
-`./workbench/`. Nothing else at the root is reachable from a normal visit to the site.
+`./workbench/`. There is no root or `workbench/`-level `workbench.html`; the live entry is
+`workbench/index.html`. Nothing else at the root is reachable from a normal visit to the site.
 
 ---
 
@@ -124,6 +125,12 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 are separate files with separate audiences; don't conflate them.
 
 ### 3.6 Projects / Backstage (key 7)
+
+The Area adapter first reads `my-storage-note/views/areas.json`. It renders declared Areas
+with sibling Project, Assignment, and Task collections and keeps records without an Area in
+an explicit unassigned section. If the Area projection is unavailable or invalid, the adapter
+falls back to `my-storage-note/views/projects.json`, preserving the Project-only detail and
+handoff contract. This fallback is read-only and does not rewrite canonical Objects.
 
 `backstage.js`'s own constants say `REPO = 'gpts'`, `PROJECT_DIR = 'projects'` — this looks
 like it's reading the *legacy*, about-to-be-frozen `gpts` repository directly, which would
@@ -377,3 +384,18 @@ last touched on 2026-09-12, "Use configured Short Memo destination"). Not stale.
 - `main.html`'s exact feature completeness — confirmed it runs, not confirmed it's correct.
 - Anything inside the external apps this workbench launches (zen-note, My_Internet_place,
   taskliner_taskchute-line) — those are separate repositories.
+
+## 10. Final Area migration verification (2026-09-23)
+
+Canonical verification passed with `python3 scripts/build_views.py`, the 9-test Python suite,
+and the `views/areas.json` unassigned-bucket audit. Cockpid JavaScript syntax checks passed for
+every `workbench/*.js` file. The full Cockpid suite is 38 passing and 1 failing: the pre-existing
+Keyboard routing contract still expects the legacy `keyboard.html` page route, while the live
+router points key 9 at the external Keyboard iframe. This documentation task does not change
+that unrelated routing behavior.
+
+Automated contract tests covered the Area/Project/Assignment/Task grouping contract, Project
+detail and handoff paths, Backstage pause/review states, ON HAND completion and scheduling
+semantics, direct Project links, and Workbench Idea → Area → destination branching. A manual
+browser/device walkthrough was not completed in this run; browser/device and external-service
+behavior remains subject to the boundaries listed above.

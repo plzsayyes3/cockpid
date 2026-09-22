@@ -63,6 +63,8 @@ Project表示は原則 `views/` を利用し、Canonical Project MarkdownをCock
 ## Live entry point
 
 GitHub Pagesのroot `index.html` は `./workbench/` へリダイレクトします。
+`workbench.html` という単一の入口ファイルは存在しません。実際の入口は
+`workbench/index.html` です。
 
 現行HOME:
 
@@ -102,6 +104,15 @@ HOMEは「全部を監視するMission Control」ではなく、必要な道具�
 - スマートフォンでは独立Appを全画面で扱える構造を基本とする
 
 ## Project surfaces
+
+### Area-first Project entry
+
+Projects, Assignments, and Tasks are read from the Area projection when
+`my-storage-note/views/areas.json` is available. The Project surface groups
+sibling records under declared Areas and keeps records without an Area in an
+explicit unassigned section. The adapter preserves the legacy Project detail
+and handoff behavior; if the Area projection cannot be loaded, it falls back to
+the canonical `views/projects.json` Project view without changing source data.
 
 ### Projects / Backstage
 
