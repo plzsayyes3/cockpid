@@ -28,6 +28,7 @@
   window.COCKPID_PROJECT_SOURCE = useGeneratedView
     ? Object.freeze({ repo: VIEW_SOURCE.repo, dir: VIEW_SOURCE.path, mode: 'view' })
     : source;
+  window.COCKPID_PROJECT_SOURCE_FALLBACK = window.COCKPID_PROJECT_SOURCE;
 
   const originalFetch = window.fetch.bind(window);
   let viewPromise = null;
