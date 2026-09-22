@@ -375,12 +375,15 @@
     else if (state.view === 'week') {
       const start = weekStart(state.anchor); const end = addDays(start, 6);
       label.textContent = `${start.month}/${start.day} – ${end.month}/${end.day}`;
+    } else if (state.view === 'timeline') {
+      label.textContent = 'SCALE 62';
     } else label.textContent = `${state.anchor.year}.${pad(state.anchor.month)}`;
   }
 
   async function renderRight() {
     const seq = ++renderSeq;
     syncControls();
+    if (state.view !== 'timeline') window.COCKPID_TIMELINE?.destroy?.();
     if (!token()) {
       viewContent.innerHTML = '<div class="message">GitHub token が必要です。</div>';
       sourceStatus.textContent = 'TOKEN REQUIRED';
@@ -396,6 +399,19 @@
         requestAnimationFrame(() => { viewContent.scrollTop = 0; });
       } else if (state.view === 'week') {
         await renderWeek(state.anchor, seq);
+      } else if (state.view === 'timeline') {
+        const timeline = window.COCKPID_TIMELINE;
+        if (!timeline?.render) throw new Error('Timeline renderer unavailable');
+        await timeline.render({
+          container: viewContent,
+          anchor: state.anchor,
+          loadMonth,
+          isCurrent: () => seq === renderSeq && state.view === 'timeline',
+          onScale: ({ scale, mode, range }) => {
+            if (seq !== renderSeq || state.view !== 'timeline') return;
+            $('rightDateLabel').textContent = `${mode} · SCALE ${scale}`;
+          }
+        });
       } else {
         await renderMonth(state.anchor, seq);
       }
@@ -416,6 +432,7 @@
   function move(amount) {
     if (state.view === 'day') state.anchor = addDays(state.anchor, amount);
     else if (state.view === 'week') state.anchor = addDays(state.anchor, amount * 7);
+    else if (state.view === 'timeline') state.anchor = addDays(state.anchor, amount * 30);
     else state.anchor = shiftMonth(state.anchor, amount);
     renderRight();
   }
