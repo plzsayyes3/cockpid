@@ -16,6 +16,8 @@
   let merging = false;
   let currentFiles = [];
   let topMergeButton = null;
+  let areaRouteButton = null;
+  let areaRoutePanel = null;
 
   function inboxSource() {
     return window.COCKPID_SOURCES?.get('inbox') || { repo: 'mynotebook', dir: '00_inbox' };
@@ -132,6 +134,44 @@
     topMergeButton = button;
     syncTopMergeButton();
     return button;
+  }
+
+  function ensureAreaRoutingUi() {
+    const actions = document.querySelector('.capture-object .capture-actions');
+    const captureButton = document.getElementById('captureBtn');
+    if (!actions || !captureButton) return null;
+    if (!areaRouteButton) {
+      areaRouteButton = document.createElement('button');
+      areaRouteButton.className = 'memo-area-route';
+      areaRouteButton.type = 'button';
+      areaRouteButton.textContent = 'AREA →';
+      areaRouteButton.setAttribute('aria-expanded', 'false');
+      captureButton.before(areaRouteButton);
+    }
+    if (!areaRoutePanel) {
+      areaRoutePanel = document.createElement('div');
+      areaRoutePanel.className = 'memo-area-route-panel';
+      areaRoutePanel.hidden = true;
+      areaRoutePanel.setAttribute('aria-live', 'polite');
+      actions.parentElement?.append(areaRoutePanel);
+    }
+    return areaRouteButton;
+  }
+
+  async function showAreaRouting() {
+    if (!areaRoutePanel) return;
+    areaRouteButton.setAttribute('aria-expanded', 'true');
+    areaRoutePanel.hidden = false;
+    areaRoutePanel.textContent = 'Areaを読み込んでいます…';
+    try {
+      const view = await window.COCKPID_AREA_VIEW?.load?.();
+      const areas = Array.isArray(view?.areas) ? view.areas : [];
+      areaRoutePanel.innerHTML = areas.length
+        ? `<span class="memo-area-route-label">IDEAの次の分岐</span>${areas.map((area) => `<button type="button" data-area-route-id="${String(area.id).replace(/[^A-Za-z0-9_-]/g, '')}">${esc(area.title || area.id)}</button>`).join('')}`
+        : '<span class="memo-area-route-label">未分類のままInboxへ置きます。</span>';
+    } catch (_) {
+      areaRoutePanel.textContent = 'Areaを読み込めませんでした。Inboxへ置けます。';
+    }
   }
 
   function syncInboxSourceUi() {
@@ -475,10 +515,26 @@
 
   const { mergeButton } = ensureMergeUi();
   const topButton = ensureTopMergeUi();
+  const areaButton = ensureAreaRoutingUi();
   mergeButton?.addEventListener('click', mergeInboxToDaily);
   topButton?.addEventListener('click', async () => {
     await loadInbox(true);
     await mergeInboxToDaily();
+  });
+  areaButton?.addEventListener('click', () => {
+    if (areaRoutePanel?.hidden) showAreaRouting();
+    else {
+      areaRoutePanel.hidden = true;
+      areaButton.setAttribute('aria-expanded', 'false');
+    }
+  });
+  areaRoutePanel?.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-area-route-id]');
+    if (!button) return;
+    const route = document.getElementById('memoStatus');
+    if (route) route.textContent = `Area候補: ${button.textContent} · 保存先はInboxのまま`;
+    areaRoutePanel.hidden = true;
+    areaButton.setAttribute('aria-expanded', 'false');
   });
   captureTab.addEventListener('click', () => setMode('capture'));
   inboxTab.addEventListener('click', () => setMode('inbox'));

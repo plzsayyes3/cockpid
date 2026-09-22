@@ -174,6 +174,11 @@
     return clean(item?.title || item?.summary || '');
   }
 
+  function areaContextOf(item, areaView) {
+    const resolver = window.COCKPID_AREA_CONTEXT || window.AreaContext;
+    return resolver?.resolve ? resolver.resolve(item, areaView) : { area: null, project: null, assignment: null };
+  }
+
   function legacyItemId(item) {
     return hashId(`${item._date}|${item._type}|${item.title || item.summary || ''}`);
   }
@@ -519,6 +524,7 @@
     classify,
     normalizeMode,
     titleKey,
+    areaContextOf,
     itemId,
     readHistory,
     writeHistory,

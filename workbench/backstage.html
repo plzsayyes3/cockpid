@@ -10,6 +10,9 @@
 .backstage-actions{display:flex;align-items:center;gap:8px}
 .town-open-btn{height:38px;padding:0 13px;border:1px solid var(--line);border-radius:19px;background:rgba(255,255,255,.52);cursor:pointer;font-size:9px;font-weight:800;letter-spacing:.12em}
 .town-open-btn:hover{border-color:#bdb2a3;background:var(--paper)}
+.area-context-label{display:inline-block;margin-top:4px;color:#315d91;font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+.area-branch{border:0;background:transparent;color:#315d91;padding:0;font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;cursor:pointer}
+.area-branch:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -56,6 +59,8 @@
   </main>
 </div>
 <script src="project-source-adapter.js"></script>
+<script src="area-source-adapter.js"></script>
+<script src="area-model.js"></script>
 <script src="project-status-model.js?v=20260920-project-town-visible1"></script>
 <script src="project-status-view.js?v=20260920-project-town-visible1"></script>
 <script src="backstage.js?v=20260920-project-town-visible1"></script>

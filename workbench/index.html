@@ -28,6 +28,7 @@
 .today-object .anytime-item,.today-object .timeline-event-title{filter:grayscale(1) saturate(0)}
 .app-frame-actions{display:flex;align-items:center;gap:7px}.app-frame-actions .ghost-btn{font:700 8px/1 ui-monospace,monospace;letter-spacing:.05em}
 .drawer-backdrop{background:rgba(42,40,35,.18)!important;z-index:110!important}.drawer{background:#f8f7f2!important;color:var(--ink)!important;border-left:0!important;box-shadow:-18px 0 45px rgba(30,28,24,.16)!important;z-index:111!important}.drawer-head{border-bottom:1px solid var(--line)!important}.drawer-head strong{color:var(--ink)!important}.drawer textarea,.token-box input{background:#fff!important;color:var(--ink)!important;border:1px solid #d7d3ca!important}.token-box{border-color:var(--line)!important}.btn{border:0;border-radius:6px;background:#e9e7e0;color:var(--ink);padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.btn.primary{background:var(--ink);color:#faf9f5}.small,.drawer-status,.zen-hint,.token-box label{color:var(--muted)!important}
+.memo-area-route{border:0;border-radius:6px;background:#dce8f4;color:#315d91;padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.memo-area-route-panel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding:7px;border:1px solid #c9d8e6;border-radius:6px;background:#f5f9fd;color:#315d91;font:700 8px ui-monospace,monospace}.memo-area-route-panel[hidden]{display:none}.memo-area-route-panel button{border:1px solid #b8cbe0;border-radius:999px;background:#fff;color:#315d91;padding:5px 8px;cursor:pointer;font:inherit}.memo-area-route-label{letter-spacing:.08em}
 </style>
 </head>
 <body>
@@ -91,6 +92,8 @@
 <script src="navigation.js"></script>
 <script>document.write(`<script src="app-routing.js?cb=${Date.now()}"><\/script>`);</script>
 <script src="system-settings.js?v=20260918-workbench-review2"></script>
+<script src="area-source-adapter.js"></script>
+<script src="area-model.js"></script>
 <script src="memo-inbox.js?v=20260918-workbench-review"></script>
 <script src="onhand-core.js?v=20260918-review8"></script>
 <script src="onhand-shared-state.js?v=20260918-sync-race"></script>

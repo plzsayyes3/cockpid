@@ -44,7 +44,53 @@
     }, emptyGroup());
   }
 
-  const api = { groupItems, unassigned };
+  function allRecords(view, type) {
+    const source = view && typeof view === 'object' ? view : {};
+    const nested = records(source.areas).flatMap((area) => records(area?.[type]));
+    return nested.concat(records(source.unassigned?.[type]), records(source[type]));
+  }
+
+  function findRecord(view, type, id) {
+    if (id == null || id === '') return null;
+    return allRecords(view, type).find((record) => String(record?.id || '') === String(id)) || null;
+  }
+
+  function findArea(view, areaId) {
+    if (areaId == null || areaId === '') return null;
+    const source = view && typeof view === 'object' ? view : {};
+    return records(source.areas).find((area) => String(area?.id || '') === String(areaId)) || null;
+  }
+
+  function areaForRecord(view, record) {
+    if (!record) return null;
+    const direct = findArea(view, record.area_id);
+    if (direct) return direct;
+    for (const type of TYPES) {
+      const match = allRecords(view, type).find((candidate) => candidate === record || String(candidate?.id || '') === String(record.id || ''));
+      if (match?.area_id) return findArea(view, match.area_id);
+    }
+    return null;
+  }
+
+  const AreaContext = Object.freeze({
+    resolve(item, view) {
+      const source = item && typeof item === 'object' ? item : {};
+      const project = source.project_id
+        ? findRecord(view, 'projects', source.project_id)
+        : (source.type === 'project' || source.object_type === 'project' ? findRecord(view, 'projects', source.id) : null);
+      const assignment = source.assignment_id
+        ? findRecord(view, 'assignments', source.assignment_id)
+        : (source.type === 'assignment' || source.object_type === 'assignment' ? findRecord(view, 'assignments', source.id) : null);
+      const area = findArea(view, source.area_id) || areaForRecord(view, project) || areaForRecord(view, assignment) || areaForRecord(view, source);
+      return { area, project, assignment };
+    }
+  });
+
+  const api = { groupItems, unassigned, AreaContext };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  if (typeof window !== 'undefined') window.COCKPID_AREA_MODEL = Object.freeze(api);
+  if (typeof window !== 'undefined') {
+    window.COCKPID_AREA_MODEL = Object.freeze(api);
+    window.COCKPID_AREA_CONTEXT = AreaContext;
+    window.AreaContext = AreaContext;
+  }
 })();

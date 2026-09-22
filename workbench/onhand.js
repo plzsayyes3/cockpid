@@ -18,6 +18,7 @@
   let filter = 'all';
   let history = core.readHistory();
   let feedbackTimer = null;
+  let areaView = null;
 
   const itemById = (bucket, id) => pools[bucket].find((item) => core.itemId(item) === id) || null;
   const bucketForId = (id) => buckets.find((bucket) => Boolean(itemById(bucket, id))) || null;
@@ -70,11 +71,16 @@
     const skipUntil = status === 'skip' ? skipUntilText(state?.skip_until) : '';
     const canonical = Boolean(item._isCanonicalTask);
     const sourceLabel = canonical ? 'SHARED TASK' : item._type;
+    const area = item._areaContext?.area;
+    const parent = item._areaContext?.project || item._areaContext?.assignment;
+    const areaContext = area
+      ? `<span class="onhand-area-context">AREA · ${core.esc(area.title || area.id)}${parent ? ` · ${core.esc(parent.title || parent.id)}` : ''}</span>`
+      : '';
     const checked = status === 'done';
     const disabled = status === 'skip' || (canonical && checked);
     return `<div class="item${checked ? ' is-done' : ''}${status === 'skip' ? ' is-skip' : ''}" data-row-id="${core.esc(id)}"${canonical ? ` data-canonical-task="true" data-task-id="${core.esc(item._canonicalTaskId)}"` : ''}>
       <input type="checkbox" class="done-box" data-id="${core.esc(id)}" data-bucket="${bucket}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} aria-label="${canonical ? 'Taskを完了' : 'Handled'}">
-      <div class="item-main"><span class="item-title">${core.esc(title)}</span><div class="item-meta"><span>[${core.esc(sourceLabel)}]</span><span>${core.esc(item._date || '')}</span>${status !== 'open' ? `<span class="status ${status}">${status === 'done' ? (canonical ? 'COMPLETED' : 'HANDLED') : 'SKIP'}${time ? ` ${core.esc(time)}` : ''}</span>` : ''}${skipUntil ? `<span class="skip-until">再表示 ${core.esc(skipUntil)}</span>` : ''}</div></div>
+      <div class="item-main"><span class="item-title">${core.esc(title)}</span><div class="item-meta"><span>[${core.esc(sourceLabel)}]</span><span>${core.esc(item._date || '')}</span>${areaContext}${status !== 'open' ? `<span class="status ${status}">${status === 'done' ? (canonical ? 'COMPLETED' : 'HANDLED') : 'SKIP'}${time ? ` ${core.esc(time)}` : ''}</span>` : ''}${skipUntil ? `<span class="skip-until">再表示 ${core.esc(skipUntil)}</span>` : ''}</div></div>
       <button class="skip-btn" data-id="${core.esc(id)}" data-bucket="${bucket}" ${checked ? 'disabled' : ''}>${status === 'skip' ? 'UNDO' : 'SKIP'}</button>
     </div>`;
   }
@@ -129,7 +135,12 @@
       });
       return;
     }
-    const loaded = await core.loadAllItems();
+    const [loaded, loadedAreaView] = await Promise.all([
+      core.loadAllItems(),
+      window.COCKPID_AREA_VIEW?.load?.().catch(() => null) || Promise.resolve(null)
+    ]);
+    areaView = loadedAreaView;
+    loaded.items.forEach((item) => { item._areaContext = core.areaContextOf(item, areaView); });
     history = core.readHistory();
     core.migrateHistoryForItems(loaded.items, history);
     core.ensureSkipDeadlines(loaded.items, history);

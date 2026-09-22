@@ -20,10 +20,12 @@
   const detailEmpty = $('detailEmpty');
   const statusModel = window.COCKPID_PROJECT_STATUS;
   const statusView = window.COCKPID_PROJECT_STATUS_VIEW;
+  const areaContext = window.COCKPID_AREA_CONTEXT || window.AreaContext;
 
   let allProjects = [];
   let projects = [];
   let selectedId = '';
+  let areaView = null;
 
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -176,6 +178,19 @@
     return values;
   }
 
+  function areaFor(project) {
+    return project?.area || areaContext?.resolve(project, areaView)?.area || null;
+  }
+
+  function areaLabel(project, branch = false) {
+    const area = areaFor(project);
+    if (!area) return '';
+    const label = `AREA · ${area.title || area.id}`;
+    return branch
+      ? `<button class="area-branch" type="button" data-area-id="${esc(area.id)}">${esc(label)} →</button>`
+      : `<span class="area-context-label">${esc(label)}</span>`;
+  }
+
   function renderDesk() {
     const desk = projects.filter((project) => project.meta.desk === true);
     deskCount.textContent = String(desk.length);
@@ -202,6 +217,7 @@
         <span class="project-fill" aria-hidden="true"></span>
         <span class="project-inner">
           <span class="project-top"><span class="project-title">${esc(project.title)}</span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
+          ${areaLabel(project)}
           ${current ? `<span class="project-current">${esc(current)}</span>` : ''}
           <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span></span>
         </span>
@@ -277,15 +293,16 @@
     return html.join('');
   }
 
-  function githubPath(path, mode = 'blob') {
+  function githubPath(path, mode = 'blob', repo = REPO) {
     const value = String(path || '').trim().replace(/^\/+|\/+$/g, '');
     if (!value) return '';
     const encoded = value.split('/').map((part) => encodeURIComponent(part)).join('/');
-    return `https://github.com/${OWNER}/${REPO}/${mode}/${BRANCH}/${encoded}`;
+    return `https://github.com/${OWNER}/${repo}/${mode}/${BRANCH}/${encoded}`;
   }
 
   function projectSourceLink(project) {
-    const url = githubPath(project?.path, 'blob');
+    const repo = project?.source?.repo || REPO;
+    const url = githubPath(project?.path, 'blob', repo);
     if (!url) return '';
     return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">PROJECT ↗</a>`;
   }
@@ -475,7 +492,7 @@
       <div class="detail-title-row">
         <div>
           <h1 class="detail-title">${esc(project.title)}</h1>
-          <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span></div>
+          <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span>${areaLabel(project, true)}</div>
         </div>
         <div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
         <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
@@ -512,6 +529,17 @@
 
   function bindEvents() {
     document.addEventListener('click', (event) => {
+      const areaButton = event.target.closest?.('[data-area-id]');
+      if (areaButton?.classList.contains('area-branch')) {
+        event.preventDefault();
+        const areaId = areaButton.dataset.areaId;
+        const target = [...list.querySelectorAll('[data-project-id]')].find((node) => {
+          const project = allProjects.find((item) => item.id === node.dataset.projectId);
+          return areaFor(project)?.id === areaId;
+        });
+        target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        return;
+      }
       const button = event.target.closest?.('[data-project-id]');
       if (!button || button.tagName !== 'BUTTON') return;
       showProject(button.dataset.projectId);
@@ -522,7 +550,7 @@
   async function loadProjects() {
     reloadButton.disabled = true;
     status.classList.remove('error');
-    status.textContent = 'gpts / projects を読んでいます…';
+    status.textContent = 'Area / Project を読んでいます…';
     list.innerHTML = '';
     selectedId = '';
     detailContent.hidden = true;
@@ -530,17 +558,13 @@
     document.body.classList.remove('detail-open');
 
     try {
-      const entries = await apiJson(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PROJECT_DIR}?ref=${BRANCH}`);
-      const candidates = (Array.isArray(entries) ? entries : []).filter(isCandidate);
-      let failedReads = 0;
-      const loaded = await Promise.all(candidates.map(async (entry) => {
-        try { return await fetchProject(entry); }
-        catch (error) {
-          failedReads += 1;
-          console.warn('Backstage project skip', entry.path, error);
-          return null;
-        }
-      }));
+      const result = window.COCKPID_AREA_VIEW?.loadWithFallback
+        ? await window.COCKPID_AREA_VIEW.loadWithFallback({ cache: 'no-store' }, loadLegacyProjects)
+        : { kind: 'project', fallback: true, source: null, view: await loadLegacyProjects() };
+      areaView = result.kind === 'area' ? result.view : null;
+      const loaded = result.kind === 'area'
+        ? areaProjectRecords(result.view, result.source)
+        : legacyProjectRecords(result.view, result.source);
 
       allProjects = loaded.filter(Boolean).sort((a, b) => {
         const byDate = String(b.meta.last_touched || '').localeCompare(String(a.meta.last_touched || ''));
@@ -550,7 +574,7 @@
 
       renderDesk();
       renderList();
-      status.textContent = `${projects.length} projects · source: gpts/projects${failedReads ? ` · PARTIAL · ${failedReads} READ ERROR` : ''}`;
+      status.textContent = `${projects.length} projects · source: ${result.kind === 'area' ? 'my-storage-note / views/areas.json' : 'Project fallback'}`;
 
       const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
       if (hashId && allProjects.some((project) => project.id === hashId)) {
@@ -569,6 +593,48 @@
     } finally {
       reloadButton.disabled = false;
     }
+  }
+
+  function areaProjectRecords(view, source) {
+    const areas = Array.isArray(view?.areas) ? view.areas : [];
+    const nested = areas.flatMap((area) => (Array.isArray(area.projects) ? area.projects : []).map((project) => ({ ...project, area, source })));
+    const unassigned = (Array.isArray(view?.unassigned?.projects) ? view.unassigned.projects : []).map((project) => ({ ...project, source }));
+    return nested.concat(unassigned).map((project) => ({
+      id: String(project.id),
+      title: String(project.title || project.id),
+      meta: { ...project },
+      body: String(project.body_markdown || project.body || ''),
+      path: project.path || project.object_path || `objects/projects/${project.id}.md`,
+      area: project.area || null,
+      source: project.source || source
+    }));
+  }
+
+  function legacyProjectRecords(view, source) {
+    return (Array.isArray(view?.projects) ? view.projects : []).map((project) => ({
+      id: String(project.id),
+      title: String(project.title || project.id),
+      meta: { ...project },
+      body: String(project.body_markdown || project.body || ''),
+      path: project.path || project.object_path || `projects/${project.id}.md`,
+      source
+    }));
+  }
+
+  async function loadLegacyProjects() {
+    if (window.COCKPID_PROJECT_VIEW?.load && window.COCKPID_PROJECT_SOURCE?.mode === 'view') {
+      return window.COCKPID_PROJECT_VIEW.load({ cache: 'no-store' });
+    }
+    const entries = await apiJson(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PROJECT_DIR}?ref=${BRANCH}`);
+    const candidates = (Array.isArray(entries) ? entries : []).filter(isCandidate);
+    const loaded = await Promise.all(candidates.map(async (entry) => {
+      try { return await fetchProject(entry); }
+      catch (error) {
+        console.warn('Backstage project skip', entry.path, error);
+        return null;
+      }
+    }));
+    return { projects: loaded.filter(Boolean) };
   }
 
   bindEvents();
