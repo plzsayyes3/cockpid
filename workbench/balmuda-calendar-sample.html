@@ -138,13 +138,16 @@ function visibleDaysFor(z){
   }
   return zz<=0?365:2.6;
 }
-function morphFor(z){return smooth(.82,.975,z)}
+// Axis orientation and day expansion are intentionally decoupled.
+// The axis swap finishes early in DAYS; the day continues expanding afterward.
+function axisMorphFor(z){return smooth(.74,.86,z)}
+function sizeMorphFor(z){return smooth(.82,.975,z)}
 function timelineRowHeight(z){return viewport.clientHeight/visibleDaysFor(z)}
 function dayBlockHeight(z){
   var hour=lerp(30,46,smooth(.90,1,z));
   return 40+24*hour;
 }
-function unitHeightFor(z){return lerp(timelineRowHeight(z),dayBlockHeight(z),morphFor(z))}
+function unitHeightFor(z){return lerp(timelineRowHeight(z),dayBlockHeight(z),sizeMorphFor(z))}
 function modeFor(z){
   if(z>=.93)return'DAY';
   if(z>=.76)return'DAYS';
@@ -188,7 +191,8 @@ function pointLerp(a,b,t){return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t)}}
 
 function draw(z){
   var w=viewport.clientWidth,hv=viewport.clientHeight,u=unitHeightFor(z),scroll=viewport.scrollTop;
-  var p=morphFor(z);
+  var p=axisMorphFor(z);
+  var sizeP=sizeMorphFor(z);
   var first=clamp(Math.floor(scroll/u)-2,0,allDays.length-1);
   var last=clamp(Math.ceil((scroll+hv)/u)+2,0,allDays.length-1);
 
@@ -210,7 +214,7 @@ function draw(z){
 
     var arr=(eventsByDate.get(key)||[]).slice().sort(function(a,b){return minutes(a.start)-minutes(b.start)});
     var monthStart=d.getDate()===1;
-    var rowAlpha=lerp(.11,.22,p);
+    var rowAlpha=lerp(.11,.18,p)+.04*sizeP;
 
     // Date-row boundary remains the same object and simply spreads apart as the day expands.
     out.push('<line x1="'+railW+'" y1="'+base+'" x2="'+w+'" y2="'+base+'" stroke="rgba(255,255,255,'+(monthStart?.24:rowAlpha)+')" stroke-width="1"/>');
