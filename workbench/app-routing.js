@@ -14,13 +14,13 @@
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
     thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
-    dictionary: { key: '6', title: '6 / DICTIONARY', type: 'dictionary' },
+    dictionary: { key: '9', title: '9 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
     backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260924-project-memo2' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
-    keyboard: { key: '9', title: '9 / KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
+    keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
-    secret: { key: '0', title: '0 / ???', type: 'game' }
+    formysons: { key: '0', title: '0 / FOR MY SONS', type: 'iframe', src: 'https://plzsayyes3.github.io/for_my_sons/' }
   });
 
 
@@ -33,8 +33,7 @@
     dictionary: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-.7 5.4-.2 8 1.5v12c-2.6-1.7-5-2.2-8-1.5zM20 5.5c-3-.7-5.4-.2-8 1.5v12c2.6-1.7 5-2.2 8-1.5z"/></svg>',
     backstage: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h7l2-2h8v14h-17z"/><rect x="8" y="10" width="8" height="5" rx="1"/></svg>',
     thinking: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M12 11L6 16M12 11l6 5"/></svg>',
-    keyboard: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1M6 13h1M10 13h1M14 13h1M18 13h1M8 16h8"/></svg>',
-    secret: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.2"/><path d="M10.8 12v5.5M13.2 12v5.5M10.8 17.5h2.4"/></svg>'
+    formysons: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5L12 4.5l8 7M6.5 9.5V19.5h11V9.5"/><path d="M12 17.2l-2.4-2.3a1.5 1.5 0 0 1 2.4-1.8 1.5 1.5 0 0 1 2.4 1.8z"/></svg>'
   });
 
   const dockLabels = Object.freeze({
@@ -46,8 +45,7 @@
     dictionary: 'Dictionary',
     backstage: 'Projects',
     thinking: 'Thinking',
-    keyboard: 'Keyboard',
-    secret: 'Secret'
+    formysons: 'For My Sons'
   });
 
   function dockMarkup(appName, key, fallbackLabel) {
@@ -80,10 +78,9 @@
     const zero = dockButton('0');
     const entries = [
       ['5', 'onhand', 'On Hand'],
-      ['6', 'dictionary', 'Dictionary'],
       ['7', 'backstage', 'Projects'],
       ['8', 'thinking', 'Thinking'],
-      ['9', 'keyboard', 'Keyboard']
+      ['9', 'dictionary', 'Dictionary']
     ];
 
     entries.forEach(([key, appName, label]) => {
@@ -209,14 +206,6 @@
       renderBoard();
     } else if (app.type === 'dictionary') {
       renderDictionary();
-    } else if (app.type === 'game') {
-      appContent.innerHTML = '<div class="under-construction"><div><strong>SECRET DESK</strong><p>仕事をしないための場所。</p><button class="ghost-btn" id="fortuneBtn">今日の謎を引く</button><div class="game-result" id="gameResult"></div></div></div>';
-      const button = document.getElementById('fortuneBtn');
-      button?.addEventListener('click', () => {
-        const lines = ['5分だけ遠回りする。', '昔のノートを1ページだけ開く。', '今日は効率を1つ捨てる。', 'いちばんくだらない案を残す。', '机の上の物を1つだけ動かす。'];
-        const result = document.getElementById('gameResult');
-        if (result) result.textContent = lines[Math.floor(Math.random() * lines.length)];
-      });
     } else {
       appContent.innerHTML = `<div class="under-construction"><div><strong>UNDER CONSTRUCTION</strong><p>${app.text || ''}</p></div></div>`;
     }

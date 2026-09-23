@@ -20,7 +20,7 @@
     container.innerHTML = `
       <div class="dictionary-view">
         <header class="dictionary-head">
-          <div><div class="dictionary-kicker">6 / DICTIONARY</div><h1>Transcription Dictionary</h1><p>StickS3 Voice Captureの手動辞書を編集します。</p></div>
+          <div><div class="dictionary-kicker">9 / DICTIONARY</div><h1>Transcription Dictionary</h1><p>StickS3 Voice Captureの手動辞書を編集します。</p></div>
           <div id="dictionaryStatus">${statusHtml('READING…')}</div>
         </header>
         <div class="dictionary-grid">
