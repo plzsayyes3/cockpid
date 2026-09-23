@@ -274,6 +274,10 @@
     history = core.historyFromText(event.newValue);
     core.ensureSkipDeadlines(buckets.flatMap((bucket) => pools[bucket]), history);
     const changed = new Set([...Object.keys(previous), ...Object.keys(history)].filter((id) => JSON.stringify(previous[id] || null) !== JSON.stringify(history[id] || null)));
+    if ([...changed].some((id) => id.startsWith('cover:'))) {
+      renderAll();
+      return;
+    }
     const affected = new Set([...changed].map(bucketForId).filter(Boolean));
     affected.forEach(renderBucket);
   });
