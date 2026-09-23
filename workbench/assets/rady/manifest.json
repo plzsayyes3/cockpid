@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "character": "rady",
+  "basePath": "./assets/rady/web/",
+  "groups": {
+    "animation": {
+      "idle": "animation_01_idle.png",
+      "walk": "animation_02_walk.png",
+      "thinking": "animation_03_thinking.png",
+      "jump": "animation_04_jump.png",
+      "sleep": "animation_05_sleep.png"
+    },
+    "color": {
+      "default": "color_01_default.png",
+      "mint": "color_02_mint.png",
+      "skyblue": "color_03_skyblue.png",
+      "yellow": "color_04_yellow.png",
+      "pink": "color_05_pink.png",
+      "orange": "color_06_orange.png",
+      "purple": "color_07_purple.png",
+      "red": "color_08_red.png",
+      "green": "color_09_green.png",
+      "gray": "color_10_gray.png"
+    },
+    "expression": {
+      "normal": "expression_01_normal.png",
+      "smile": "expression_02_smile.png",
+      "happy": "expression_03_happy.png",
+      "surprised": "expression_04_surprised.png",
+      "sleepy": "expression_05_sleepy.png",
+      "wink": "expression_06_wink.png",
+      "sparkle": "expression_07_sparkle.png",
+      "grumpy": "expression_08_grumpy.png",
+      "shy": "expression_09_shy.png",
+      "heart": "expression_10_heart.png"
+    },
+    "usage": {
+      "taskComplete": "usage_01_task_complete.png",
+      "thinking": "usage_02_thinking.png",
+      "sleep": "usage_03_sleep.png",
+      "happy": "usage_04_happy.png"
+    }
+  }
+}
