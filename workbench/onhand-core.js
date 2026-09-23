@@ -174,6 +174,30 @@
     return clean(item?.title || item?.summary || '');
   }
 
+  function canonicalCoverId(item) {
+    const keyValue = titleKey(item);
+    return keyValue ? `cover:${hashId(keyValue)}` : '';
+  }
+
+  function candidateSourceDate(item) {
+    const raw = String(item?._date || item?.last_seen || item?.first_seen || item?.date || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+  }
+
+  function canonicalCoverState(item, history) {
+    if (item?._isCanonicalTask) return null;
+    const coverId = canonicalCoverId(item);
+    if (!coverId) return null;
+    const cover = history?.[coverId];
+    if (cover?.status !== 'done') return null;
+    const coveredAt = Date.parse(cover.at || '');
+    if (!Number.isFinite(coveredAt)) return null;
+    const sourceDate = candidateSourceDate(item);
+    if (!sourceDate) return cover;
+    const coveredDate = key(jstParts(new Date(coveredAt)));
+    return sourceDate <= coveredDate ? cover : null;
+  }
+
   function areaContextOf(item, areaView) {
     const resolver = window.COCKPID_AREA_CONTEXT || window.AreaContext;
     return resolver?.resolve ? resolver.resolve(item, areaView) : { area: null, project: null, assignment: null };
@@ -223,6 +247,8 @@
   }
 
   function stateFor(item, history) {
+    const covered = canonicalCoverState(item, history);
+    if (covered) return covered;
     const state = history[itemId(item)] || null;
     if (isExpiredSkip(state)) return null;
     if (item?._isCanonicalTask && state?.status === 'done') {
@@ -240,14 +266,13 @@
       history[id] = {
         status: 'done', at, title_key: titleKey(item), recurring: Boolean(item?._isRecurring)
       };
-      if (item?._isCanonicalTask && Array.isArray(item._shadowCandidates)) {
-        item._shadowCandidates
-          .filter((candidate) => !candidate?._isRecurring)
-          .forEach((candidate) => {
-            history[itemId(candidate)] = {
-              status: 'done', at, title_key: titleKey(candidate), recurring: false
-            };
-          });
+      if (item?._isCanonicalTask) {
+        const coverId = canonicalCoverId(item);
+        if (coverId) {
+          history[coverId] = {
+            status: 'done', at, title_key: titleKey(item), recurring: false
+          };
+        }
       }
     } else if (status === 'skip') {
       const plan = skipPlan(classify(item._type, item), item);
@@ -275,7 +300,6 @@
       if (item?._isCanonicalTask) {
         const canonicalId = String(item._canonicalTaskId || item.id || '');
         if (!canonicalId || seenCanonicalIds.has(canonicalId)) return;
-        item._shadowCandidates = [];
         seenCanonicalIds.add(canonicalId);
         seenTitles.add(keyValue);
         if (!canonicalByTitle.has(keyValue)) canonicalByTitle.set(keyValue, item);
@@ -284,12 +308,7 @@
       }
 
       const canonical = canonicalByTitle.get(keyValue);
-      if (canonical) {
-        canonical._shadowCandidates.push(item);
-        return;
-      }
-
-      if (seenTitles.has(keyValue)) return;
+      if (canonical) return;
 
       if (item?._isRecurring) {
         const occurrenceId = legacyItemId(item);
@@ -299,6 +318,7 @@
         return;
       }
 
+      if (seenTitles.has(keyValue)) return;
       seenTitles.add(keyValue);
       merged.push(item);
     });
