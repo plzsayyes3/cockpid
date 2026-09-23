@@ -7,10 +7,10 @@ const root = path.join(__dirname, '..');
 const routing = fs.readFileSync(path.join(__dirname, 'app-routing.js'), 'utf8');
 const index = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
-test('key 6 is the Area route backed by the Area-first Backstage', () => {
-  assert.match(routing, /backstage:\s*\{ key: '6', title: '6 \/ AREA'/);
-  assert.match(routing, /\['6', 'backstage', 'Area'\]/);
-  assert.match(index, /data-app="backstage"><b>6<\/b><span>Area<\/span>/);
+test('key 6 is the Project · Assignment route backed by the Area-first Backstage', () => {
+  assert.match(routing, /backstage:\s*\{ key: '6', title: '6 \/ PROJECT · ASSIGNMENT'/);
+  assert.match(routing, /\['6', 'backstage', 'PJ · Assign'\]/);
+  assert.match(index, /data-app="backstage"><b>6<\/b><span>PJ · Assign<\/span>/);
   assert.doesNotMatch(routing, /\['7', /);
 });
 

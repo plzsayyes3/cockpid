@@ -66,14 +66,14 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
 | 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
-| 6 | Area | ✅ | iframe → `backstage.html` | Area-first Project / Assignment / Task shelf + Town status view, see §3.6 |
+| 6 | Project · Assignment | ✅ | iframe → `backstage.html` | Area-first Project / Assignment / Task shelf + Town status view, see §3.6 |
 | 8 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
 | 9 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
 | — | Keyboard | ❌ (header icon) | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイト。ヘッダーのStanマイク横のキーボードアイコンから開く。`keyboard.html` は互換リダイレクト |
 | 0 | For My Sons | ✅ | iframe → external `https://plzsayyes3.github.io/for_my_sons/` | separate repo/site (`plzsayyes3/for_my_sons`) |
 
-Runtime dock tail is therefore `5=On Hand / 6=Area / 8=Thinking / 9=Dictionary`, followed by
+Runtime dock tail is therefore `5=On Hand / 6=Project · Assignment / 8=Thinking / 9=Dictionary`, followed by
 `0=For My Sons`. Key 7 is intentionally unassigned (2026-09-23 menu reorganization). Keyboard is
 reachable from the header icon, not the numeric dock. Project Town is not a numeric dock entry; its
 standalone URL remains for compatibility. Advice stays outside the numeric dock.
@@ -126,7 +126,7 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 `secretary-ai-overview/BOARD.md` — all three serve a similar "who's doing what" purpose but
 are separate files with separate audiences; don't conflate them.
 
-### 3.6 Area / Backstage (key 6)
+### 3.6 Project · Assignment / Backstage (key 6)
 
 The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source,
 using the shared `zen-note-github-token` when the Canonical repository is private.
@@ -409,6 +409,6 @@ behavior remains subject to the boundaries listed above.
 ## 11. Menu reorganization (2026-09-23)
 
 Following the 2026-09-23 22:20 Daily: `0` opens For My Sons, Keyboard moved to a header icon,
-Dictionary moved from `6` to `9`, and the Area-first Backstage moved from `7` to `6 / AREA`.
+Dictionary moved from `6` to `9`, and the Area-first Backstage moved from `7` to `6 / PROJECT · ASSIGNMENT` (dock label `PJ · Assign`).
 Key `7` is unassigned. The Secret Desk easter egg was retired. The Cockpid suite is 54/54 passing,
 including the updated Keyboard routing contract.

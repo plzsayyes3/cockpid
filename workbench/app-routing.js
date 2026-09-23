@@ -16,7 +16,7 @@
     thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '9', title: '9 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '6', title: '6 / AREA', type: 'iframe', src: 'backstage.html?v=20260923-area-menu1' },
+    backstage: { key: '6', title: '6 / PROJECT · ASSIGNMENT', type: 'iframe', src: 'backstage.html?v=20260924-pj-assign1' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
@@ -43,7 +43,7 @@
     news: 'News',
     onhand: 'On Hand',
     dictionary: 'Dictionary',
-    backstage: 'Area',
+    backstage: 'PJ · Assign',
     thinking: 'Thinking',
     formysons: 'For My Sons'
   });
@@ -78,7 +78,7 @@
     const zero = dockButton('0');
     const entries = [
       ['5', 'onhand', 'On Hand'],
-      ['6', 'backstage', 'Area'],
+      ['6', 'backstage', 'PJ · Assign'],
       ['8', 'thinking', 'Thinking'],
       ['9', 'dictionary', 'Dictionary']
     ];
