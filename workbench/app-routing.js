@@ -16,7 +16,7 @@
     thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '9', title: '9 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260924-project-memo2' },
+    backstage: { key: '6', title: '6 / AREA', type: 'iframe', src: 'backstage.html?v=20260923-area-menu1' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
@@ -31,7 +31,7 @@
     news: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h11v14H5zM16 8h3v9a2 2 0 0 1-2 2h-1M8 9h5M8 12h5M8 15h3"/></svg>',
     onhand: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="10" height="9" rx="2"/><path d="M3.5 15.5h4l2-1.5h4.5c1.3 0 2 .8 2 1.7M7.5 18.5h7.2c1.1 0 2-.3 2.8-1l3-2.5M3.5 15.5v4"/></svg>',
     dictionary: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-.7 5.4-.2 8 1.5v12c-2.6-1.7-5-2.2-8-1.5zM20 5.5c-3-.7-5.4-.2-8 1.5v12c2.6-1.7 5-2.2 8-1.5z"/></svg>',
-    backstage: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h7l2-2h8v14h-17z"/><rect x="8" y="10" width="8" height="5" rx="1"/></svg>',
+    backstage: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2 6 2 5.5-2v13l-5.5 2-6-2-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></svg>',
     thinking: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M12 11L6 16M12 11l6 5"/></svg>',
     formysons: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5L12 4.5l8 7M6.5 9.5V19.5h11V9.5"/><path d="M12 17.2l-2.4-2.3a1.5 1.5 0 0 1 2.4-1.8 1.5 1.5 0 0 1 2.4 1.8z"/></svg>'
   });
@@ -43,7 +43,7 @@
     news: 'News',
     onhand: 'On Hand',
     dictionary: 'Dictionary',
-    backstage: 'Projects',
+    backstage: 'Area',
     thinking: 'Thinking',
     formysons: 'For My Sons'
   });
@@ -78,7 +78,7 @@
     const zero = dockButton('0');
     const entries = [
       ['5', 'onhand', 'On Hand'],
-      ['7', 'backstage', 'Projects'],
+      ['6', 'backstage', 'Area'],
       ['8', 'thinking', 'Thinking'],
       ['9', 'dictionary', 'Dictionary']
     ];

@@ -7,10 +7,11 @@ const root = path.join(__dirname, '..');
 const routing = fs.readFileSync(path.join(__dirname, 'app-routing.js'), 'utf8');
 const index = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
-test('key 7 is the canonical Projects route', () => {
-  assert.match(routing, /backstage:\s*\{ key: '7', title: '7 \/ PROJECTS'/);
-  assert.match(routing, /\['7', 'backstage', 'Projects'\]/);
-  assert.match(index, /data-app="backstage"><b>7<\/b><span>Projects<\/span>/);
+test('key 6 is the Area route backed by the Area-first Backstage', () => {
+  assert.match(routing, /backstage:\s*\{ key: '6', title: '6 \/ AREA'/);
+  assert.match(routing, /\['6', 'backstage', 'Area'\]/);
+  assert.match(index, /data-app="backstage"><b>6<\/b><span>Area<\/span>/);
+  assert.doesNotMatch(routing, /\['7', /);
 });
 
 test('header microphone opens the existing Stan surface', () => {
