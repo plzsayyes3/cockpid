@@ -18,6 +18,13 @@
   const reloadButton = $('reloadBtn');
   const detailContent = $('detailContent');
   const detailEmpty = $('detailEmpty');
+  const memoPane = $('projectMemoPane');
+  const memoContext = $('projectMemoContext');
+  const memoSourceLabel = $('projectMemoSource');
+  const memoText = $('projectMemoText');
+  const memoStatus = $('projectMemoStatus');
+  const memoSave = $('projectMemoSave');
+  const memoClose = $('projectMemoClose');
   const statusModel = window.COCKPID_PROJECT_STATUS;
   const statusView = window.COCKPID_PROJECT_STATUS_VIEW;
   const areaContext = window.COCKPID_AREA_CONTEXT || window.AreaContext;
@@ -26,12 +33,163 @@
   let projects = [];
   let selectedId = '';
   let areaView = null;
+  let memoProjectId = '';
+  const memoDrafts = new Map();
 
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[char]));
 
   const token = () => localStorage.getItem(TOKEN_KEY) || '';
+
+  function memoSource() {
+    try {
+      return window.COCKPID_SOURCES?.get?.('memo')
+        || window.parent?.COCKPID_SOURCES?.get?.('memo')
+        || { repo: 'mynotebook', dir: '00_inbox' };
+    } catch (_) {
+      return { repo: 'mynotebook', dir: '00_inbox' };
+    }
+  }
+
+  function joinPath(dir, child) {
+    const base = String(dir || '').replace(/^\/+|\/+$/g, '');
+    const tail = String(child || '').replace(/^\/+/, '');
+    return base ? `${base}/${tail}` : tail;
+  }
+
+  function encodeApiPath(path) {
+    return String(path || '').split('/').map(encodeURIComponent).join('/');
+  }
+
+  function encodeUtf8(value) {
+    const bytes = new TextEncoder().encode(String(value ?? ''));
+    let binary = '';
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary);
+  }
+
+  function memoStamp(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(date);
+    const get = (type) => parts.find((part) => part.type === type)?.value || '00';
+    return `${get('year')}${get('month')}${get('day')}${get('hour')}${get('minute')}${get('second')}${String(date.getMilliseconds()).padStart(3, '0')}`;
+  }
+
+  function selectedProject() {
+    return allProjects.find((item) => item.id === selectedId) || null;
+  }
+
+  function projectMemoPrefix(project) {
+    return project ? `${project.title}: ` : '';
+  }
+
+  function setMemoStatus(message, error = false) {
+    if (!memoStatus) return;
+    memoStatus.textContent = message;
+    memoStatus.classList.toggle('error', error);
+  }
+
+  function stashProjectMemoDraft() {
+    if (!memoText || !memoProjectId) return;
+    memoDrafts.set(memoProjectId, memoText.value);
+  }
+
+  function loadProjectMemo(project) {
+    if (!memoText || !memoContext || !memoSave) return;
+    stashProjectMemoDraft();
+    memoProjectId = project?.id || '';
+    const source = memoSource();
+    if (memoSourceLabel) memoSourceLabel.textContent = `${source.repo} / ${source.dir}`;
+
+    if (!project) {
+      memoContext.textContent = 'Projectを選択してください。';
+      memoText.value = '';
+      memoText.disabled = true;
+      memoSave.disabled = true;
+      setMemoStatus('SELECT PROJECT');
+      return;
+    }
+
+    memoContext.textContent = project.title;
+    memoText.disabled = false;
+    memoSave.disabled = false;
+    memoText.value = memoDrafts.get(project.id) ?? projectMemoPrefix(project);
+    setMemoStatus('READY');
+    const end = memoText.value.length;
+    memoText.focus?.();
+    memoText.setSelectionRange?.(end, end);
+  }
+
+  function openProjectMemo() {
+    if (!memoPane) return;
+    memoPane.hidden = false;
+    document.body.classList.add('memo-open');
+    loadProjectMemo(selectedProject());
+  }
+
+  function closeProjectMemo() {
+    if (!memoPane) return;
+    stashProjectMemoDraft();
+    memoPane.hidden = true;
+    document.body.classList.remove('memo-open');
+  }
+
+  async function saveProjectMemo() {
+    const project = selectedProject();
+    if (!project || !memoText || !memoSave) {
+      setMemoStatus('SELECT PROJECT', true);
+      return;
+    }
+    const text = memoText.value.trim();
+    const prefix = projectMemoPrefix(project).trim();
+    if (!text || text === prefix) {
+      setMemoStatus('EMPTY', true);
+      return;
+    }
+    const currentToken = token();
+    if (!currentToken) {
+      setMemoStatus('TOKEN REQUIRED · Workbench Settings', true);
+      return;
+    }
+
+    const source = memoSource();
+    const name = `${memoStamp()}.md`;
+    const memoPath = joinPath(source.dir, name);
+    memoSave.disabled = true;
+    setMemoStatus('POSTING…');
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${OWNER}/${source.repo}/contents/${encodeApiPath(memoPath)}`, {
+        method: 'PUT',
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${currentToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `cockpid: project memo ${name}`,
+          content: encodeUtf8(`${text}\n`)
+        })
+      });
+      if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
+      try {
+        (window.COCKPID_MEMO_ROUTE || window.parent?.COCKPID_MEMO_ROUTE)?.recordMemo?.(name);
+      } catch (_) {}
+      memoDrafts.set(project.id, projectMemoPrefix(project));
+      memoText.value = projectMemoPrefix(project);
+      setMemoStatus(`SAVED · ${name}`);
+    } catch (error) {
+      console.error('Project memo write failed', error);
+      setMemoStatus(String(error?.message || error).toUpperCase(), true);
+    } finally {
+      memoSave.disabled = false;
+    }
+  }
 
   async function apiJson(url) {
     const headers = { Accept: 'application/vnd.github+json' };
@@ -480,6 +638,7 @@
   function showProject(id, updateHash = true) {
     const project = allProjects.find((item) => item.id === id);
     if (!project) return;
+    if (selectedId !== id) stashProjectMemoDraft();
     selectedId = id;
     renderList();
 
@@ -517,6 +676,7 @@
     bindDetailView(project);
     document.body.classList.add('detail-open');
     $('detailBack')?.addEventListener('click', closeMobileDetail);
+    if (document.body.classList.contains('memo-open')) loadProjectMemo(project);
     if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(project.id)}`);
   }
 
@@ -528,6 +688,23 @@
   }
 
   function bindEvents() {
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin) return;
+      if (event.data?.type !== 'cockpid:open-project-memo') return;
+      openProjectMemo();
+    });
+    memoClose?.addEventListener('click', closeProjectMemo);
+    memoSave?.addEventListener('click', saveProjectMemo);
+    memoText?.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        saveProjectMemo();
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeProjectMemo();
+      }
+    });
     document.addEventListener('click', (event) => {
       const areaButton = event.target.closest?.('[data-area-id]');
       if (areaButton?.classList.contains('area-branch')) {
@@ -553,6 +730,8 @@
     status.textContent = 'Area / Project を読んでいます…';
     list.innerHTML = '';
     selectedId = '';
+    memoProjectId = '';
+    closeProjectMemo();
     detailContent.hidden = true;
     detailEmpty.hidden = false;
     document.body.classList.remove('detail-open');
