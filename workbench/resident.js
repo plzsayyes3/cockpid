@@ -85,6 +85,18 @@
   let lastInteractionAt = Date.now();
   let drag = null;
   let activitySyncQueued = false;
+  let animationTimer = null;
+  let animationRun = 0;
+  let currentVisualKey = '';
+
+  const animationFrameCache = new Map();
+  const ANIMATION_FRAME_MS = {
+    idle: 760,
+    walk: 260,
+    thinking: 430,
+    jump: 260,
+    sleep: 900
+  };
 
   const operations = new Map();
 
@@ -131,13 +143,86 @@
     render();
   }
 
-  function setVisual(group, key, mode) {
-    const src = asset(group, key);
-    if (!src) return;
-    if (image.getAttribute('src') !== src) image.src = src;
+  function stopAnimation() {
+    clearTimeout(animationTimer);
+    animationTimer = null;
+    animationRun += 1;
+  }
+
+  function loadAnimationFrames(key) {
+    if (animationFrameCache.has(key)) return animationFrameCache.get(key);
+
+    const promise = new Promise((resolve) => {
+      const sprite = new Image();
+      sprite.onload = () => {
+        const frameCount = 3;
+        const frames = [];
+        for (let index = 0; index < frameCount; index += 1) {
+          const startX = Math.round(index * sprite.naturalWidth / frameCount);
+          const endX = Math.round((index + 1) * sprite.naturalWidth / frameCount);
+          const sourceWidth = Math.max(1, endX - startX);
+          const canvas = document.createElement('canvas');
+          canvas.width = sourceWidth;
+          canvas.height = sprite.naturalHeight;
+          const context = canvas.getContext('2d');
+          if (!context) continue;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(
+            sprite,
+            startX, 0, sourceWidth, sprite.naturalHeight,
+            0, 0, sourceWidth, sprite.naturalHeight
+          );
+          frames.push(canvas.toDataURL('image/png'));
+        }
+        resolve(frames);
+      };
+      sprite.onerror = () => resolve([]);
+      sprite.src = asset('animation', key);
+    });
+
+    animationFrameCache.set(key, promise);
+    return promise;
+  }
+
+  function applyVisualMetadata(group, key, mode) {
     image.dataset.asset = `${group}.${key}`;
     image.dataset.mode = mode || key;
     pet.dataset.radyMode = mode || key;
+  }
+
+  function setVisual(group, key, mode) {
+    const visualKey = `${group}.${key}:${mode || key}`;
+    if (currentVisualKey === visualKey) return;
+
+    stopAnimation();
+    currentVisualKey = visualKey;
+    applyVisualMetadata(group, key, mode);
+
+    if (group !== 'animation') {
+      const src = asset(group, key);
+      if (src && image.getAttribute('src') !== src) image.src = src;
+      return;
+    }
+
+    const run = animationRun;
+    loadAnimationFrames(key).then((frames) => {
+      if (run !== animationRun || currentVisualKey !== visualKey) return;
+
+      if (!frames.length) {
+        const src = asset(group, key);
+        if (src) image.src = src;
+        return;
+      }
+
+      let frameIndex = 0;
+      const advance = () => {
+        if (run !== animationRun || currentVisualKey !== visualKey) return;
+        image.src = frames[frameIndex % frames.length];
+        frameIndex += 1;
+        animationTimer = setTimeout(advance, ANIMATION_FRAME_MS[key] || 520);
+      };
+      advance();
+    });
   }
 
   function sample(items) {
