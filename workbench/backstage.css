@@ -158,7 +158,7 @@ button.relation-row:hover{border-color:#bdb2a3;background:rgba(255,255,255,.34)}
 /* Project inline memo */
 .project-memo-pane{min-width:0;border-left:1px solid var(--line);padding-left:24px}
 .project-memo-pane[hidden]{display:none}
-body.memo-open .backstage-app{max-width:1480px}
+body.memo-open .backstage-app{max-width:none}
 body.memo-open .backstage-layout{grid-template-columns:minmax(270px,330px) minmax(0,1fr) minmax(270px,320px);gap:24px}
 body.memo-open .detail-pane{padding-left:24px}
 .project-memo-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
@@ -175,6 +175,40 @@ body.memo-open .detail-pane{padding-left:24px}
 .project-memo-save{flex:0 0 auto;border:0;border-radius:6px;background:var(--ink);color:#faf9f5;padding:8px 10px;cursor:pointer;font:800 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
 .project-memo-save:disabled{opacity:.4;cursor:default}
 .project-memo-hint{margin:9px 0 0;color:var(--muted);font-size:9px;line-height:1.6}
+
+@media(min-width:821px){
+  html,body{height:100%}
+  body.memo-open{overflow:hidden}
+  body.memo-open .backstage-app{
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:22px;
+    overflow:hidden;
+  }
+  body.memo-open .backstage-top,
+  body.memo-open .desk-strip,
+  body.memo-open .load-status{flex:0 0 auto}
+  body.memo-open .backstage-layout{
+    flex:1 1 auto;
+    min-height:0;
+    align-items:stretch;
+    overflow:hidden;
+  }
+  body.memo-open .list-pane,
+  body.memo-open .detail-pane,
+  body.memo-open .project-memo-pane{
+    min-height:0;
+    height:100%;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+    padding-bottom:34px;
+  }
+  body.memo-open .list-pane{padding-right:8px}
+  body.memo-open .detail-pane{padding-right:8px}
+  body.memo-open .project-memo-pane{padding-right:4px}
+}
 
 @media(max-width:980px) and (min-width:821px){
   body.memo-open .backstage-layout{grid-template-columns:minmax(230px,280px) minmax(300px,1fr) minmax(245px,280px);gap:18px}
