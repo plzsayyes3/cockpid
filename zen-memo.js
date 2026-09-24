@@ -49,7 +49,23 @@
     input.setSelectionRange(end, end);
   }
 
+  function projectMemoFrame() {
+    const frame = document.querySelector('#appContent iframe');
+    const title = String(el('appTitle')?.textContent || '');
+    const src = String(frame?.getAttribute('src') || '');
+    if (!frame?.contentWindow) return null;
+    if (!/PROJECTS/i.test(title) || !/backstage\.html/i.test(src)) return null;
+    return frame.contentWindow;
+  }
+
   function openZenMemo() {
+    const projectFrame = projectMemoFrame();
+    if (projectFrame) {
+      closeZenMemo();
+      projectFrame.postMessage({ type: 'cockpid:open-project-memo' }, window.location.origin);
+      return;
+    }
+
     syncMemoSourceLabel();
     el('drawer').classList.add('open');
     el('drawerBackdrop').classList.add('open');
