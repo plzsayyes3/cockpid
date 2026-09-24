@@ -125,10 +125,19 @@
     memoText.setSelectionRange?.(end, end);
   }
 
+  function notifyProjectMemoState(open) {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'cockpid:project-memo-state', open: Boolean(open) }, location.origin);
+      }
+    } catch (_) {}
+  }
+
   function openProjectMemo() {
     if (!memoPane) return;
     memoPane.hidden = false;
     document.body.classList.add('memo-open');
+    notifyProjectMemoState(true);
     loadProjectMemo(selectedProject());
   }
 
@@ -137,6 +146,7 @@
     stashProjectMemoDraft();
     memoPane.hidden = true;
     document.body.classList.remove('memo-open');
+    notifyProjectMemoState(false);
   }
 
   async function saveProjectMemo() {
