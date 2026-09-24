@@ -5,20 +5,54 @@
   const say = document.getElementById('petSay');
   const avatar = pet?.querySelector('.pet-avatar');
   const capture = document.getElementById('captureText');
+  const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-  const HOME_FRAME = 7;
-  const TYPE_FRAMES = [7, 8, 9, 8];
-  const REACTION_FRAMES = [1, 2, 4, 5, 7];
-  const FRAME_SRC = {
-    3: 'resident-frame3-full.svg?v=20260911',
-    6: 'resident-frame6.png',
-    7: 'resident-frame7.png',
-    8: 'resident-frame8.png',
-    9: 'resident-frame9.png'
+  const MANIFEST_PATH = './assets/rady/manifest.json';
+  const SLEEP_AFTER_MS = 5 * 60 * 1000;
+  const SLEEP_RETRY_MS = 60 * 1000;
+
+  const FALLBACK_ASSETS = {
+    animation: {
+      idle: 'animation_01_idle.png',
+      walk: 'animation_02_walk.png',
+      thinking: 'animation_03_thinking.png',
+      jump: 'animation_04_jump.png',
+      sleep: 'animation_05_sleep.png'
+    },
+    color: {
+      default: 'color_01_default.png',
+      mint: 'color_02_mint.png',
+      skyblue: 'color_03_skyblue.png',
+      yellow: 'color_04_yellow.png',
+      pink: 'color_05_pink.png',
+      orange: 'color_06_orange.png',
+      purple: 'color_07_purple.png',
+      red: 'color_08_red.png',
+      green: 'color_09_green.png',
+      gray: 'color_10_gray.png'
+    },
+    expression: {
+      normal: 'expression_01_normal.png',
+      smile: 'expression_02_smile.png',
+      happy: 'expression_03_happy.png',
+      surprised: 'expression_04_surprised.png',
+      sleepy: 'expression_05_sleepy.png',
+      wink: 'expression_06_wink.png',
+      sparkle: 'expression_07_sparkle.png',
+      grumpy: 'expression_08_grumpy.png',
+      shy: 'expression_09_shy.png',
+      heart: 'expression_10_heart.png'
+    },
+    usage: {
+      taskComplete: 'usage_01_task_complete.png',
+      thinking: 'usage_02_thinking.png',
+      sleep: 'usage_03_sleep.png',
+      happy: 'usage_04_happy.png'
+    }
   };
-  const generatedFrameSrc = {};
+
   const RADY_LINES = [
     'それ、いまやる？',
     'ちょっと別のこと考えてもいいかも。',
@@ -38,60 +72,76 @@
     '静かなうちに、ひとつ考える？'
   ];
 
-  let currentFrame = HOME_FRAME;
+  let manifest = { basePath: './assets/rady/web/', groups: FALLBACK_ASSETS };
+  let latestHint = '';
+  let lastSpeech = '';
+  let speechTimer = null;
   let typingTimer = null;
   let typingUntil = 0;
-  let typingIndex = 0;
-  let idleTimer = null;
-  let gestureTimer = null;
-  let gestureRun = 0;
-  let speechTimer = null;
-  let lastSpeech = '';
-  let activeReactionFrame = null;
-  let lastReactionFrame = null;
-  let latestHint = '';
+  let sleepTimer = null;
+  let transientTimer = null;
+  let transientVisual = null;
+  let sleeping = false;
+  let lastInteractionAt = Date.now();
   let drag = null;
+  let activitySyncQueued = false;
+
+  const operations = new Map();
 
   avatar.innerHTML = '';
   const image = document.createElement('img');
   image.id = 'residentImage';
   image.className = 'resident-image';
-  image.alt = '';
+  image.alt = 'らでぃ';
   image.draggable = false;
   avatar.appendChild(image);
 
-  Object.values(FRAME_SRC).forEach((src) => {
-    const preload = new Image();
-    preload.src = src;
-  });
-
-  function frameSource(frame) {
-    return FRAME_SRC[frame] || generatedFrameSrc[frame] || FRAME_SRC[HOME_FRAME];
+  function asset(group, key) {
+    const file = manifest?.groups?.[group]?.[key] || FALLBACK_ASSETS?.[group]?.[key];
+    if (!file) return '';
+    const base = String(manifest?.basePath || './assets/rady/web/');
+    return `${base}${file}`;
   }
 
-  function hasFrame(frame) {
-    return Boolean(FRAME_SRC[frame] || generatedFrameSrc[frame]);
+  function preloadAssets() {
+    const entries = [
+      ['animation', 'idle'], ['animation', 'walk'], ['animation', 'thinking'], ['animation', 'sleep'],
+      ['usage', 'taskComplete'], ['usage', 'happy'], ['usage', 'sleep'],
+      ['expression', 'smile'], ['expression', 'grumpy'],
+      ['color', 'mint'], ['color', 'skyblue'], ['color', 'yellow'], ['color', 'purple'], ['color', 'red'], ['color', 'green']
+    ];
+    entries.forEach(([group, key]) => {
+      const src = asset(group, key);
+      if (!src) return;
+      const preload = new Image();
+      preload.src = src;
+    });
   }
 
-  function setFrame(frame) {
-    const safe = hasFrame(frame) ? Number(frame) : HOME_FRAME;
-    const nextSrc = frameSource(safe);
-    if (image.getAttribute('src') !== nextSrc) image.src = nextSrc;
-    image.dataset.frame = String(safe);
-    currentFrame = safe;
+  async function loadManifest() {
+    try {
+      const response = await fetch(MANIFEST_PATH, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Rady manifest ${response.status}`);
+      const data = await response.json();
+      if (data?.groups) manifest = data;
+    } catch (error) {
+      console.warn('[Rady] manifest fallback', error);
+    }
+    preloadAssets();
+    render();
+  }
+
+  function setVisual(group, key, mode) {
+    const src = asset(group, key);
+    if (!src) return;
+    if (image.getAttribute('src') !== src) image.src = src;
+    image.dataset.asset = `${group}.${key}`;
+    image.dataset.mode = mode || key;
+    pet.dataset.radyMode = mode || key;
   }
 
   function sample(items) {
     return items.length ? items[Math.floor(Math.random() * items.length)] : '';
-  }
-
-  function chooseReactionFrame() {
-    const available = REACTION_FRAMES.filter(hasFrame);
-    const alternatives = available.filter((frame) => frame !== lastReactionFrame);
-    const pool = alternatives.length ? alternatives : available;
-    const picked = pool.length ? sample(pool) : HOME_FRAME;
-    lastReactionFrame = picked;
-    return picked;
   }
 
   function clip(value, max = 38) {
@@ -110,18 +160,15 @@
     const messages = [];
     if (latestHint) messages.push(`これ、まだ気になる？「${clip(latestHint, 44)}」`);
 
-    const onHand = visibleTexts('.movement-item-title');
-    const onHandTitle = sample(onHand);
+    const onHandTitle = sample(visibleTexts('.movement-item-title'));
     if (onHandTitle) {
       const title = clip(onHandTitle, 34);
       messages.push(`これ、拾ってみる？「${title}」`);
       messages.push(`ON HANDに「${title}」がいる。`);
     }
 
-    const calendar = visibleTexts('.timeline-event-title, .anytime-item');
-    const calendarTitle = sample(calendar);
+    const calendarTitle = sample(visibleTexts('.timeline-event-title, .anytime-item'));
     if (calendarTitle) messages.push(`今日の予定に「${clip(calendarTitle, 34)}」があるよ。`);
-
     if (capture?.value.trim()) messages.push('そのメモ、いま机に置いておく？');
     return messages;
   }
@@ -133,13 +180,6 @@
     const message = sample(choices.length ? choices : pool) || '……。';
     lastSpeech = message;
     return message;
-  }
-
-  function speak(message = nextSpeech()) {
-    say.textContent = message;
-    say.classList.add('show');
-    clearTimeout(speechTimer);
-    speechTimer = setTimeout(() => say.classList.remove('show'), 5200);
   }
 
   function isSpeaking() {
@@ -154,97 +194,208 @@
     return Date.now() < typingUntil;
   }
 
+  function activeOperationMode() {
+    const values = [...operations.values()];
+    if (values.includes('working')) return 'working';
+    if (values.includes('thinking')) return 'thinking';
+    return null;
+  }
+
   function isBusy() {
-    return isDragging() || isSpeaking() || isTyping();
+    return isDragging() || isSpeaking() || isTyping() || operations.size > 0 || Boolean(transientVisual);
   }
 
-  function cancelIdle() {
-    clearTimeout(idleTimer);
-    clearTimeout(gestureTimer);
-    idleTimer = null;
-    gestureTimer = null;
-    gestureRun += 1;
-  }
+  function render() {
+    pet.classList.toggle('is-speaking', isSpeaking());
+    pet.classList.toggle('is-sleeping', sleeping);
 
-  function scheduleIdle() {
-    clearTimeout(idleTimer);
-    if (!generatedFrameSrc[1] || !generatedFrameSrc[2] || isBusy()) return;
-    idleTimer = setTimeout(runIdleGesture, 12000 + Math.random() * 8000);
-  }
-
-  function runIdleGesture() {
-    if (isBusy() || !generatedFrameSrc[1] || !generatedFrameSrc[2]) {
-      scheduleIdle();
+    if (sleeping) {
+      setVisual('animation', 'sleep', 'sleep');
       return;
     }
 
-    const run = ++gestureRun;
-    const sequence = [1, 2, 1, HOME_FRAME];
-    let step = 0;
-    const next = () => {
-      if (run !== gestureRun || isBusy()) {
-        if (!isBusy()) setFrame(HOME_FRAME);
-        scheduleIdle();
-        return;
-      }
-      setFrame(sequence[step]);
-      step += 1;
-      if (step < sequence.length) gestureTimer = setTimeout(next, 260);
-      else scheduleIdle();
+    if (isDragging()) {
+      setVisual('animation', 'walk', 'dragging');
+      return;
+    }
+
+    if (transientVisual) {
+      setVisual(transientVisual.group, transientVisual.key, transientVisual.mode);
+      return;
+    }
+
+    if (isSpeaking()) {
+      setVisual('expression', 'smile', 'speaking');
+      return;
+    }
+
+    const operationMode = activeOperationMode();
+    if (operationMode === 'working') {
+      setVisual('animation', 'walk', 'working');
+      return;
+    }
+    if (operationMode === 'thinking') {
+      setVisual('animation', 'thinking', 'thinking');
+      return;
+    }
+
+    if (isTyping()) {
+      setVisual('animation', 'thinking', 'thinking');
+      return;
+    }
+
+    setVisual('animation', 'idle', 'idle');
+  }
+
+  function showTransient(group, key, mode, duration = 600) {
+    clearTimeout(transientTimer);
+    transientVisual = { group, key, mode };
+    render();
+    transientTimer = setTimeout(() => {
+      transientVisual = null;
+      render();
+    }, duration);
+  }
+
+  function flashColor(color = 'mint', duration = 520) {
+    const safe = FALLBACK_ASSETS.color[color] ? color : 'mint';
+    showTransient('color', safe, `press-${safe}`, duration);
+  }
+
+  function press(kind = 'normal') {
+    const colors = {
+      normal: 'mint',
+      info: 'skyblue',
+      warning: 'yellow',
+      success: 'green',
+      error: 'red',
+      danger: 'red'
     };
-    next();
+    flashColor(colors[kind] || (FALLBACK_ASSETS.color[kind] ? kind : 'mint'));
   }
 
-  function applyPriorityState() {
-    const speaking = isSpeaking();
-    const dragging = isDragging();
-    pet.classList.toggle('is-speaking', speaking);
-
-    if (dragging) {
-      setFrame(6);
-      return true;
-    }
-    if (speaking) {
-      if (activeReactionFrame == null || !hasFrame(activeReactionFrame)) {
-        activeReactionFrame = chooseReactionFrame();
-      }
-      setFrame(activeReactionFrame);
-      return true;
-    }
-    activeReactionFrame = null;
-    return false;
-  }
-
-  function stopTypingLoop() {
-    clearInterval(typingTimer);
-    typingTimer = null;
-    typingIndex = 0;
-    if (!applyPriorityState()) setFrame(HOME_FRAME);
-    scheduleIdle();
+  function speak(message = nextSpeech()) {
+    if (sleeping) wake();
+    say.textContent = message;
+    say.classList.add('show');
+    clearTimeout(speechTimer);
+    speechTimer = setTimeout(() => {
+      say.classList.remove('show');
+      render();
+    }, 5200);
+    render();
   }
 
   function startTypingPulse() {
-    typingUntil = Date.now() + 900;
-    cancelIdle();
-    if (typingTimer) return;
-
-    typingTimer = setInterval(() => {
-      if (applyPriorityState()) return;
-      if (!isTyping()) {
-        stopTypingLoop();
-        return;
-      }
-      setFrame(TYPE_FRAMES[typingIndex % TYPE_FRAMES.length]);
-      typingIndex += 1;
-    }, 150);
+    typingUntil = Date.now() + 1000;
+    clearTimeout(typingTimer);
+    render();
+    typingTimer = setTimeout(() => {
+      typingUntil = 0;
+      render();
+    }, 1050);
   }
 
-  function syncState() {
-    cancelIdle();
-    if (applyPriorityState()) return;
-    if (isTyping()) return;
-    setFrame(HOME_FRAME);
-    scheduleIdle();
+  function setOperation(key, mode) {
+    const safeKey = String(key || 'external');
+    operations.set(safeKey, mode === 'thinking' ? 'thinking' : 'working');
+    render();
+  }
+
+  function clearOperation(key) {
+    operations.delete(String(key || 'external'));
+    render();
+  }
+
+  function completeOperation(key = 'external') {
+    clearOperation(key);
+    showTransient('usage', 'taskComplete', 'complete', 1700);
+  }
+
+  function errorOperation(key = 'external') {
+    clearOperation(key);
+    showTransient('expression', 'grumpy', 'error', 1300);
+  }
+
+  function scheduleSleep(delay) {
+    clearTimeout(sleepTimer);
+    const elapsed = Date.now() - lastInteractionAt;
+    const remaining = delay ?? Math.max(0, SLEEP_AFTER_MS - elapsed);
+    sleepTimer = setTimeout(trySleep, remaining);
+  }
+
+  function trySleep() {
+    if (Date.now() - lastInteractionAt < SLEEP_AFTER_MS) {
+      scheduleSleep();
+      return;
+    }
+    if (isBusy()) {
+      scheduleSleep(SLEEP_RETRY_MS);
+      return;
+    }
+    sleeping = true;
+    say.classList.remove('show');
+    clearTimeout(transientTimer);
+    transientVisual = null;
+    render();
+  }
+
+  function wake() {
+    const wasSleeping = sleeping;
+    sleeping = false;
+    if (wasSleeping) showTransient('expression', 'smile', 'wake', 850);
+    else render();
+  }
+
+  function markInteraction() {
+    lastInteractionAt = Date.now();
+    if (sleeping) wake();
+    scheduleSleep();
+  }
+
+  function buttonColor(button) {
+    const requested = button?.dataset?.radyColor;
+    if (requested && FALLBACK_ASSETS.color[requested]) return requested;
+    const className = String(button?.className || '');
+    if (/danger/i.test(className)) return 'red';
+    if (/app-btn/i.test(className)) return 'skyblue';
+    if (/status-|ghost-btn/i.test(className)) return 'purple';
+    if (/primary/i.test(className)) return 'yellow';
+    return 'mint';
+  }
+
+  function handleButtonPress(event) {
+    const button = event.target?.closest?.('button, [role="button"], .btn, .action-btn, .app-btn');
+    if (!button || pet.contains(button) || button.disabled || button.dataset.radyIgnore === 'true') return;
+    flashColor(buttonColor(button));
+  }
+
+  function syncDetectedActivity() {
+    activitySyncQueued = false;
+    const saving = Boolean(captureBtn?.disabled && /保存中/.test(captureBtn.textContent || ''));
+    if (saving) operations.set('__dom__', 'working');
+    else {
+      const loadingSelectors = [
+        '#todayList .empty',
+        '#newsHomeList .news-home-empty',
+        '.movement-loading'
+      ];
+      const loading = loadingSelectors.some((selector) =>
+        [...document.querySelectorAll(selector)].some((node) =>
+          node.getClientRects().length > 0 &&
+          (/読み込|読んでいます|LOADING/i.test(node.textContent || '') || node.classList.contains('movement-loading'))
+        )
+      );
+      if (loading) operations.set('__dom__', 'thinking');
+      else operations.delete('__dom__');
+    }
+    render();
+  }
+
+  function queueActivitySync() {
+    if (activitySyncQueued) return;
+    activitySyncQueued = true;
+    queueMicrotask(syncDetectedActivity);
   }
 
   function clampPosition(x, y) {
@@ -282,32 +433,7 @@
     if (moved) setPosition(rect.left, rect.top, true);
     else speak();
     drag = null;
-    syncState();
-  }
-
-  function prepareGeneratedFrames() {
-    const sprite = new Image();
-    sprite.onload = () => {
-      const cellW = sprite.naturalWidth / 3;
-      const cellH = sprite.naturalHeight / 3;
-      if (!Number.isFinite(cellW) || !Number.isFinite(cellH) || cellW <= 0 || cellH <= 0) return;
-
-      for (const frame of [1, 2, 4, 5]) {
-        const index = frame - 1;
-        const col = index % 3;
-        const row = Math.floor(index / 3);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(cellW);
-        canvas.height = Math.round(cellH);
-        const context = canvas.getContext('2d');
-        if (!context) continue;
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(sprite, col * cellW, row * cellH, cellW, cellH, 0, 0, canvas.width, canvas.height);
-        generatedFrameSrc[frame] = canvas.toDataURL('image/png');
-      }
-      scheduleIdle();
-    };
-    sprite.src = 'resident-sprites.png?v=20260911-reactions';
+    render();
   }
 
   async function loadLatestHint() {
@@ -338,11 +464,16 @@
   }
 
   image.addEventListener('error', () => {
-    if (currentFrame !== HOME_FRAME) setFrame(HOME_FRAME);
+    if (image.dataset.asset !== 'animation.idle') {
+      transientVisual = null;
+      sleeping = false;
+      setVisual('animation', 'idle', 'idle');
+    }
   });
 
   pet.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    markInteraction();
     const rect = pet.getBoundingClientRect();
     drag = {
       id: event.pointerId,
@@ -354,7 +485,7 @@
     };
     pet.setPointerCapture(event.pointerId);
     pet.classList.add('dragging');
-    syncState();
+    render();
     event.preventDefault();
   });
 
@@ -366,19 +497,65 @@
   pet.addEventListener('pointerup', endDrag);
   pet.addEventListener('pointercancel', endDrag);
 
-  new MutationObserver(syncState).observe(say, { attributes: true, attributeFilter: ['class'] });
   capture?.addEventListener('input', startTypingPulse);
+  document.addEventListener('click', handleButtonPress, true);
+
+  ['pointerdown', 'keydown', 'input', 'touchstart', 'wheel', 'scroll'].forEach((eventName) => {
+    window.addEventListener(eventName, markInteraction, { passive: true, capture: eventName === 'pointerdown' });
+  });
+
+  new MutationObserver(() => {
+    queueActivitySync();
+    render();
+  }).observe(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ['class', 'disabled', 'hidden', 'aria-hidden']
+  });
+
   window.addEventListener('resize', () => {
     if (!pet.style.left) return;
     const rect = pet.getBoundingClientRect();
     setPosition(rect.left, rect.top, true);
   });
 
-  setFrame(HOME_FRAME);
-  prepareGeneratedFrames();
+  function setFrame(frame) {
+    const legacy = {
+      1: ['expression', 'smile', 'legacy'],
+      2: ['expression', 'happy', 'legacy'],
+      3: ['animation', 'thinking', 'thinking'],
+      4: ['expression', 'surprised', 'legacy'],
+      5: ['expression', 'wink', 'legacy'],
+      6: ['animation', 'walk', 'working'],
+      7: ['animation', 'idle', 'idle'],
+      8: ['animation', 'thinking', 'thinking'],
+      9: ['animation', 'walk', 'working']
+    };
+    const next = legacy[Number(frame)] || legacy[7];
+    showTransient(next[0], next[1], next[2], 700);
+  }
+
   restorePosition();
   loadLatestHint();
-  syncState();
+  loadManifest();
+  syncDetectedActivity();
+  render();
+  scheduleSleep();
 
-  window.COCKPID_RESIDENT = Object.freeze({ speak, setFrame });
+  window.COCKPID_RESIDENT = Object.freeze({
+    speak,
+    setFrame,
+    press,
+    flashColor,
+    thinking: (key = 'external') => setOperation(key, 'thinking'),
+    working: (key = 'external') => setOperation(key, 'working'),
+    idle: (key = 'external') => clearOperation(key),
+    complete: completeOperation,
+    error: errorOperation,
+    sleep: trySleep,
+    wake,
+    getMode: () => pet.dataset.radyMode || 'idle'
+  });
 })();

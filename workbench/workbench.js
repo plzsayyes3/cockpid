@@ -255,6 +255,7 @@
     captureBtn.disabled = true;
     captureBtn.textContent = '保存中…';
     captureStatus(`${source.repo}/${source.dir} へ保存しています…`, false);
+    window.COCKPID_RESIDENT?.working?.('capture-save');
     try {
       const response = await fetch(`https://api.github.com/repos/${OWNER}/${source.repo}/contents/${encodeApiPath(path)}`, {
         method: 'PUT',
@@ -266,11 +267,13 @@
       captureText.value = '';
       captureBtn.textContent = '保存済み ✓';
       captureStatus(`保存しました · ${name}`);
+      window.COCKPID_RESIDENT?.complete?.('capture-save');
       setTimeout(() => { captureBtn.textContent = originalLabel; }, 1400);
     } catch (error) {
       console.error(error);
       captureBtn.textContent = '保存失敗';
       captureStatus(String(error?.message || error));
+      window.COCKPID_RESIDENT?.error?.('capture-save');
       setTimeout(() => { captureBtn.textContent = originalLabel; }, 1800);
     } finally {
       captureBtn.disabled = false;
