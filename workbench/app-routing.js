@@ -16,7 +16,7 @@
     thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '6', title: '6 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260924-project-memo1' },
+    backstage: { key: '7', title: '7 / PROJECTS', type: 'iframe', src: 'backstage.html?v=20260924-project-memo2' },
     projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: '9', title: '9 / KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
@@ -195,6 +195,7 @@
   function openApp(name) {
     const app = apps[name];
     if (!app) return false;
+    appWindow.classList.remove('project-memo-expanded');
 
     if (app.type === 'page') {
       window.location.assign(app.src);
