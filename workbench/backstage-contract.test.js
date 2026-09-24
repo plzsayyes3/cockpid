@@ -16,6 +16,8 @@ function element() {
     textContent: '',
     disabled: false,
     addEventListener() {},
+    focus() {},
+    setSelectionRange() {},
     querySelectorAll: () => [],
     querySelector: () => null,
   };
@@ -24,7 +26,9 @@ function element() {
 function context() {
   const elements = new Map([
     'projectList', 'deskItems', 'deskCount', 'projectCount', 'loadStatus',
-    'reloadBtn', 'detailContent', 'detailEmpty'
+    'reloadBtn', 'detailContent', 'detailEmpty',
+    'projectMemoPane', 'projectMemoContext', 'projectMemoSource', 'projectMemoText',
+    'projectMemoStatus', 'projectMemoSave', 'projectMemoClose'
   ].map((id) => [id, element()]));
   const window = {
     innerWidth: 900,
@@ -40,6 +44,7 @@ function context() {
     COCKPID_PROJECT_STATUS: {},
     COCKPID_PROJECT_STATUS_VIEW: {},
     COCKPID_AREA_CONTEXT: null,
+    addEventListener() {},
   };
   const document = {
     body: { classList: { add() {}, remove() {} } },
@@ -56,6 +61,7 @@ function context() {
     location: { hash: '', pathname: '/backstage.html', search: '' },
     URL,
     TextDecoder,
+    TextEncoder,
     Uint8Array,
     atob,
     btoa,
@@ -77,4 +83,15 @@ test('Backstage documentation names the same Project-only boundary as the UI', (
   assert.match(readme, /Project-only/);
   assert.match(surfaces, /Project-only detail/);
   assert.match(surfaces, /Assignment.*Task/);
+});
+
+
+test('Projects inline memo contract keeps capture project-scoped and Inbox-first', () => {
+  const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
+  assert.match(html, /id="projectMemoPane"/);
+  assert.match(html, /id="projectMemoText"/);
+  assert.match(html, /Project正本はここでは変更しません/);
+  assert.match(source, /cockpid:open-project-memo/);
+  assert.match(source, /projectMemoPrefix\(project\)/);
+  assert.match(source, /repo: 'mynotebook', dir: '00_inbox'/);
 });

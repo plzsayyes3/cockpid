@@ -49,7 +49,28 @@
     input.setSelectionRange(end, end);
   }
 
+  function projectMemoFrame() {
+    const frame = document.querySelector('#appContent iframe');
+    const title = String(el('appTitle')?.textContent || '');
+    const src = String(frame?.getAttribute('src') || '');
+    if (!frame?.contentWindow) return null;
+    if (!/PROJECTS/i.test(title) || !/backstage\.html/i.test(src)) return null;
+    return frame.contentWindow;
+  }
+
+  function setProjectMemoExpanded(open) {
+    el('appWindow')?.classList.toggle('project-memo-expanded', Boolean(open));
+  }
+
   function openZenMemo() {
+    const projectFrame = projectMemoFrame();
+    if (projectFrame) {
+      closeZenMemo();
+      setProjectMemoExpanded(true);
+      projectFrame.postMessage({ type: 'cockpid:open-project-memo' }, window.location.origin);
+      return;
+    }
+
     syncMemoSourceLabel();
     el('drawer').classList.add('open');
     el('drawerBackdrop').classList.add('open');
@@ -138,7 +159,12 @@
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) return;
     const data = event.data;
-    if (!data || data.type !== 'cockpid:project-detail') return;
+    if (!data) return;
+    if (data.type === 'cockpid:project-memo-state') {
+      setProjectMemoExpanded(data.open);
+      return;
+    }
+    if (data.type !== 'cockpid:project-detail') return;
     projectMemoContext = data.open ? String(data.title || '').trim() : '';
   });
   window.addEventListener('cockpid:sources-changed', syncMemoSourceLabel);

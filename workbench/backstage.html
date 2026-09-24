@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f3f0e8">
 <title>COCKPID — Projects</title>
-<link rel="stylesheet" href="backstage.css?v=20260920-project-town-visible1">
+<link rel="stylesheet" href="backstage.css?v=20260924-project-memo2">
 <style>
 .backstage-actions{display:flex;align-items:center;gap:8px}
 .town-open-btn{height:38px;padding:0 13px;border:1px solid var(--line);border-radius:19px;background:rgba(255,255,255,.52);cursor:pointer;font-size:9px;font-weight:800;letter-spacing:.12em}
@@ -56,6 +56,24 @@
       </div>
       <div class="detail-content" id="detailContent" hidden></div>
     </article>
+
+    <aside class="project-memo-pane" id="projectMemoPane" hidden aria-labelledby="projectMemoTitle">
+      <div class="project-memo-head">
+        <div>
+          <span class="section-label">MEMO</span>
+          <h2 id="projectMemoTitle">Project Memo</h2>
+          <div class="project-memo-context" id="projectMemoContext">Projectを選択してください。</div>
+        </div>
+        <button class="project-memo-close" id="projectMemoClose" type="button" aria-label="メモを閉じる">×</button>
+      </div>
+      <div class="project-memo-source" id="projectMemoSource">mynotebook / 00_inbox</div>
+      <textarea id="projectMemoText" class="project-memo-text" placeholder="このProjectについて、今考えていることを書く……"></textarea>
+      <div class="project-memo-foot">
+        <span class="project-memo-status" id="projectMemoStatus">READY</span>
+        <button class="project-memo-save" id="projectMemoSave" type="button">SAVE / ⌘↵</button>
+      </div>
+      <p class="project-memo-hint">一次記録としてInboxへ保存します。Project正本はここでは変更しません。</p>
+    </aside>
   </main>
 </div>
 <script src="project-source-adapter.js"></script>
@@ -63,7 +81,7 @@
 <script src="area-model.js"></script>
 <script src="project-status-model.js?v=20260920-project-town-visible1"></script>
 <script src="project-status-view.js?v=20260920-project-town-visible1"></script>
-<script src="backstage.js?v=20260920-project-town-visible1"></script>
+<script src="backstage.js?v=20260924-project-memo2"></script>
 <script>
 (() => {
   const button = document.getElementById('openTownBtn');
