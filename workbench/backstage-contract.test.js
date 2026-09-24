@@ -47,7 +47,7 @@ function context() {
     addEventListener() {},
   };
   const document = {
-    body: { classList: { add() {}, remove() {} } },
+    body: { classList: { add() {}, remove() {}, contains() { return false; } } },
     getElementById: (id) => elements.get(id) || null,
     addEventListener() {},
   };
