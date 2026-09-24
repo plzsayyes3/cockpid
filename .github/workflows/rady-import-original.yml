@@ -21,10 +21,10 @@ jobs:
         run: |
           set -euo pipefail
           test -f .rady-import/READY
-          cat .rady-import/chunk-* > /tmp/rady.zip.b64
-          base64 -d /tmp/rady.zip.b64 > /tmp/rady.zip
+          cat .rady-import/chunk-* > /tmp/rady.tar.gz.b64
+          base64 -d /tmp/rady.tar.gz.b64 > /tmp/rady.tar.gz
           mkdir -p workbench/assets/rady/original
-          unzip -o /tmp/rady.zip -d workbench/assets/rady/original
+          tar -xzf /tmp/rady.tar.gz -C workbench/assets/rady/original
           test "$(find workbench/assets/rady/original -maxdepth 1 -name '*.png' | wc -l)" -eq 29
 
       - name: Switch manifest to originals
