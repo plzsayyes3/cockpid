@@ -52,8 +52,9 @@ Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-
 
 ## 3. The apps
 
-`workbench/app-routing.js` is the runtime source of truth for app routing. Eleven entries are
-registered: ten keyed launchers (`1`–`9`, `0`) plus Advice, which has no numeric key. At
+`workbench/app-routing.js` is the runtime source of truth for app routing. Nine keyed launchers
+are registered (`1`–`6`, `8`, `9`, `0`); Advice, Board, Project Town, Keyboard and Stan have no
+numeric key. At
 load time `rebuildDockTail()` rebuilds keys `5`–`9`, so the runtime mapping below is the
 canonical dock behavior even if older static markup or screenshots show previous numbers.
 
@@ -65,16 +66,17 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
 | 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
-| 6 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
-| 7 | Projects | ✅ | iframe → `backstage.html` | Overview + Town status view, see §3.6 |
+| 6 | Project · Assignment | ✅ | iframe → `backstage.html` | Area-first Project / Assignment / Task shelf + Town status view, see §3.6 |
 | 8 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
-| 9 | Keyboard | ✅ | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイトを作業台App枠内に直接表示。`keyboard.html` は互換リダイレクト |
-| 0 | ??? (secret) | ✅ | local easter egg, no network | "今日の謎を引く" — draws one random line from a fixed list. Purely whimsical, explicitly "仕事をしないための場所" |
+| 9 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
+| — | Keyboard | ❌ (header icon) | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイト。ヘッダーのStanマイク横のキーボードアイコンから開く。`keyboard.html` は互換リダイレクト |
+| 0 | For My Sons | ✅ | iframe → external `https://plzsayyes3.github.io/for_my_sons/` | separate repo/site (`plzsayyes3/for_my_sons`) |
 
-Runtime dock tail is therefore `5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Keyboard`, followed by
-`0=Secret Desk`. Project Town is no longer a numeric dock entry; its standalone URL remains
-for compatibility. Advice stays outside the numeric dock.
+Runtime dock tail is therefore `5=On Hand / 6=Project · Assignment / 8=Thinking / 9=Dictionary`, followed by
+`0=For My Sons`. Key 7 is intentionally unassigned (2026-09-23 menu reorganization). Keyboard is
+reachable from the header icon, not the numeric dock. Project Town is not a numeric dock entry; its
+standalone URL remains for compatibility. Advice stays outside the numeric dock.
 
 ### 3.1 Calendar
 
@@ -106,7 +108,7 @@ Mail badge. This is intentionally **not** in the app dock — `index.html`'s own
 copy says so explicitly: "AdviceはMENUから外し、Mail Statusから既存画面を開きます" (Advice
 is deliberately treated as a notification, not a peer app).
 
-### 3.4 Dictionary (key 6)
+### 3.4 Dictionary (key 9)
 
 Reads the manual and auto transcription dictionaries from `plzsayyes3/sticks3-voice-capture`.
 The manual `local-receiver/transcription-dictionary.txt` is editable and saved through the
@@ -124,7 +126,7 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 `secretary-ai-overview/BOARD.md` — all three serve a similar "who's doing what" purpose but
 are separate files with separate audiences; don't conflate them.
 
-### 3.6 Projects / Backstage (key 7)
+### 3.6 Project · Assignment / Backstage (key 6)
 
 The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source,
 using the shared `zen-note-github-token` when the Canonical repository is private.
@@ -219,7 +221,7 @@ Canonical Shared Task completion, ON HAND state, TaskLiner and Techo routing pat
 --float:      rgba(255,255,255,.90)   (dock buttons)
 --ink:        #292924   (near-black text)
 --muted:      #8b8880
---accent:     #b8665d   (dusty rose/terracotta — used sparingly: today marker, secret app)
+--accent:     #b8665d   (dusty rose/terracotta — used sparingly: today marker)
 --shadow:     0 10px 30px rgba(37,34,29,.07)
 ```
 
@@ -403,3 +405,10 @@ detail and handoff paths, Backstage pause/review states, ON HAND completion and 
 semantics, direct Project links, and Workbench Idea → Area → destination branching. A manual
 browser/device walkthrough was not completed in this run; browser/device and external-service
 behavior remains subject to the boundaries listed above.
+
+## 11. Menu reorganization (2026-09-23)
+
+Following the 2026-09-23 22:20 Daily: `0` opens For My Sons, Keyboard moved to a header icon,
+Dictionary moved from `6` to `9`, and the Area-first Backstage moved from `7` to `6 / PROJECT · ASSIGNMENT` (dock label `PJ · Assign`).
+Key `7` is unassigned. The Secret Desk easter egg was retired. The Cockpid suite is 54/54 passing,
+including the updated Keyboard routing contract.
