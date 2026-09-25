@@ -8,7 +8,7 @@
   const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260925-rady-debug2';
+  const RESIDENT_VERSION = '20260925-rady-debug3';
   console.info('[Rady] resident boot', RESIDENT_VERSION);
 
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
@@ -158,7 +158,9 @@
   }
 
   function loadAnimationFrames(key) {
-    if (animationFrameCache.has(key)) return animationFrameCache.get(key);
+    const src = asset('animation', key);
+    const cacheKey = `${key}:${src}`;
+    if (animationFrameCache.has(cacheKey)) return animationFrameCache.get(cacheKey);
 
     const promise = new Promise((resolve) => {
       const sprite = new Image();
@@ -191,11 +193,14 @@
         }
         resolve(frames);
       };
-      sprite.onerror = () => resolve([]);
-      sprite.src = asset('animation', key);
+      sprite.onerror = () => {
+        console.warn('[Rady] sprite failed', { key, src });
+        resolve([]);
+      };
+      sprite.src = src;
     });
 
-    animationFrameCache.set(key, promise);
+    animationFrameCache.set(cacheKey, promise);
     return promise;
   }
 
@@ -206,7 +211,8 @@
   }
 
   function setVisual(group, key, mode) {
-    const visualKey = `${group}.${key}:${mode || key}`;
+    const src = asset(group, key);
+    const visualKey = `${group}.${key}:${mode || key}:${src}`;
     if (currentVisualKey === visualKey) return;
 
     stopAnimation();
