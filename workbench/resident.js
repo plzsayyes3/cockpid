@@ -8,7 +8,7 @@
   const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260925-rady-debug3';
+  const RESIDENT_VERSION = '20260925-rady-click1';
   console.info('[Rady] resident boot', RESIDENT_VERSION);
 
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
@@ -22,7 +22,8 @@
       walk: 'animation_02_walk.png',
       thinking: 'animation_03_thinking.png',
       jump: 'animation_04_jump.png',
-      sleep: 'animation_05_sleep.png'
+      sleep: 'animation_05_sleep.png',
+      click: 'animation_06_click_hq.png'
     },
     color: {
       default: 'color_01_default.png',
@@ -98,7 +99,8 @@
     walk: 260,
     thinking: 430,
     jump: 260,
-    sleep: 900
+    sleep: 900,
+    click: 230
   };
 
   const operations = new Map();
@@ -120,7 +122,7 @@
 
   function preloadAssets() {
     const entries = [
-      ['animation', 'idle'], ['animation', 'walk'], ['animation', 'thinking'], ['animation', 'sleep'],
+      ['animation', 'idle'], ['animation', 'walk'], ['animation', 'thinking'], ['animation', 'sleep'], ['animation', 'click'],
       ['usage', 'taskComplete'], ['usage', 'happy'], ['usage', 'sleep'],
       ['expression', 'smile'], ['expression', 'grumpy'],
       ['color', 'mint'], ['color', 'skyblue'], ['color', 'yellow'], ['color', 'purple'], ['color', 'red'], ['color', 'green']
@@ -327,7 +329,7 @@
       return;
     }
 
-    if (isDragging()) {
+    if (isDragging() && drag?.moved) {
       setVisual('animation', 'walk', 'dragging');
       return;
     }
@@ -338,7 +340,7 @@
     }
 
     if (isSpeaking()) {
-      setVisual('expression', 'smile', 'speaking');
+      setVisual('animation', 'idle', 'speaking');
       return;
     }
 
@@ -396,7 +398,7 @@
       say.classList.remove('show');
       render();
     }, 5200);
-    render();
+    showTransient('animation', 'click', 'press-click', 920);
   }
 
   function startTypingPulse() {
@@ -597,15 +599,18 @@
       moved: false
     };
     pet.setPointerCapture(event.pointerId);
-    pet.classList.add('dragging');
-    render();
     event.preventDefault();
   });
 
   pet.addEventListener('pointermove', (event) => {
     if (!drag || event.pointerId !== drag.id) return;
-    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 4) drag.moved = true;
-    setPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
+    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (!drag.moved && distance > 4) {
+      drag.moved = true;
+      pet.classList.add('dragging');
+      render();
+    }
+    if (drag.moved) setPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY);
   });
   pet.addEventListener('pointerup', endDrag);
   pet.addEventListener('pointercancel', endDrag);
@@ -679,7 +684,8 @@
       naturalWidth: image.naturalWidth,
       naturalHeight: image.naturalHeight,
       manifestBasePath: manifest.basePath,
-      manifestThinking: manifest?.groups?.animation?.thinking
+      manifestThinking: manifest?.groups?.animation?.thinking,
+      manifestClick: manifest?.groups?.animation?.click
     }),
     testThinking: (duration = 5000) => {
       const key = '__rady-debug-thinking__';

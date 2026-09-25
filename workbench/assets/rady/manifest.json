@@ -8,7 +8,8 @@
       "walk": "animation_02_walk.png",
       "thinking": "animation_03_thinking_hq.png?v=20260925-thinking-hq1",
       "jump": "animation_04_jump.png",
-      "sleep": "animation_05_sleep.png"
+      "sleep": "animation_05_sleep.png",
+      "click": "animation_06_click_hq.png?v=20260925-click-hq1"
     },
     "color": {
       "default": "color_01_default.png",
