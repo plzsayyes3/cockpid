@@ -70,7 +70,7 @@ function context() {
   return { window, elements };
 }
 
-test('Backstage declares Area-first Project index with Project-only detail contract', async () => {
+test('Backstage preserves the legacy Project-only fallback contract', async () => {
   const harness = context();
   await harness.window.COCKPID_BACKSTAGE.loadProjects();
 
@@ -79,10 +79,12 @@ test('Backstage declares Area-first Project index with Project-only detail contr
   assert.match(harness.elements.get('loadStatus').textContent, /Project-only/);
 });
 
-test('Backstage documentation names the same Project-only boundary as the UI', () => {
-  assert.match(readme, /Project-only/);
-  assert.match(surfaces, /Project-only detail/);
-  assert.match(surfaces, /Assignment.*Task/);
+test('Backstage documentation matches the mixed Area-first shelf and Project-only fallback', () => {
+  assert.match(readme, /ProjectとAssignmentを同じ一覧/);
+  assert.match(readme, /compatibility\s+path remains Project-only/);
+  assert.match(surfaces, /mixed Project \/ Assignment shelf/);
+  assert.match(surfaces, /compatibility fallback is intentionally Project-only/);
+  assert.match(surfaces, /Task siblings remain on the Area \/ ON HAND surfaces/);
 });
 
 
@@ -120,6 +122,14 @@ test('Backstage hides completed Assignments without changing Project lifecycle r
   assert.match(source, /return status !== 'archived'/);
   assert.match(source, /projects = allProjects\.filter\(isBackstageVisible\)/);
   assert.match(source, /closed hidden/);
+});
+
+test('Backstage keeps a compact three-column memo layout for tablet-width frames', () => {
+  const css = fs.readFileSync(require.resolve('./backstage.css'), 'utf8');
+  assert.match(css, /@media\(max-width:980px\) and \(min-width:821px\)/);
+  assert.match(css, /body\.memo-open \.backstage-app\{padding-left:18px;padding-right:18px\}/);
+  assert.match(css, /grid-template-columns:minmax\(200px,\.9fr\) minmax\(260px,1\.25fr\) minmax\(210px,\.95fr\)/);
+  assert.match(css, /body\.memo-open \.project-memo-pane\{padding-left:14px\}/);
 });
 
 test('inline memo save records the selected Project or Assignment route explicitly', () => {
