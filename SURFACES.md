@@ -66,7 +66,7 @@ canonical dock behavior even if older static markup or screenshots show previous
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
 | 5 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) |
 | 6 | Area | ✅ | iframe → `project-town.html` | Area Town / Area-first overview |
-| 7 | PJ | ✅ | iframe → `backstage.html` | Project / Assignment / Task shelf |
+| 7 | Backstage | ✅ | iframe → `backstage.html` | Project / Assignment / Task shelf |
 | 8 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
 | 9 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town direct URL | ❌ | direct URL → `project-town.html` | same Area surface, standalone compatibility route |
