@@ -6,6 +6,9 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const routing = fs.readFileSync(path.join(__dirname, 'app-routing.js'), 'utf8');
 const index = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const zenMemo = fs.readFileSync(path.join(root, 'zen-memo.js'), 'utf8');
+const backstageCss = fs.readFileSync(path.join(__dirname, 'backstage.css'), 'utf8');
+const drawerCss = fs.readFileSync(path.join(__dirname, 'drawer.css'), 'utf8');
 
 test('keys 5-9 follow Dictionary / Area / Backstage / On Hand / Thinking', () => {
   assert.match(routing, /dictionary:\s*\{ key: '5', title: '5 \/ DICTIONARY'/);
@@ -23,6 +26,13 @@ test('keys 5-9 follow Dictionary / Area / Backstage / On Hand / Thinking', () =>
   assert.match(index, /data-app="backstage"><b>7<\/b><span>Backstage<\/span>/);
   assert.match(index, /data-app="onhand"><b>8<\/b><span>On Hand<\/span>/);
   assert.match(index, /data-app="thinking"><b>9<\/b><span>Thinking<\/span>/);
+});
+
+test('Backstage keeps the inline memo bridge independent of dock key or title', () => {
+  assert.match(zenMemo, /backstage\\\.html/);
+  assert.doesNotMatch(zenMemo, /PROJECTS\/i\.test\(title\)/);
+  assert.match(drawerCss, /project-memo-expanded \.app-frame\{width:90vw\}/);
+  assert.match(backstageCss, /body\.memo-open \.list-pane,[\s\S]*body\.memo-open \.detail-pane,[\s\S]*body\.memo-open \.project-memo-pane\{[\s\S]*overflow-y:auto/);
 });
 
 test('header microphone opens the existing Stan surface', () => {
