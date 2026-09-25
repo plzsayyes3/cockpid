@@ -86,6 +86,28 @@ test('Backstage documentation names the same Project-only boundary as the UI', (
 });
 
 
+test('Backstage exposes Projects and Assignments as distinct record types', () => {
+  const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
+  const css = fs.readFileSync(require.resolve('./backstage.css'), 'utf8');
+  assert.match(html, /PROJECT \/ ASSIGNMENT/);
+  assert.match(source, /area\.assignments/);
+  assert.match(source, /unassigned\?\.assignments/);
+  assert.match(source, /recordTypeBadge\(project/);
+  assert.match(source, /ASSIGN/);
+  assert.match(source, /assignmentTotal/);
+  assert.match(css, /record-type-badge\.assignment/);
+  assert.match(css, /project-card\.record-assignment/);
+});
+
+test('inline memo save records the selected Project or Assignment route explicitly', () => {
+  assert.match(source, /function memoRouteFor\(project\)/);
+  assert.match(source, /selectBranch\(area, recordType\(project\)/);
+  assert.match(source, /id: project\.id/);
+  assert.match(source, /title: project\.title/);
+  assert.match(source, /recordMemo\(name, undefined, route\)/);
+  assert.doesNotMatch(source, /recordMemo\?\.\(name\)/);
+});
+
 test('Projects inline memo contract keeps capture project-scoped and Inbox-first', () => {
   const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
   assert.match(html, /id="projectMemoPane"/);
