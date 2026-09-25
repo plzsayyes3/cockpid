@@ -41,6 +41,12 @@ h1{margin:5px 0 6px;font:600 34px/1 Georgia,"Times New Roman",serif}
 .project-fill{position:absolute;inset:0 auto 0 0;width:var(--fill-width,0%);background:linear-gradient(90deg,var(--fill-strong),var(--fill));pointer-events:none}
 .project-inner{display:block;position:relative;z-index:1;padding:12px 18px 11px 21px}
 .project-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:18px}
+.project-title-wrap{display:flex;align-items:center;gap:7px;min-width:0}
+.record-type-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:30px;height:17px;padding:0 6px;border:1px solid #aaa093;border-radius:999px;background:rgba(255,255,255,.52);color:#625b52;font:800 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+.record-type-badge.assignment{border-color:#b69f72;background:#eadca5;color:#5f4d2c}
+.record-type-badge.detail{height:19px;min-width:0;padding:0 8px;margin-bottom:8px;font-size:8px}
+.project-card.record-assignment{border-left:3px solid #b69f72}
+.detail-kind-row{display:flex;align-items:center;gap:8px}
 .project-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.35;font-weight:720}
 .project-age{flex:0 0 auto;font-size:9px;line-height:1.35;color:#645e55}
 .project-current{display:-webkit-box;margin:5px 0 0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:10px;line-height:1.5;color:#655f57}
