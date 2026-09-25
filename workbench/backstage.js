@@ -427,15 +427,17 @@
       const tags = projectTags(project);
       const tagHtml = tags.map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
       const current = String(project.meta.current || '').trim();
-      const sheets = sheetsValue(project);
       const type = recordType(project);
-      return `<button class="project-card record-${type}${selectedId === project.id ? ' active' : ''}" type="button" data-project-id="${esc(project.id)}" data-record-type="${type}" style="--fill-width:${fillPercent(project)}%">
+      const isProject = type === 'project';
+      const sheets = isProject ? sheetsValue(project) : 0;
+      const metricHtml = isProject ? `<span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span>` : '';
+      return `<button class="project-card record-${type}${selectedId === project.id ? ' active' : ''}" type="button" data-project-id="${esc(project.id)}" data-record-type="${type}" style="--fill-width:${isProject ? fillPercent(project) : 0}%">
         <span class="project-fill" aria-hidden="true"></span>
         <span class="project-inner">
           <span class="project-top"><span class="project-title-wrap">${recordTypeBadge(project)}<span class="project-title">${esc(project.title)}</span></span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
           ${areaLabel(project)}
           ${current ? `<span class="project-current">${esc(current)}</span>` : ''}
-          <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span></span>
+          <span class="project-foot"><span class="tags">${tagHtml}</span>${metricHtml}</span>
         </span>
       </button>`;
     }).join('');
