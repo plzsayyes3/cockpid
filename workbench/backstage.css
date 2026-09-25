@@ -46,6 +46,7 @@ h1{margin:5px 0 6px;font:600 34px/1 Georgia,"Times New Roman",serif}
 .record-type-badge.assignment{border-color:#b69f72;background:#eadca5;color:#5f4d2c}
 .record-type-badge.detail{height:19px;min-width:0;padding:0 8px;margin-bottom:8px;font-size:8px}
 .project-card.record-assignment{border-left:3px solid #b69f72}
+.project-card.record-assignment .project-fill{display:none}
 .detail-kind-row{display:flex;align-items:center;gap:8px}
 .project-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.35;font-weight:720}
 .project-age{flex:0 0 auto;font-size:9px;line-height:1.35;color:#645e55}
