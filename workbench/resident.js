@@ -8,6 +8,9 @@
   const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
+  const RESIDENT_VERSION = '20260925-rady-debug2';
+  console.info('[Rady] resident boot', RESIDENT_VERSION);
+
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
   const MANIFEST_PATH = './assets/rady/manifest.json';
   const SLEEP_AFTER_MS = 5 * 60 * 1000;
@@ -660,6 +663,7 @@
     error: errorOperation,
     sleep: trySleep,
     wake,
+    version: RESIDENT_VERSION,
     getMode: () => pet.dataset.radyMode || 'idle',
     debug: () => ({
       mode: pet.dataset.radyMode || 'idle',
