@@ -12,12 +12,12 @@
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
-    onhand: { key: '5', title: '5 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    thinking: { key: '8', title: '8 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
-    dictionary: { key: '9', title: '9 / DICTIONARY', type: 'dictionary' },
+    onhand: { key: '8', title: '8 / ON HAND', type: 'iframe', src: 'onhand.html' },
+    thinking: { key: '9', title: '9 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    dictionary: { key: '5', title: '5 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '6', title: '6 / PROJECT · ASSIGNMENT', type: 'iframe', src: 'backstage.html?v=20260924-pj-assign1' },
-    projecttown: { key: null, title: 'PROJECT TOWN', type: 'iframe', src: 'project-town.html' },
+    backstage: { key: '7', title: '7 / PROJECT', type: 'iframe', src: 'backstage.html?v=20260924-pj-assign1' },
+    projecttown: { key: '6', title: '6 / AREA', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
     formysons: { key: '0', title: '0 / FOR MY SONS', type: 'iframe', src: 'https://plzsayyes3.github.io/for_my_sons/' }
@@ -33,6 +33,7 @@
     dictionary: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5c3-.7 5.4-.2 8 1.5v12c-2.6-1.7-5-2.2-8-1.5zM20 5.5c-3-.7-5.4-.2-8 1.5v12c2.6-1.7 5-2.2 8-1.5z"/></svg>',
     backstage: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2 6 2 5.5-2v13l-5.5 2-6-2-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></svg>',
     thinking: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M12 7v4M12 11L6 16M12 11l6 5"/></svg>',
+    projecttown: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2 6 2 5.5-2v13l-5.5 2-6-2-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/></svg>',
     formysons: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5L12 4.5l8 7M6.5 9.5V19.5h11V9.5"/><path d="M12 17.2l-2.4-2.3a1.5 1.5 0 0 1 2.4-1.8 1.5 1.5 0 0 1 2.4 1.8z"/></svg>'
   });
 
@@ -43,8 +44,9 @@
     news: 'News',
     onhand: 'On Hand',
     dictionary: 'Dictionary',
-    backstage: 'PJ · Assign',
+    backstage: 'PJ',
     thinking: 'Thinking',
+    projecttown: 'Area',
     formysons: 'For My Sons'
   });
 
@@ -77,10 +79,11 @@
 
     const zero = dockButton('0');
     const entries = [
-      ['5', 'onhand', 'On Hand'],
-      ['6', 'backstage', 'PJ · Assign'],
-      ['8', 'thinking', 'Thinking'],
-      ['9', 'dictionary', 'Dictionary']
+      ['5', 'dictionary', 'Dictionary'],
+      ['6', 'projecttown', 'Area'],
+      ['7', 'backstage', 'PJ'],
+      ['8', 'onhand', 'On Hand'],
+      ['9', 'thinking', 'Thinking']
     ];
 
     entries.forEach(([key, appName, label]) => {
