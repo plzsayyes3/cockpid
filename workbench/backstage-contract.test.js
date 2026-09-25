@@ -86,11 +86,56 @@ test('Backstage documentation names the same Project-only boundary as the UI', (
 });
 
 
+test('Backstage exposes Projects and Assignments as distinct record types', () => {
+  const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
+  const css = fs.readFileSync(require.resolve('./backstage.css'), 'utf8');
+  assert.match(html, /PROJECT \/ ASSIGNMENT/);
+  assert.match(source, /area\.assignments/);
+  assert.match(source, /unassigned\?\.assignments/);
+  assert.match(source, /recordTypeBadge\(project/);
+  assert.match(source, /ASSIGN/);
+  assert.match(source, /assignmentTotal/);
+  assert.match(css, /record-type-badge\.assignment/);
+  assert.match(css, /project-card\.record-assignment/);
+  assert.match(css, /record-assignment \.project-fill\{display:none\}/);
+  assert.match(source, /const metricHtml = isProject \?/);
+  assert.match(source, /isProject \? fillPercent\(project\) : 0/);
+});
+
+test('mixed Project and Assignment state uses type-qualified record keys', () => {
+  assert.match(source, /function recordKey\(project\)/);
+  assert.match(source, /return `\$\{recordType\(project\)\}:\$\{project\.id\}`/);
+  assert.match(source, /function recordByKey\(value\)/);
+  assert.match(source, /\^\(project\|assignment\):\(\.\*\)\$/);
+  assert.match(source, /selectedKey === recordKey\(project\)/);
+  assert.match(source, /memoDrafts\.get\(recordKey\(project\)\)/);
+  assert.match(source, /data-record-key/);
+  assert.match(source, /encodeURIComponent\(recordKey\(project\)\)/);
+  assert.match(source, /recordType\(item\) === 'project' && item\.id === relation\.projectId/);
+});
+
+test('Backstage hides completed Assignments without changing Project lifecycle rules', () => {
+  assert.match(source, /CLOSED_ASSIGNMENT_STATUSES = new Set\(\['done', 'cancelled', 'canceled', 'archived'\]\)/);
+  assert.match(source, /if \(recordType\(project\) === 'assignment'\) return !CLOSED_ASSIGNMENT_STATUSES\.has\(status\)/);
+  assert.match(source, /return status !== 'archived'/);
+  assert.match(source, /projects = allProjects\.filter\(isBackstageVisible\)/);
+  assert.match(source, /closed hidden/);
+});
+
+test('inline memo save records the selected Project or Assignment route explicitly', () => {
+  assert.match(source, /function memoRouteFor\(project\)/);
+  assert.match(source, /selectBranch\(area, recordType\(project\)/);
+  assert.match(source, /id: project\.id/);
+  assert.match(source, /title: project\.title/);
+  assert.match(source, /recordMemo\(name, undefined, route\)/);
+  assert.doesNotMatch(source, /recordMemo\?\.\(name\)/);
+});
+
 test('Projects inline memo contract keeps capture project-scoped and Inbox-first', () => {
   const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
   assert.match(html, /id="projectMemoPane"/);
   assert.match(html, /id="projectMemoText"/);
-  assert.match(html, /Project正本はここでは変更しません/);
+  assert.match(html, /Project \/ Assignment正本はここでは変更しません/);
   assert.match(source, /cockpid:open-project-memo/);
   assert.match(source, /projectMemoPrefix\(project\)/);
   assert.match(source, /repo: 'mynotebook', dir: '00_inbox'/);
