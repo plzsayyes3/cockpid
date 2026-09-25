@@ -52,9 +52,8 @@ Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-
 
 ## 3. The apps
 
-`workbench/app-routing.js` is the runtime source of truth for app routing. Nine keyed launchers
-are registered (`1`–`6`, `8`, `9`, `0`); Advice, Board, Project Town, Keyboard and Stan have no
-numeric key. At
+`workbench/app-routing.js` is the runtime source of truth for app routing. Ten keyed launchers
+are registered (`1`–`9`, `0`); Advice, Board, Keyboard and Stan have no numeric key. At
 load time `rebuildDockTail()` rebuilds keys `5`–`9`, so the runtime mapping below is the
 canonical dock behavior even if older static markup or screenshots show previous numbers.
 
@@ -65,11 +64,13 @@ canonical dock behavior even if older static markup or screenshots show previous
 | 3 | Zen | ✅ | iframe → external `https://plzsayyes3.github.io/zen-note/` | separate repo/site entirely |
 | 4 | News | ✅ | iframe → external `https://plzsayyes3.github.io/My_Internet_place/` | separate repo/site entirely |
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
-| 5 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
-| 6 | Project · Assignment | ✅ | iframe → `backstage.html` | Area-first Project / Assignment / Task shelf + Town status view, see §3.6 |
-| 8 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
-| — | Project Town | ❌ | direct URL → `project-town.html` | standalone compatibility surface, see §3.7 |
-| 9 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
+| 5 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) |
+| 6 | Area | ✅ | iframe → `project-town.html` | Area Town / Area-first overview |
+| 7 | PJ | ✅ | iframe → `backstage.html` | Project / Assignment / Task shelf |
+| 8 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
+| 9 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
+| — | Project Town direct URL | ❌ | direct URL → `project-town.html` | same Area surface, standalone compatibility route |
+| — | Dictionary implementation | — | `dictionary.js` | `sticks3-voice-capture/local-receiver/transcription-dictionary.txt` (editable) + `.auto.txt` (read-only) |
 | — | Keyboard | ❌ (header icon) | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイト。ヘッダーのStanマイク横のキーボードアイコンから開く。`keyboard.html` は互換リダイレクト |
 | 0 | For My Sons | ✅ | iframe → external `https://plzsayyes3.github.io/for_my_sons/` | separate repo/site (`plzsayyes3/for_my_sons`) |
 
