@@ -8,7 +8,7 @@
   const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260925-rady-stable1';
+  const RESIDENT_VERSION = '20260926-rady-observer1';
   console.info('[Rady] resident boot', RESIDENT_VERSION);
 
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
@@ -89,6 +89,7 @@
   let lastInteractionAt = Date.now();
   let drag = null;
   let activitySyncQueued = false;
+  let activitySyncTimer = null;
   let animationTimer = null;
   let animationRun = 0;
   let currentVisualKey = '';
@@ -500,6 +501,7 @@
 
   function syncDetectedActivity() {
     activitySyncQueued = false;
+    activitySyncTimer = null;
     const saving = Boolean(captureBtn?.disabled && /保存中/.test(captureBtn.textContent || ''));
     if (saving) operations.set('__dom__', 'working');
     else {
@@ -520,10 +522,43 @@
     render();
   }
 
+  const ACTIVITY_MUTATION_SELECTOR = '#captureBtn, #todayList, #newsHomeList, .movement-loading';
+
+  function touchesActivityRegion(node) {
+    if (!node) return false;
+    const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!(element instanceof Element)) return false;
+    return Boolean(
+      element.matches(ACTIVITY_MUTATION_SELECTOR) ||
+      element.closest(ACTIVITY_MUTATION_SELECTOR) ||
+      element.querySelector?.(ACTIVITY_MUTATION_SELECTOR)
+    );
+  }
+
+  function isRelevantActivityMutation(mutation) {
+    if (pet.contains(mutation.target)) return false;
+
+    if (mutation.type === 'characterData') {
+      return touchesActivityRegion(mutation.target);
+    }
+
+    if (mutation.type === 'attributes') {
+      return touchesActivityRegion(mutation.target);
+    }
+
+    if (mutation.type === 'childList') {
+      if (touchesActivityRegion(mutation.target)) return true;
+      return [...mutation.addedNodes, ...mutation.removedNodes].some(touchesActivityRegion);
+    }
+
+    return false;
+  }
+
   function queueActivitySync() {
     if (activitySyncQueued) return;
     activitySyncQueued = true;
-    queueMicrotask(syncDetectedActivity);
+    clearTimeout(activitySyncTimer);
+    activitySyncTimer = setTimeout(syncDetectedActivity, 80);
   }
 
   function clampPosition(x, y) {
@@ -639,10 +674,12 @@
     window.addEventListener(eventName, markInteraction, { passive: true, capture: eventName === 'pointerdown' });
   });
 
-  new MutationObserver(() => {
+  const activityObserver = new MutationObserver((mutations) => {
+    if (!mutations.some(isRelevantActivityMutation)) return;
     queueActivitySync();
-    render();
-  }).observe(document.body, {
+  });
+
+  activityObserver.observe(document.body, {
     subtree: true,
     childList: true,
     characterData: true,
