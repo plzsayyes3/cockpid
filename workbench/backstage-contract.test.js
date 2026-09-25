@@ -115,7 +115,7 @@ test('Projects inline memo contract keeps capture project-scoped and Inbox-first
   const html = fs.readFileSync(require.resolve('./backstage.html'), 'utf8');
   assert.match(html, /id="projectMemoPane"/);
   assert.match(html, /id="projectMemoText"/);
-  assert.match(html, /Project正本はここでは変更しません/);
+  assert.match(html, /Project \/ Assignment正本はここでは変更しません/);
   assert.match(source, /cockpid:open-project-memo/);
   assert.match(source, /projectMemoPrefix\(project\)/);
   assert.match(source, /repo: 'mynotebook', dir: '00_inbox'/);
