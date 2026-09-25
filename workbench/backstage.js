@@ -20,6 +20,7 @@
   const detailEmpty = $('detailEmpty');
   const memoPane = $('projectMemoPane');
   const memoContext = $('projectMemoContext');
+  const memoTitle = $('projectMemoTitle');
   const memoSourceLabel = $('projectMemoSource');
   const memoText = $('projectMemoText');
   const memoStatus = $('projectMemoStatus');
@@ -88,6 +89,43 @@
     return project ? `${project.title}: ` : '';
   }
 
+  function recordType(project) {
+    const value = String(project?.recordType || project?.meta?.type || project?.meta?.object_type || 'project').toLowerCase();
+    return value === 'assignment' ? 'assignment' : 'project';
+  }
+
+  function recordTypeShort(project) {
+    return recordType(project) === 'assignment' ? 'ASSIGN' : 'PJ';
+  }
+
+  function recordTypeLong(project) {
+    return recordType(project) === 'assignment' ? 'Assignment' : 'Project';
+  }
+
+  function recordTypeBadge(project, detail = false) {
+    const type = recordType(project);
+    const label = detail ? recordTypeLong(project).toUpperCase() : recordTypeShort(project);
+    return `<span class="record-type-badge ${type}${detail ? ' detail' : ''}">${label}</span>`;
+  }
+
+  function memoRouteApi() {
+    try {
+      return window.COCKPID_MEMO_ROUTE || window.parent?.COCKPID_MEMO_ROUTE || null;
+    } catch (_) {
+      return window.COCKPID_MEMO_ROUTE || null;
+    }
+  }
+
+  function memoRouteFor(project) {
+    const routeApi = memoRouteApi();
+    const area = areaFor(project);
+    if (!project || !area || typeof routeApi?.selectBranch !== 'function') return null;
+    return routeApi.selectBranch(area, recordType(project), {
+      id: project.id,
+      title: project.title
+    });
+  }
+
   function setMemoStatus(message, error = false) {
     if (!memoStatus) return;
     memoStatus.textContent = message;
@@ -107,15 +145,20 @@
     if (memoSourceLabel) memoSourceLabel.textContent = `${source.repo} / ${source.dir}`;
 
     if (!project) {
-      memoContext.textContent = 'Projectを選択してください。';
+      if (memoTitle) memoTitle.textContent = 'Memo';
+      memoContext.textContent = 'Project / Assignmentを選択してください。';
+      memoText.placeholder = 'このProject / Assignmentについて、今考えていることを書く……';
       memoText.value = '';
       memoText.disabled = true;
       memoSave.disabled = true;
-      setMemoStatus('SELECT PROJECT');
+      setMemoStatus('SELECT ITEM');
       return;
     }
 
-    memoContext.textContent = project.title;
+    const typeName = recordTypeLong(project);
+    if (memoTitle) memoTitle.textContent = `${typeName} Memo`;
+    memoContext.textContent = `${typeName} · ${project.title}`;
+    memoText.placeholder = `この${typeName}について、今考えていることを書く……`;
     memoText.disabled = false;
     memoSave.disabled = false;
     memoText.value = memoDrafts.get(project.id) ?? projectMemoPrefix(project);
@@ -182,13 +225,17 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: `cockpid: project memo ${name}`,
+          message: `cockpid: ${recordType(project)} memo ${name}`,
           content: encodeUtf8(`${text}\n`)
         })
       });
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
       try {
-        (window.COCKPID_MEMO_ROUTE || window.parent?.COCKPID_MEMO_ROUTE)?.recordMemo?.(name);
+        const routeApi = memoRouteApi();
+        const route = memoRouteFor(project);
+        if (route && typeof routeApi?.recordMemo === 'function') {
+          routeApi.recordMemo(name, undefined, route);
+        }
       } catch (_) {}
       memoDrafts.set(project.id, projectMemoPrefix(project));
       memoText.value = projectMemoPrefix(project);
@@ -381,10 +428,11 @@
       const tagHtml = tags.map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
       const current = String(project.meta.current || '').trim();
       const sheets = sheetsValue(project);
-      return `<button class="project-card${selectedId === project.id ? ' active' : ''}" type="button" data-project-id="${esc(project.id)}" style="--fill-width:${fillPercent(project)}%">
+      const type = recordType(project);
+      return `<button class="project-card record-${type}${selectedId === project.id ? ' active' : ''}" type="button" data-project-id="${esc(project.id)}" data-record-type="${type}" style="--fill-width:${fillPercent(project)}%">
         <span class="project-fill" aria-hidden="true"></span>
         <span class="project-inner">
-          <span class="project-top"><span class="project-title">${esc(project.title)}</span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
+          <span class="project-top"><span class="project-title-wrap">${recordTypeBadge(project)}<span class="project-title">${esc(project.title)}</span></span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
           ${areaLabel(project)}
           ${current ? `<span class="project-current">${esc(current)}</span>` : ''}
           <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span></span>
@@ -472,7 +520,7 @@
     const repo = project?.source?.repo || REPO;
     const url = githubPath(project?.path, 'blob', repo);
     if (!url) return '';
-    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">PROJECT ↗</a>`;
+    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${recordTypeLong(project).toUpperCase()} ↗</a>`;
   }
 
   function repositoryLink(repository) {
@@ -608,7 +656,7 @@
     const links = [projectSourceLink(project), repositoryLink(project.meta.repository), workspaceLink(project.meta.workspace)].filter(Boolean).join('');
     if (!links) return '';
     return `<section class="detail-section detail-links-section">
-      <div class="detail-section-label">PROJECT LINKS</div>
+      <div class="detail-section-label">${recordTypeLong(project).toUpperCase()} LINKS</div>
       <div class="detail-links">${links}</div>
     </section>`;
   }
@@ -655,22 +703,24 @@
     const tags = projectTags(project).map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
     const sheets = sheetsValue(project);
     const parts = detailParts(project);
+    const isAssignment = recordType(project) === 'assignment';
 
     detailContent.innerHTML = `
-      <button class="detail-back" id="detailBack" type="button">← PROJECTS</button>
+      <button class="detail-back" id="detailBack" type="button">← PJ / ASSIGN</button>
       <div class="detail-title-row">
         <div>
+          <div class="detail-kind-row">${recordTypeBadge(project, true)}</div>
           <h1 class="detail-title">${esc(project.title)}</h1>
           <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span>${areaLabel(project, true)}</div>
         </div>
-        <div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
+        ${isAssignment ? '' : `<div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
         <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
           <div class="detail-meter-label">${sheets} / ${SHEETS_FULL_SCALE} sheets</div>
-        </div>
+        </div>`}
       </div>
-      <div class="detail-view-tabs" role="tablist" aria-label="Project view">
+      <div class="detail-view-tabs" role="tablist" aria-label="${recordTypeLong(project)} view">
         <button class="detail-view-tab active" type="button" role="tab" aria-selected="true" data-project-view="overview">OVERVIEW</button>
-        <button class="detail-view-tab" type="button" role="tab" aria-selected="false" data-project-view="town">TOWN / STATUS</button>
+        ${isAssignment ? '' : '<button class="detail-view-tab" type="button" role="tab" aria-selected="false" data-project-view="town">TOWN / STATUS</button>'}
       </div>
       <div id="projectOverview" class="project-detail-view">
         ${parts.resume ? `<div class="markdown detail-resume">${renderMarkdown(parts.resume)}</div>` : ''}
@@ -737,7 +787,7 @@
   async function loadProjects() {
     reloadButton.disabled = true;
     status.classList.remove('error');
-    status.textContent = 'Area / Project を読んでいます…';
+    status.textContent = 'Area / Project / Assignment を読んでいます…';
     list.innerHTML = '';
     selectedId = '';
     memoProjectId = '';
@@ -763,7 +813,11 @@
 
       renderDesk();
       renderList();
-      status.textContent = `${projects.length} projects · ${result.kind === 'area' ? 'Area-first Project index' : 'Project fallback · Project-only detail'}`;
+      const projectTotal = projects.filter((item) => recordType(item) === 'project').length;
+      const assignmentTotal = projects.filter((item) => recordType(item) === 'assignment').length;
+      status.textContent = result.kind === 'area'
+        ? `${projectTotal} projects · ${assignmentTotal} assignments · Area-first index`
+        : `${projectTotal} projects · Project fallback`;
 
       const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
       if (hashId && allProjects.some((project) => project.id === hashId)) {
@@ -786,24 +840,37 @@
 
   function areaProjectRecords(view, source) {
     const areas = Array.isArray(view?.areas) ? view.areas : [];
-    const nested = areas.flatMap((area) => (Array.isArray(area.projects) ? area.projects : []).map((project) => ({ ...project, area, source })));
-    const unassigned = (Array.isArray(view?.unassigned?.projects) ? view.unassigned.projects : []).map((project) => ({ ...project, source }));
-    return nested.concat(unassigned).map((project) => ({
-      id: String(project.id),
-      title: String(project.title || project.id),
-      meta: { ...project },
-      body: String(project.body_markdown || project.body || ''),
-      path: project.path || project.object_path || `objects/projects/${project.id}.md`,
-      area: project.area || null,
-      source: project.source || source
-    }));
+    const collect = (bucket, area, type) => (Array.isArray(bucket) ? bucket : []).map((item) => ({ ...item, area, source, recordType: type }));
+    const nested = areas.flatMap((area) => [
+      ...collect(area.projects, area, 'project'),
+      ...collect(area.assignments, area, 'assignment')
+    ]);
+    const unassigned = [
+      ...collect(view?.unassigned?.projects, null, 'project'),
+      ...collect(view?.unassigned?.assignments, null, 'assignment')
+    ];
+    return nested.concat(unassigned).map((item) => {
+      const type = item.recordType === 'assignment' ? 'assignment' : 'project';
+      const dir = type === 'assignment' ? 'assignments' : 'projects';
+      return {
+        id: String(item.id),
+        title: String(item.title || item.id),
+        recordType: type,
+        meta: { ...item, type },
+        body: String(item.body_markdown || item.body || ''),
+        path: item.path || item.object_path || `objects/${dir}/${item.id}.md`,
+        area: item.area || null,
+        source: item.source || source
+      };
+    });
   }
 
   function legacyProjectRecords(view, source) {
     return (Array.isArray(view?.projects) ? view.projects : []).map((project) => ({
       id: String(project.id),
       title: String(project.title || project.id),
-      meta: { ...project },
+      recordType: 'project',
+      meta: { ...project, type: project.type || 'project' },
       body: String(project.body_markdown || project.body || ''),
       path: project.path || project.object_path || `projects/${project.id}.md`,
       source
