@@ -8,7 +8,7 @@
   const captureBtn = document.getElementById('captureBtn');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260925-rady-click1';
+  const RESIDENT_VERSION = '20260925-rady-stable1';
   console.info('[Rady] resident boot', RESIDENT_VERSION);
 
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
@@ -18,12 +18,12 @@
 
   const FALLBACK_ASSETS = {
     animation: {
-      idle: 'animation_01_idle.png',
-      walk: 'animation_02_walk.png',
-      thinking: 'animation_03_thinking.png',
-      jump: 'animation_04_jump.png',
-      sleep: 'animation_05_sleep.png',
-      click: 'animation_06_click_hq.png'
+      idle: 'animation_01_idle_hq.png?v=20260925-idle-hq1',
+      walk: 'animation_02_walk_hq.png?v=20260925-walk-hq1',
+      thinking: 'animation_03_thinking_hq.png?v=20260925-thinking-hq1',
+      jump: 'animation_01_idle_hq.png?v=20260925-idle-hq1',
+      sleep: 'animation_01_idle_hq.png?v=20260925-idle-hq1',
+      click: 'animation_06_click_hq.png?v=20260925-click-hq1'
     },
     color: {
       default: 'color_01_default.png',
@@ -122,10 +122,10 @@
 
   function preloadAssets() {
     const entries = [
-      ['animation', 'idle'], ['animation', 'walk'], ['animation', 'thinking'], ['animation', 'sleep'], ['animation', 'click'],
-      ['usage', 'taskComplete'], ['usage', 'happy'], ['usage', 'sleep'],
-      ['expression', 'smile'], ['expression', 'grumpy'],
-      ['color', 'mint'], ['color', 'skyblue'], ['color', 'yellow'], ['color', 'purple'], ['color', 'red'], ['color', 'green']
+      ['animation', 'idle'],
+      ['animation', 'walk'],
+      ['animation', 'thinking'],
+      ['animation', 'click']
     ];
     entries.forEach(([group, key]) => {
       const src = asset(group, key);
@@ -193,10 +193,12 @@
           );
           frames.push(canvas.toDataURL('image/png'));
         }
+        if (frames.length !== frameCount) animationFrameCache.delete(cacheKey);
         resolve(frames);
       };
       sprite.onerror = () => {
-        console.warn('[Rady] sprite failed', { key, src });
+        animationFrameCache.delete(cacheKey);
+        console.warn('[Rady] sprite failed; cache cleared for retry', { key, src });
         resolve([]);
       };
       sprite.src = src;
@@ -239,8 +241,13 @@
       if (run !== animationRun || currentVisualKey !== visualKey) return;
 
       if (!frames.length) {
-        const src = asset(group, key);
-        if (src) image.src = src;
+        console.warn('[Rady] no animation frames; keeping last good frame', { key, src });
+        currentVisualKey = null;
+        if (key !== 'idle') {
+          setVisual('animation', 'idle', mode === 'sleep' ? 'sleep' : 'idle');
+        } else {
+          animationTimer = setTimeout(render, 1200);
+        }
         return;
       }
 
@@ -325,7 +332,9 @@
     pet.classList.toggle('is-sleeping', sleeping);
 
     if (sleeping) {
-      setVisual('animation', 'sleep', 'sleep');
+      // Until the dedicated HQ sleep asset is ready, keep the stable HQ idle art
+      // and express sleep through CSS only.
+      setVisual('animation', 'idle', 'sleep');
       return;
     }
 
@@ -373,8 +382,10 @@
   }
 
   function flashColor(color = 'mint', duration = 520) {
+    // Legacy color assets use a different crop/scale and could make Rady appear
+    // to vanish. Preserve the API but use the approved HQ click reaction.
     const safe = FALLBACK_ASSETS.color[color] ? color : 'mint';
-    showTransient('color', safe, `press-${safe}`, duration);
+    showTransient('animation', 'click', `press-${safe}`, Math.max(520, duration));
   }
 
   function press(kind = 'normal') {
@@ -424,12 +435,14 @@
 
   function completeOperation(key = 'external') {
     clearOperation(key);
-    showTransient('usage', 'taskComplete', 'complete', 1700);
+    // Dedicated HQ complete asset will replace this later.
+    showTransient('animation', 'idle', 'complete', 1100);
   }
 
   function errorOperation(key = 'external') {
     clearOperation(key);
-    showTransient('expression', 'grumpy', 'error', 1300);
+    // Dedicated HQ error asset will replace this later.
+    showTransient('animation', 'idle', 'error', 900);
   }
 
   function scheduleSleep(delay) {
@@ -458,7 +471,7 @@
   function wake() {
     const wasSleeping = sleeping;
     sleeping = false;
-    if (wasSleeping) showTransient('expression', 'smile', 'wake', 850);
+    if (wasSleeping) showTransient('animation', 'idle', 'wake', 850);
     else render();
   }
 
@@ -579,11 +592,15 @@
   }
 
   image.addEventListener('error', () => {
-    if (image.dataset.asset !== 'animation.idle') {
-      transientVisual = null;
-      sleeping = false;
-      setVisual('animation', 'idle', 'idle');
-    }
+    console.warn('[Rady] rendered image failed; recovering to HQ idle', {
+      asset: image.dataset.asset,
+      mode: image.dataset.mode
+    });
+    stopAnimation();
+    currentVisualKey = null;
+    transientVisual = null;
+    sleeping = false;
+    setTimeout(() => setVisual('animation', 'idle', 'idle'), 80);
   });
 
   pet.addEventListener('pointerdown', (event) => {
@@ -640,12 +657,14 @@
   });
 
   function setFrame(frame) {
+    // Keep legacy callers working without falling back to the old low-res
+    // expression set. Only approved HQ animation assets are used here.
     const legacy = {
-      1: ['expression', 'smile', 'legacy'],
-      2: ['expression', 'happy', 'legacy'],
+      1: ['animation', 'idle', 'legacy'],
+      2: ['animation', 'idle', 'legacy'],
       3: ['animation', 'thinking', 'thinking'],
-      4: ['expression', 'surprised', 'legacy'],
-      5: ['expression', 'wink', 'legacy'],
+      4: ['animation', 'idle', 'legacy'],
+      5: ['animation', 'idle', 'legacy'],
       6: ['animation', 'walk', 'working'],
       7: ['animation', 'idle', 'idle'],
       8: ['animation', 'thinking', 'thinking'],
