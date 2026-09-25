@@ -136,6 +136,11 @@
       if (!response.ok) throw new Error(`Rady manifest ${response.status}`);
       const data = await response.json();
       if (data?.groups) manifest = data;
+      console.info('[Rady] manifest loaded', {
+        basePath: manifest.basePath,
+        idle: manifest?.groups?.animation?.idle,
+        thinking: manifest?.groups?.animation?.thinking
+      });
     } catch (error) {
       console.warn('[Rady] manifest fallback', error);
     }
@@ -156,6 +161,13 @@
       const sprite = new Image();
       sprite.onload = () => {
         const frameCount = 3;
+        console.info('[Rady] sprite loaded', {
+          key,
+          src: sprite.src,
+          width: sprite.naturalWidth,
+          height: sprite.naturalHeight,
+          frameWidth: Math.round(sprite.naturalWidth / frameCount)
+        });
         const frames = [];
         for (let index = 0; index < frameCount; index += 1) {
           const startX = Math.round(index * sprite.naturalWidth / frameCount);
@@ -197,6 +209,13 @@
     stopAnimation();
     currentVisualKey = visualKey;
     applyVisualMetadata(group, key, mode);
+
+    console.info('[Rady] visual', {
+      group,
+      key,
+      mode: mode || key,
+      asset: asset(group, key)
+    });
 
     if (group !== 'animation') {
       const src = asset(group, key);
@@ -641,6 +660,28 @@
     error: errorOperation,
     sleep: trySleep,
     wake,
-    getMode: () => pet.dataset.radyMode || 'idle'
+    getMode: () => pet.dataset.radyMode || 'idle',
+    debug: () => ({
+      mode: pet.dataset.radyMode || 'idle',
+      visualKey: currentVisualKey,
+      asset: image.dataset.asset || '',
+      imageSrc: image.src,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      manifestBasePath: manifest.basePath,
+      manifestThinking: manifest?.groups?.animation?.thinking
+    }),
+    testThinking: (duration = 5000) => {
+      const key = '__rady-debug-thinking__';
+      console.info('[Rady] testThinking start', {
+        duration,
+        asset: asset('animation', 'thinking')
+      });
+      setOperation(key, 'thinking');
+      setTimeout(() => {
+        clearOperation(key);
+        console.info('[Rady] testThinking end');
+      }, Math.max(500, Number(duration) || 5000));
+    }
   });
 })();
