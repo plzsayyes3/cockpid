@@ -51,10 +51,11 @@
 
   function projectMemoFrame() {
     const frame = document.querySelector('#appContent iframe');
-    const title = String(el('appTitle')?.textContent || '');
     const src = String(frame?.getAttribute('src') || '');
     if (!frame?.contentWindow) return null;
-    if (!/PROJECTS/i.test(title) || !/backstage\.html/i.test(src)) return null;
+    // Backstage is the stable surface identity. Do not couple memo routing to
+    // its numeric key or visible title (currently "6 / PROJECT · ASSIGNMENT").
+    if (!/(?:^|\/)backstage\.html(?:[?#]|$)/i.test(src)) return null;
     return frame.contentWindow;
   }
 
