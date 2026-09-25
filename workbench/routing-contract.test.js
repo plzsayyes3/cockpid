@@ -33,6 +33,7 @@ test('Backstage keeps the inline memo bridge independent of dock key or title', 
   assert.doesNotMatch(zenMemo, /PROJECTS\/i\.test\(title\)/);
   assert.match(drawerCss, /project-memo-expanded \.app-frame\{width:90vw\}/);
   assert.match(backstageCss, /body\.memo-open \.list-pane,[\s\S]*body\.memo-open \.detail-pane,[\s\S]*body\.memo-open \.project-memo-pane\{[\s\S]*overflow-y:auto/);
+  assert.match(backstageCss, /@media\(max-width:980px\) and \(min-width:821px\)[\s\S]*grid-template-columns:minmax\(200px,\.9fr\) minmax\(260px,1\.25fr\) minmax\(210px,\.95fr\)/);
 });
 
 test('header microphone opens the existing Stan surface', () => {
