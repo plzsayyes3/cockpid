@@ -66,7 +66,7 @@ canonical dock behavior even if older static markup or screenshots show previous
 | — | Advice | ❌ | iframe → `advice.html` | `my-storage-note/advice/YYYY-MM-DD.md`; reachable from the header Mail status, see §3.3 |
 | 5 | Dictionary | ✅ | special (`dictionary.js`, loaded lazily) |
 | 6 | Area | ✅ | iframe → `project-town.html` | Area Town / Area-first overview |
-| 7 | Backstage | ✅ | iframe → `backstage.html` | Project / Assignment / Task shelf |
+| 7 | Backstage | ✅ | iframe → `backstage.html` | Area-first Project / Assignment shelf with inline Memo; Task remains on Area / ON HAND surfaces |
 | 8 | On Hand | ✅ | iframe → `onhand.html` | same Task / Check / Keep model as the Home ON HAND panel, with full list/filter controls |
 | 9 | Thinking | ✅ | iframe → `thinking.html` | recent ideas / themes / questions / hypotheses / actions |
 | — | Project Town direct URL | ❌ | direct URL → `project-town.html` | same Area surface, standalone compatibility route |
@@ -74,10 +74,10 @@ canonical dock behavior even if older static markup or screenshots show previous
 | — | Keyboard | ❌ (header icon) | iframe → external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` | 薙刀式タイピング練習サイト。ヘッダーのStanマイク横のキーボードアイコンから開く。`keyboard.html` は互換リダイレクト |
 | 0 | For My Sons | ✅ | iframe → external `https://plzsayyes3.github.io/for_my_sons/` | separate repo/site (`plzsayyes3/for_my_sons`) |
 
-Runtime dock tail is therefore `5=On Hand / 6=Project · Assignment / 8=Thinking / 9=Dictionary`, followed by
-`0=For My Sons`. Key 7 is intentionally unassigned (2026-09-23 menu reorganization). Keyboard is
-reachable from the header icon, not the numeric dock. Project Town is not a numeric dock entry; its
-standalone URL remains for compatibility. Advice stays outside the numeric dock.
+Runtime dock tail is therefore `5=Dictionary / 6=Area / 7=Backstage / 8=On Hand / 9=Thinking`, followed by
+`0=For My Sons`. Keyboard is reachable from the header icon, not the numeric dock. The Area surface
+uses `project-town.html`; its standalone URL remains for compatibility. Advice stays outside the
+numeric dock.
 
 ### 3.1 Calendar
 
@@ -127,16 +127,17 @@ reason/updated — with `status` getting a colored badge). This is a **third**, 
 `secretary-ai-overview/BOARD.md` — all three serve a similar "who's doing what" purpose but
 are separate files with separate audiences; don't conflate them.
 
-### 3.6 Project · Assignment / Backstage (key 6)
+### 3.6 Backstage — Project / Assignment (key 7)
 
-The Area adapter first reads `my-storage-note/views/areas.json` for the default Project source,
+The Area adapter first reads `my-storage-note/views/areas.json` for the default source,
 using the shared `zen-note-github-token` when the Canonical repository is private.
-It renders declared Areas with sibling Project, Assignment, and Task collections and keeps
-records without an Area in an explicit unassigned section. If a custom Project source is
-configured, that existing source is preferred before Area-first loading. If the Area projection
-is unavailable or invalid, the adapter falls back to the configured Project source, preserving
-the Project-only detail and handoff contract. This fallback is read-only and does not rewrite
-canonical Objects.
+Backstage flattens the Area projection into a mixed Project / Assignment shelf while retaining
+each record's Area context. Records without an Area stay in the explicit unassigned bucket.
+Task siblings remain on the Area / ON HAND surfaces rather than being promoted into this shelf.
+If a custom Project source is configured, that existing source is preferred before Area-first
+loading. If the Area projection is unavailable or invalid, the adapter falls back to the
+configured Project source; that compatibility fallback is intentionally Project-only and does
+not rewrite canonical Objects.
 
 `backstage.js`'s own constants say `REPO = 'gpts'`, `PROJECT_DIR = 'projects'` — this looks
 like it's reading the *legacy*, about-to-be-frozen `gpts` repository directly, which would
@@ -150,10 +151,13 @@ paths; its *runtime behavior* reads the new canonical view. This exact pattern i
 out by name in `my-storage-note/MIGRATION_MAP.md` ("Cockpid Project screens may still
 contain old gpts/projects labels/constants for compatibility adapters").
 
-The detail panel has an `OVERVIEW` mode for Current / Next, Workstreams, Relations, and links,
-plus a `TOWN / STATUS` mode backed by the shared `project-status-model.js`. Both modes use the
-same selected Project record; a Town rendering failure does not hide the Project list. Backstage
-is explicitly Project-only; Area/Project Town provides the sibling Assignment and Task context.
+The detail panel accepts both Project and Assignment records. Project details keep the existing
+sheets meter, relations, Workstreams, links, and `TOWN / STATUS` mode backed by
+`project-status-model.js`. Assignment details use `OVERVIEW` without Project-only sheets or
+Town status. Closed Assignments (`done`, `cancelled` / `canceled`, `archived`) are hidden
+from the active shelf with a hidden-count indicator. The Workbench MEMO button opens a third
+Backstage column; list, detail, and memo columns scroll independently on desktop/tablet widths.
+Memo routing records the selected Area plus explicit Project/Assignment type and record id.
 
 ### 3.7 Project Town (standalone compatibility URL)
 
@@ -409,7 +413,7 @@ behavior remains subject to the boundaries listed above.
 
 ## 11. Menu reorganization (2026-09-23)
 
-Following the 2026-09-23 22:20 Daily: `0` opens For My Sons, Keyboard moved to a header icon,
-Dictionary moved from `6` to `9`, and the Area-first Backstage moved from `7` to `6 / PROJECT · ASSIGNMENT` (dock label `PJ · Assign`).
-Key `7` is unassigned. The Secret Desk easter egg was retired. The Cockpid suite is 54/54 passing,
-including the updated Keyboard routing contract.
+The 2026-09-23 reorganization moved For My Sons to `0` and Keyboard to a header icon. A later
+menu pass established the current dock order: `5=Dictionary / 6=Area / 7=Backstage / 8=On Hand /
+9=Thinking`. Earlier intermediate notes that described key 7 as unassigned or Backstage as key 6
+are superseded by this runtime order. The Secret Desk easter egg remains retired.

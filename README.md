@@ -108,21 +108,19 @@ HOMEは「全部を監視するMission Control」ではなく、必要な道具�
 ### Area-first Project entry
 
 Projects, Assignments, and Tasks are read from the Area projection when
-`my-storage-note/views/areas.json` is available. The Project surface groups
-sibling records under declared Areas and keeps records without an Area in an
-explicit unassigned section. Backstage is intentionally a Project-only index and
-detail/handoff surface; Assignment and Task siblings remain visible through the
-Area/Project Town views and are not silently promoted into Backstage's Project
-list. The adapter preserves the legacy Project detail and handoff behavior; if
-the Area projection cannot be loaded, it falls back to the configured Project
-source without changing source data. A custom Project source always wins over
-Area-first loading for compatibility.
+`my-storage-note/views/areas.json` is available. Backstage promotes Project and
+Assignment records into one Area-aware shelf while keeping their types explicit;
+Task siblings remain on the Area / ON HAND surfaces. Records without an Area stay
+in the explicit unassigned bucket. If the Area projection cannot be loaded, the
+adapter falls back to the configured legacy Project source, so that compatibility
+path remains Project-only and does not change source data. A custom Project source
+always wins over Area-first loading for compatibility.
 
 ### Projects / Backstage
 
-Projectの一覧・詳細画面です。旧Backstageを親画面として、OverviewとTown / Statusを切り替えます。BackstageはArea-firstのProject-only index/detail/handoffで、Assignment・Taskの兄弟はArea/Project Town側の導線で確認します。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定では `my-storage-note/views/projects.json` へ読み替えます。カスタムProject source設定がある場合は既存sourceを優先します。
+ProjectとAssignmentを同じ一覧で扱う詳細画面です。カードと詳細には `PJ` / `ASSIGN` の種別を明示します。Projectは従来どおりsheetsとTown / Statusを持ち、AssignmentはOverviewのみです。終了済みAssignmentは通常一覧から隠し、件数だけを表示します。WorkbenchのMEMOを押すと一覧・詳細・Memoの3カラムになり、各カラムは独立スクロールします。Memoは選択中のArea + Project/Assignment + idへ明示的にrouteされます。実装内にlegacyの `gpts/projects` ラベルが残る箇所がありますが、`project-source-adapter.js` が標準設定ではCanonical read modelへ読み替えます。カスタムProject source設定がある場合は既存sourceを優先します。
 
-Canonical Projectは `my-storage-note/objects/projects/` です。
+Canonical Projectは `my-storage-note/objects/projects/`、Canonical Assignmentは `my-storage-note/objects/assignments/` です。
 
 ### Project Town / Status
 
@@ -134,7 +132,7 @@ WorkbenchのMemo / Inboxでは、Area選択後にProject / Assignment / Task / R
 
 ## Stan / スタンちゃん
 
-`workbench/stan/` はヘッダーのマイクアイコンから開く独立全画面のstandby surfaceです。9番は `Keyboard` の薙刀式練習サイトを作業台App枠内に直接表示します。`workbench/keyboard.html` は既存ブックマーク向けの互換リダイレクトとして残します。
+`workbench/stan/` はヘッダーのマイクアイコンから開く独立全画面のstandby surfaceです。KeyboardはStan横のヘッダーアイコンから開きます。現在の9番はThinkingです。`workbench/keyboard.html` は既存ブックマーク向けの互換リダイレクトとして残します。
 
 現在実装済み:
 
