@@ -5,7 +5,7 @@
   "groups": {
     "animation": {
       "idle": "animation_01_idle_hq.png?v=20260925-idle-hq1",
-      "walk": "animation_02_walk.png",
+      "walk": "animation_02_walk_hq.png?v=20260925-walk-hq1",
       "thinking": "animation_03_thinking_hq.png?v=20260925-thinking-hq1",
       "jump": "animation_04_jump.png",
       "sleep": "animation_05_sleep.png",
