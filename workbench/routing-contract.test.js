@@ -7,11 +7,22 @@ const root = path.join(__dirname, '..');
 const routing = fs.readFileSync(path.join(__dirname, 'app-routing.js'), 'utf8');
 const index = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 
-test('key 6 is the Project · Assignment route backed by the Area-first Backstage', () => {
-  assert.match(routing, /backstage:\s*\{ key: '6', title: '6 \/ PROJECT · ASSIGNMENT'/);
-  assert.match(routing, /\['6', 'backstage', 'PJ · Assign'\]/);
-  assert.match(index, /data-app="backstage"><b>6<\/b><span>PJ · Assign<\/span>/);
-  assert.doesNotMatch(routing, /\['7', /);
+test('keys 5-9 follow Dictionary / Area / PJ / On Hand / Thinking', () => {
+  assert.match(routing, /dictionary:\s*\{ key: '5', title: '5 \/ DICTIONARY'/);
+  assert.match(routing, /projecttown:\s*\{ key: '6', title: '6 \/ AREA'/);
+  assert.match(routing, /backstage:\s*\{ key: '7', title: '7 \/ PROJECT'/);
+  assert.match(routing, /onhand:\s*\{ key: '8', title: '8 \/ ON HAND'/);
+  assert.match(routing, /thinking:\s*\{ key: '9', title: '9 \/ THINKING'/);
+  assert.match(routing, /\['5', 'dictionary', 'Dictionary'\]/);
+  assert.match(routing, /\['6', 'projecttown', 'Area'\]/);
+  assert.match(routing, /\['7', 'backstage', 'PJ'\]/);
+  assert.match(routing, /\['8', 'onhand', 'On Hand'\]/);
+  assert.match(routing, /\['9', 'thinking', 'Thinking'\]/);
+  assert.match(index, /data-app="dictionary"><b>5<\/b><span>Dictionary<\/span>/);
+  assert.match(index, /data-app="projecttown"><b>6<\/b><span>Area<\/span>/);
+  assert.match(index, /data-app="backstage"><b>7<\/b><span>PJ<\/span>/);
+  assert.match(index, /data-app="onhand"><b>8<\/b><span>On Hand<\/span>/);
+  assert.match(index, /data-app="thinking"><b>9<\/b><span>Thinking<\/span>/);
 });
 
 test('header microphone opens the existing Stan surface', () => {
@@ -27,23 +38,12 @@ test('header keyboard icon opens Keyboard practice outside the numeric dock', ()
   assert.doesNotMatch(index, /class="app-btn" data-app="keyboard"/);
 });
 
-test('key 9 is the Dictionary route', () => {
-  assert.match(routing, /dictionary:\s*\{ key: '9', title: '9 \/ DICTIONARY', type: 'dictionary'/);
-  assert.match(routing, /\['9', 'dictionary', 'Dictionary'\]/);
-  assert.match(index, /data-app="dictionary"><b>9<\/b><span>Dictionary<\/span>/);
-});
-
 test('key 0 opens For My Sons', () => {
   assert.match(routing, /formysons:\s*\{ key: '0', title: '0 \/ FOR MY SONS', type: 'iframe', src: 'https:\/\/plzsayyes3\.github\.io\/for_my_sons\/'/);
   assert.match(index, /data-app="formysons"><b>0<\/b><span>For My Sons<\/span>/);
   assert.doesNotMatch(routing, /secret/);
 });
 
-test('key 8 is the canonical Thinking route', () => {
-  assert.match(routing, /\['8', 'thinking', 'Thinking'\]/);
-  assert.match(routing, /thinking:\s*\{ key: '8', title: '8 \/ THINKING'/);
-});
-
-test('standalone Project Town remains available', () => {
+test('Area Town surface remains available', () => {
   assert.equal(fs.existsSync(path.join(root, 'workbench', 'project-town.html')), true);
 });
