@@ -4,7 +4,7 @@
   "basePath": "./assets/rady/web/",
   "groups": {
     "animation": {
-      "idle": "animation_01_idle.png?v=20260925-original1",
+      "idle": "animation_01_idle_hq.png?v=20260925-idle-hq1",
       "walk": "animation_02_walk.png",
       "thinking": "animation_03_thinking_hq.png?v=20260925-thinking-hq1",
       "jump": "animation_04_jump.png",
