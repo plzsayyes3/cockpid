@@ -16,7 +16,7 @@
     thinking: { key: '9', title: '9 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
     dictionary: { key: '5', title: '5 / DICTIONARY', type: 'dictionary' },
     board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / PROJECT', type: 'iframe', src: 'backstage.html?v=20260924-pj-assign1' },
+    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html?v=20260924-pj-assign1' },
     projecttown: { key: '6', title: '6 / AREA', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
     stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
@@ -44,7 +44,7 @@
     news: 'News',
     onhand: 'On Hand',
     dictionary: 'Dictionary',
-    backstage: 'PJ',
+    backstage: 'Backstage',
     thinking: 'Thinking',
     projecttown: 'Area',
     formysons: 'For My Sons'
@@ -81,7 +81,7 @@
     const entries = [
       ['5', 'dictionary', 'Dictionary'],
       ['6', 'projecttown', 'Area'],
-      ['7', 'backstage', 'PJ'],
+      ['7', 'backstage', 'Backstage'],
       ['8', 'onhand', 'On Hand'],
       ['9', 'thinking', 'Thinking']
     ];
