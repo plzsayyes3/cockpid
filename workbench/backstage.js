@@ -20,6 +20,7 @@
   const detailEmpty = $('detailEmpty');
   const memoPane = $('projectMemoPane');
   const memoContext = $('projectMemoContext');
+  const memoTitle = $('projectMemoTitle');
   const memoSourceLabel = $('projectMemoSource');
   const memoText = $('projectMemoText');
   const memoStatus = $('projectMemoStatus');
@@ -31,9 +32,9 @@
 
   let allProjects = [];
   let projects = [];
-  let selectedId = '';
+  let selectedKey = '';
   let areaView = null;
-  let memoProjectId = '';
+  let memoRecordKey = '';
   const memoDrafts = new Map();
 
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -81,11 +82,83 @@
   }
 
   function selectedProject() {
-    return allProjects.find((item) => item.id === selectedId) || null;
+    return recordByKey(selectedKey);
   }
 
   function projectMemoPrefix(project) {
     return project ? `${project.title}: ` : '';
+  }
+
+  function recordType(project) {
+    const value = String(project?.recordType || project?.meta?.type || project?.meta?.object_type || 'project').toLowerCase();
+    return value === 'assignment' ? 'assignment' : 'project';
+  }
+
+  function recordKey(project) {
+    if (!project?.id) return '';
+    return `${recordType(project)}:${project.id}`;
+  }
+
+  function recordByKey(value) {
+    const key = String(value || '').trim();
+    if (!key) return null;
+    const typed = /^(project|assignment):(.*)$/.exec(key);
+    if (typed) {
+      return allProjects.find((item) => recordType(item) === typed[1] && String(item.id) === typed[2]) || null;
+    }
+    // Legacy Backstage hashes used a raw Project id. Prefer Project when
+    // resolving those links so old URLs keep their historical meaning.
+    return allProjects.find((item) => recordType(item) === 'project' && String(item.id) === key)
+      || allProjects.find((item) => String(item.id) === key)
+      || null;
+  }
+
+  function recordTypeShort(project) {
+    return recordType(project) === 'assignment' ? 'ASSIGN' : 'PJ';
+  }
+
+  function recordTypeLong(project) {
+    return recordType(project) === 'assignment' ? 'Assignment' : 'Project';
+  }
+
+  const CLOSED_ASSIGNMENT_STATUSES = new Set(['done', 'cancelled', 'canceled', 'archived']);
+
+  function recordStatus(project) {
+    return String(project?.meta?.status || '').trim().toLowerCase();
+  }
+
+  function isBackstageVisible(project) {
+    const status = recordStatus(project);
+    if (recordType(project) === 'assignment') return !CLOSED_ASSIGNMENT_STATUSES.has(status);
+    return status !== 'archived';
+  }
+
+  function isClosedAssignment(project) {
+    return recordType(project) === 'assignment' && CLOSED_ASSIGNMENT_STATUSES.has(recordStatus(project));
+  }
+
+  function recordTypeBadge(project, detail = false) {
+    const type = recordType(project);
+    const label = detail ? recordTypeLong(project).toUpperCase() : recordTypeShort(project);
+    return `<span class="record-type-badge ${type}${detail ? ' detail' : ''}">${label}</span>`;
+  }
+
+  function memoRouteApi() {
+    try {
+      return window.COCKPID_MEMO_ROUTE || window.parent?.COCKPID_MEMO_ROUTE || null;
+    } catch (_) {
+      return window.COCKPID_MEMO_ROUTE || null;
+    }
+  }
+
+  function memoRouteFor(project) {
+    const routeApi = memoRouteApi();
+    const area = areaFor(project);
+    if (!project || !area || typeof routeApi?.selectBranch !== 'function') return null;
+    return routeApi.selectBranch(area, recordType(project), {
+      id: project.id,
+      title: project.title
+    });
   }
 
   function setMemoStatus(message, error = false) {
@@ -95,30 +168,35 @@
   }
 
   function stashProjectMemoDraft() {
-    if (!memoText || !memoProjectId) return;
-    memoDrafts.set(memoProjectId, memoText.value);
+    if (!memoText || !memoRecordKey) return;
+    memoDrafts.set(memoRecordKey, memoText.value);
   }
 
   function loadProjectMemo(project) {
     if (!memoText || !memoContext || !memoSave) return;
     stashProjectMemoDraft();
-    memoProjectId = project?.id || '';
+    memoRecordKey = recordKey(project);
     const source = memoSource();
     if (memoSourceLabel) memoSourceLabel.textContent = `${source.repo} / ${source.dir}`;
 
     if (!project) {
-      memoContext.textContent = 'Projectを選択してください。';
+      if (memoTitle) memoTitle.textContent = 'Memo';
+      memoContext.textContent = 'Project / Assignmentを選択してください。';
+      memoText.placeholder = 'このProject / Assignmentについて、今考えていることを書く……';
       memoText.value = '';
       memoText.disabled = true;
       memoSave.disabled = true;
-      setMemoStatus('SELECT PROJECT');
+      setMemoStatus('SELECT ITEM');
       return;
     }
 
-    memoContext.textContent = project.title;
+    const typeName = recordTypeLong(project);
+    if (memoTitle) memoTitle.textContent = `${typeName} Memo`;
+    memoContext.textContent = `${typeName} · ${project.title}`;
+    memoText.placeholder = `この${typeName}について、今考えていることを書く……`;
     memoText.disabled = false;
     memoSave.disabled = false;
-    memoText.value = memoDrafts.get(project.id) ?? projectMemoPrefix(project);
+    memoText.value = memoDrafts.get(recordKey(project)) ?? projectMemoPrefix(project);
     setMemoStatus('READY');
     const end = memoText.value.length;
     memoText.focus?.();
@@ -182,15 +260,19 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: `cockpid: project memo ${name}`,
+          message: `cockpid: ${recordType(project)} memo ${name}`,
           content: encodeUtf8(`${text}\n`)
         })
       });
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
       try {
-        (window.COCKPID_MEMO_ROUTE || window.parent?.COCKPID_MEMO_ROUTE)?.recordMemo?.(name);
+        const routeApi = memoRouteApi();
+        const route = memoRouteFor(project);
+        if (route && typeof routeApi?.recordMemo === 'function') {
+          routeApi.recordMemo(name, undefined, route);
+        }
       } catch (_) {}
-      memoDrafts.set(project.id, projectMemoPrefix(project));
+      memoDrafts.set(recordKey(project), projectMemoPrefix(project));
       memoText.value = projectMemoPrefix(project);
       setMemoStatus(`SAVED · ${name}`);
     } catch (error) {
@@ -366,7 +448,7 @@
       deskItems.innerHTML = '<span class="quiet">重点的に扱うProjectだけ、ここに出ます。</span>';
       return;
     }
-    deskItems.innerHTML = desk.map((project) => `<button class="desk-chip" type="button" data-project-id="${esc(project.id)}">${esc(project.title)}</button>`).join('');
+    deskItems.innerHTML = desk.map((project) => `<button class="desk-chip" type="button" data-record-key="${esc(recordKey(project))}">${esc(project.title)}</button>`).join('');
   }
 
   function renderList() {
@@ -380,14 +462,17 @@
       const tags = projectTags(project);
       const tagHtml = tags.map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
       const current = String(project.meta.current || '').trim();
-      const sheets = sheetsValue(project);
-      return `<button class="project-card${selectedId === project.id ? ' active' : ''}" type="button" data-project-id="${esc(project.id)}" style="--fill-width:${fillPercent(project)}%">
+      const type = recordType(project);
+      const isProject = type === 'project';
+      const sheets = isProject ? sheetsValue(project) : 0;
+      const metricHtml = isProject ? `<span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span>` : '';
+      return `<button class="project-card record-${type}${selectedKey === recordKey(project) ? ' active' : ''}" type="button" data-record-key="${esc(recordKey(project))}" data-record-type="${type}" style="--fill-width:${isProject ? fillPercent(project) : 0}%">
         <span class="project-fill" aria-hidden="true"></span>
         <span class="project-inner">
-          <span class="project-top"><span class="project-title">${esc(project.title)}</span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
+          <span class="project-top"><span class="project-title-wrap">${recordTypeBadge(project)}<span class="project-title">${esc(project.title)}</span></span><span class="project-age">${esc(touchedLabel(project.meta.last_touched))}</span></span>
           ${areaLabel(project)}
           ${current ? `<span class="project-current">${esc(current)}</span>` : ''}
-          <span class="project-foot"><span class="tags">${tagHtml}</span><span class="sheets">${sheets} / ${SHEETS_FULL_SCALE}</span></span>
+          <span class="project-foot"><span class="tags">${tagHtml}</span>${metricHtml}</span>
         </span>
       </button>`;
     }).join('');
@@ -472,7 +557,7 @@
     const repo = project?.source?.repo || REPO;
     const url = githubPath(project?.path, 'blob', repo);
     if (!url) return '';
-    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">PROJECT ↗</a>`;
+    return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${recordTypeLong(project).toUpperCase()} ↗</a>`;
   }
 
   function repositoryLink(repository) {
@@ -539,6 +624,7 @@
   }
 
   function relationRecords(project) {
+    if (recordType(project) !== 'project') return [];
     const records = [];
     const outgoing = Array.isArray(project.meta.relations) ? project.meta.relations : [];
     outgoing.forEach((relation) => {
@@ -589,14 +675,14 @@
     const relations = relationRecords(project);
     if (!relations.length) return '';
     const rows = relations.map((relation) => {
-      const target = allProjects.find((item) => item.id === relation.projectId);
+      const target = allProjects.find((item) => recordType(item) === 'project' && item.id === relation.projectId);
       const missing = !target;
       const archived = target?.meta?.status === 'archived';
       const title = target?.title || relation.projectId;
       const state = missing ? 'MISSING' : archived ? 'ARCHIVED' : '';
       const body = `<span class="relation-main"><span class="relation-title">${esc(title)}</span><span class="relation-type">${esc(relationLabel(relation.type, relation.direction))}</span>${relation.note ? `<span class="relation-note">${esc(relation.note)}</span>` : ''}</span>${state ? `<span class="relation-state ${missing ? 'missing' : 'archived'}">${state}</span>` : ''}`;
       if (missing) return `<div class="relation-row missing">${body}</div>`;
-      return `<button class="relation-row" type="button" data-project-id="${esc(target.id)}">${body}</button>`;
+      return `<button class="relation-row" type="button" data-record-key="${esc(recordKey(target))}">${body}</button>`;
     }).join('');
     return `<section class="detail-section">
       <div class="detail-section-label">RELATED PROJECTS</div>
@@ -608,7 +694,7 @@
     const links = [projectSourceLink(project), repositoryLink(project.meta.repository), workspaceLink(project.meta.workspace)].filter(Boolean).join('');
     if (!links) return '';
     return `<section class="detail-section detail-links-section">
-      <div class="detail-section-label">PROJECT LINKS</div>
+      <div class="detail-section-label">${recordTypeLong(project).toUpperCase()} LINKS</div>
       <div class="detail-links">${links}</div>
     </section>`;
   }
@@ -645,32 +731,35 @@
     selectView('overview');
   }
 
-  function showProject(id, updateHash = true) {
-    const project = allProjects.find((item) => item.id === id);
+  function showProject(key, updateHash = true) {
+    const project = recordByKey(key);
     if (!project) return;
-    if (selectedId !== id) stashProjectMemoDraft();
-    selectedId = id;
+    const keyForProject = recordKey(project);
+    if (selectedKey !== keyForProject) stashProjectMemoDraft();
+    selectedKey = keyForProject;
     renderList();
 
     const tags = projectTags(project).map((tag) => `<span class="tag${String(tag).toLowerCase() === 'must' ? ' must' : ''}">${esc(tag)}</span>`).join('');
     const sheets = sheetsValue(project);
     const parts = detailParts(project);
+    const isAssignment = recordType(project) === 'assignment';
 
     detailContent.innerHTML = `
-      <button class="detail-back" id="detailBack" type="button">← PROJECTS</button>
+      <button class="detail-back" id="detailBack" type="button">← PJ / ASSIGN</button>
       <div class="detail-title-row">
         <div>
+          <div class="detail-kind-row">${recordTypeBadge(project, true)}</div>
           <h1 class="detail-title">${esc(project.title)}</h1>
           <div class="detail-meta"><span>${esc(project.meta.last_touched || '—')}</span><span>${esc(project.meta.status || 'backstage')}</span><span>${tags}</span>${areaLabel(project, true)}</div>
         </div>
-        <div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
+        ${isAssignment ? '' : `<div class="detail-meter" aria-label="${sheets} sheets / ${SHEETS_FULL_SCALE}">
         <div class="detail-meter-box"><div class="detail-meter-fill" style="width:${fillPercent(project)}%"></div></div>
           <div class="detail-meter-label">${sheets} / ${SHEETS_FULL_SCALE} sheets</div>
-        </div>
+        </div>`}
       </div>
-      <div class="detail-view-tabs" role="tablist" aria-label="Project view">
+      <div class="detail-view-tabs" role="tablist" aria-label="${recordTypeLong(project)} view">
         <button class="detail-view-tab active" type="button" role="tab" aria-selected="true" data-project-view="overview">OVERVIEW</button>
-        <button class="detail-view-tab" type="button" role="tab" aria-selected="false" data-project-view="town">TOWN / STATUS</button>
+        ${isAssignment ? '' : '<button class="detail-view-tab" type="button" role="tab" aria-selected="false" data-project-view="town">TOWN / STATUS</button>'}
       </div>
       <div id="projectOverview" class="project-detail-view">
         ${parts.resume ? `<div class="markdown detail-resume">${renderMarkdown(parts.resume)}</div>` : ''}
@@ -687,7 +776,7 @@
     document.body.classList.add('detail-open');
     $('detailBack')?.addEventListener('click', closeMobileDetail);
     if (document.body.classList.contains('memo-open')) loadProjectMemo(project);
-    if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(project.id)}`);
+    if (updateHash) history.replaceState(null, '', `#${encodeURIComponent(recordKey(project))}`);
   }
 
   function closeMobileDetail() {
@@ -720,16 +809,16 @@
       if (areaButton?.classList.contains('area-branch')) {
         event.preventDefault();
         const areaId = areaButton.dataset.areaId;
-        const target = [...list.querySelectorAll('[data-project-id]')].find((node) => {
-          const project = allProjects.find((item) => item.id === node.dataset.projectId);
+        const target = [...list.querySelectorAll('[data-record-key]')].find((node) => {
+          const project = recordByKey(node.dataset.recordKey);
           return areaFor(project)?.id === areaId;
         });
         target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
-      const button = event.target.closest?.('[data-project-id]');
+      const button = event.target.closest?.('[data-record-key]');
       if (!button || button.tagName !== 'BUTTON') return;
-      showProject(button.dataset.projectId);
+      showProject(button.dataset.recordKey);
     });
     reloadButton.addEventListener('click', loadProjects);
   }
@@ -737,10 +826,10 @@
   async function loadProjects() {
     reloadButton.disabled = true;
     status.classList.remove('error');
-    status.textContent = 'Area / Project を読んでいます…';
+    status.textContent = 'Area / Project / Assignment を読んでいます…';
     list.innerHTML = '';
-    selectedId = '';
-    memoProjectId = '';
+    selectedKey = '';
+    memoRecordKey = '';
     closeProjectMemo();
     detailContent.hidden = true;
     detailEmpty.hidden = false;
@@ -759,17 +848,23 @@
         const byDate = String(b.meta.last_touched || '').localeCompare(String(a.meta.last_touched || ''));
         return byDate || a.title.localeCompare(b.title, 'ja');
       });
-      projects = allProjects.filter((project) => project.meta.status !== 'archived');
+      projects = allProjects.filter(isBackstageVisible);
 
       renderDesk();
       renderList();
-      status.textContent = `${projects.length} projects · ${result.kind === 'area' ? 'Area-first Project index' : 'Project fallback · Project-only detail'}`;
+      const projectTotal = projects.filter((item) => recordType(item) === 'project').length;
+      const assignmentTotal = projects.filter((item) => recordType(item) === 'assignment').length;
+      const closedAssignmentTotal = allProjects.filter(isClosedAssignment).length;
+      const hiddenAssignmentLabel = closedAssignmentTotal ? ` · ${closedAssignmentTotal} closed hidden` : '';
+      status.textContent = result.kind === 'area'
+        ? `${projectTotal} projects · ${assignmentTotal} assignments${hiddenAssignmentLabel} · Area-first index`
+        : `${projectTotal} projects · Project fallback`;
 
-      const hashId = decodeURIComponent(location.hash.replace(/^#/, ''));
-      if (hashId && allProjects.some((project) => project.id === hashId)) {
-        showProject(hashId, false);
+      const hashKey = decodeURIComponent(location.hash.replace(/^#/, ''));
+      if (hashKey && recordByKey(hashKey)) {
+        showProject(hashKey, false);
       } else if (window.innerWidth > 820 && projects[0]) {
-        showProject(projects[0].id, false);
+        showProject(recordKey(projects[0]), false);
       }
     } catch (error) {
       console.error(error);
@@ -786,24 +881,37 @@
 
   function areaProjectRecords(view, source) {
     const areas = Array.isArray(view?.areas) ? view.areas : [];
-    const nested = areas.flatMap((area) => (Array.isArray(area.projects) ? area.projects : []).map((project) => ({ ...project, area, source })));
-    const unassigned = (Array.isArray(view?.unassigned?.projects) ? view.unassigned.projects : []).map((project) => ({ ...project, source }));
-    return nested.concat(unassigned).map((project) => ({
-      id: String(project.id),
-      title: String(project.title || project.id),
-      meta: { ...project },
-      body: String(project.body_markdown || project.body || ''),
-      path: project.path || project.object_path || `objects/projects/${project.id}.md`,
-      area: project.area || null,
-      source: project.source || source
-    }));
+    const collect = (bucket, area, type) => (Array.isArray(bucket) ? bucket : []).map((item) => ({ ...item, area, source, recordType: type }));
+    const nested = areas.flatMap((area) => [
+      ...collect(area.projects, area, 'project'),
+      ...collect(area.assignments, area, 'assignment')
+    ]);
+    const unassigned = [
+      ...collect(view?.unassigned?.projects, null, 'project'),
+      ...collect(view?.unassigned?.assignments, null, 'assignment')
+    ];
+    return nested.concat(unassigned).map((item) => {
+      const type = item.recordType === 'assignment' ? 'assignment' : 'project';
+      const dir = type === 'assignment' ? 'assignments' : 'projects';
+      return {
+        id: String(item.id),
+        title: String(item.title || item.id),
+        recordType: type,
+        meta: { ...item, type },
+        body: String(item.body_markdown || item.body || ''),
+        path: item.path || item.object_path || `objects/${dir}/${item.id}.md`,
+        area: item.area || null,
+        source: item.source || source
+      };
+    });
   }
 
   function legacyProjectRecords(view, source) {
     return (Array.isArray(view?.projects) ? view.projects : []).map((project) => ({
       id: String(project.id),
       title: String(project.title || project.id),
-      meta: { ...project },
+      recordType: 'project',
+      meta: { ...project, type: project.type || 'project' },
       body: String(project.body_markdown || project.body || ''),
       path: project.path || project.object_path || `projects/${project.id}.md`,
       source
