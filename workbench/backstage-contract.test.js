@@ -97,6 +97,9 @@ test('Backstage exposes Projects and Assignments as distinct record types', () =
   assert.match(source, /assignmentTotal/);
   assert.match(css, /record-type-badge\.assignment/);
   assert.match(css, /project-card\.record-assignment/);
+  assert.match(css, /record-assignment \.project-fill\{display:none\}/);
+  assert.match(source, /const metricHtml = isProject \?/);
+  assert.match(source, /isProject \? fillPercent\(project\) : 0/);
 });
 
 test('inline memo save records the selected Project or Assignment route explicitly', () => {
