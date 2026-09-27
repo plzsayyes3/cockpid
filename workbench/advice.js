@@ -19,6 +19,7 @@
   let pushTimer = null;
   let syncPromise = null;
   let pushAgain = false;
+  const thoughtPaperCache = new Map();
 
   function readSet() {
     try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); }
@@ -211,6 +212,51 @@
     return m ? `${m[1]}.${m[2]}.${m[3]}` : name.replace(/\.md$/, '');
   }
 
+  function thoughtPaperPath(name) {
+    const day = String(name || '').replace(/\.md$/i, '');
+    return `advice-assets/${day}/thought-paper.html`;
+  }
+
+  async function loadThoughtPaper(name) {
+    if (thoughtPaperCache.has(name)) return thoughtPaperCache.get(name);
+    const payload = await gh(thoughtPaperPath(name), 'my-storage-note');
+    if (!payload?.content) throw new Error('thought paper not found');
+    const value = decode(payload.content);
+    thoughtPaperCache.set(name, value);
+    return value;
+  }
+
+  function openThoughtPaper(name) {
+    const value = thoughtPaperCache.get(name);
+    if (!value) return;
+    const blob = new Blob([value], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank', 'noopener');
+    if (!opened) window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function attachThoughtPaper(name) {
+    try {
+      await loadThoughtPaper(name);
+      if (activeName !== name) return;
+      const card = document.createElement('div');
+      card.className = 'thought-paper-card';
+      card.innerHTML = `
+        <div>
+          <span class="thought-paper-kicker">YESTERDAY / THOUGHT PAPER</span>
+          <strong>昨日の思考紙面</strong>
+          <small>記事・検索ワード・Area Balance・直近3日比較</small>
+        </div>
+        <button type="button">THOUGHT PAPERを開く →</button>
+      `;
+      card.querySelector('button')?.addEventListener('click', () => openThoughtPaper(name));
+      bodyEl.appendChild(card);
+    } catch (_) {
+      // Older advice entries do not have a Thought Paper asset.
+    }
+  }
+
   function stripHeading(text) {
     return text.replace(/^[^一-龯ぁ-んァ-ンA-Za-z0-9]+/, '').trim();
   }
@@ -280,6 +326,7 @@
       const payload = await gh(file.path, 'my-storage-note');
       if (!payload?.content) throw new Error('advice content not found');
       bodyEl.innerHTML = renderMarkdown(decode(payload.content));
+      await attachThoughtPaper(name);
       markRead(name);
       renderList();
     } catch (error) {
