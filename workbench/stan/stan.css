@@ -652,3 +652,164 @@ input { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .rady-pet { transition: none; }
 }
+
+
+/* RADY world: lightweight layered outdoor scene */
+.rady-scene {
+  --sun-x: 50%;
+  --sun-y: 28%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.stan-stage[data-character='rady'] .rady-scene { opacity: 1; }
+
+.rady-sky,
+.rady-stars,
+.rady-horizon,
+.rady-ground {
+  position: absolute;
+  inset: 0;
+}
+
+.rady-sky {
+  background: linear-gradient(#86c9f4 0%, #bfe8fb 58%, #f5dfb5 100%);
+  transition: background 900ms ease;
+}
+
+.rady-stars {
+  opacity: 0;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.82) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 24% 34%, rgba(255,255,255,.62) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 16%, rgba(255,255,255,.74) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 57% 29%, rgba(255,255,255,.56) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 13%, rgba(255,255,255,.78) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 86% 31%, rgba(255,255,255,.62) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 94% 17%, rgba(255,255,255,.70) 0 1px, transparent 1.5px);
+  transition: opacity 900ms ease;
+}
+
+.rady-celestial {
+  position: absolute;
+  left: var(--sun-x);
+  top: var(--sun-y);
+  width: clamp(26px, 5vw, 42px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff3a9;
+  box-shadow: 0 0 28px rgba(255,235,151,.32);
+  transition: left 60s linear, top 60s linear, background 900ms ease, box-shadow 900ms ease;
+}
+
+.rady-horizon {
+  top: auto;
+  bottom: 24%;
+  height: 18%;
+  background:
+    linear-gradient(155deg, transparent 0 35%, rgba(71,112,83,.34) 36% 53%, transparent 54%) 0 100% / 42% 100% no-repeat,
+    linear-gradient(205deg, transparent 0 38%, rgba(65,105,78,.28) 39% 56%, transparent 57%) 100% 100% / 48% 100% no-repeat;
+}
+
+.rady-ground {
+  top: 76%;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+    #6f9a68;
+  background-size: 8px 8px, 8px 8px, auto;
+  border-top: 1px solid rgba(255,255,255,.15);
+  transition: background-color 900ms ease, filter 900ms ease;
+}
+
+.rady-clock {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  color: rgba(29,49,61,.72);
+  text-shadow: 0 1px rgba(255,255,255,.22);
+}
+
+.rady-clock-time {
+  font-size: clamp(18px, 3.2vw, 26px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rady-clock-date {
+  font-size: 8px;
+  letter-spacing: .14em;
+  opacity: .68;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Morning glow */
+.stan-stage[data-rady-time='dawn'] .rady-sky {
+  background: linear-gradient(#7d9fc4 0%, #e5a989 52%, #f8d4a0 100%);
+}
+.stan-stage[data-rady-time='dawn'] .rady-celestial {
+  background: #ffd69b;
+  box-shadow: 0 0 32px rgba(255,170,116,.38);
+}
+.stan-stage[data-rady-time='dawn'] .rady-ground { filter: sepia(.10) brightness(.88); }
+
+/* Blue daytime */
+.stan-stage[data-rady-time='day'] .rady-sky {
+  background: linear-gradient(#62b4ee 0%, #a6dcf7 62%, #e7f2d0 100%);
+}
+.stan-stage[data-rady-time='day'] .rady-celestial {
+  background: #fff2a1;
+  box-shadow: 0 0 30px rgba(255,239,157,.28);
+}
+
+/* Evening glow */
+.stan-stage[data-rady-time='sunset'] .rady-sky {
+  background: linear-gradient(#6b6f9d 0%, #d87870 50%, #f4aa67 100%);
+}
+.stan-stage[data-rady-time='sunset'] .rady-celestial {
+  background: #ffca7c;
+  box-shadow: 0 0 34px rgba(255,128,87,.36);
+}
+.stan-stage[data-rady-time='sunset'] .rady-ground { filter: brightness(.68) saturate(.82); }
+
+/* Night */
+.stan-stage[data-rady-time='night'] .rady-sky {
+  background: linear-gradient(#071326 0%, #102845 58%, #243a4c 100%);
+}
+.stan-stage[data-rady-time='night'] .rady-stars { opacity: .82; }
+.stan-stage[data-rady-time='night'] .rady-celestial {
+  background: #eef3dd;
+  box-shadow: inset -9px -2px 0 #b5c5c8, 0 0 20px rgba(222,239,241,.14);
+}
+.stan-stage[data-rady-time='night'] .rady-ground { filter: brightness(.34) saturate(.55); }
+.stan-stage[data-rady-time='night'] .rady-clock { color: rgba(220,236,242,.72); text-shadow: none; }
+
+.stan-stage[data-character='rady']::before { opacity: .025; }
+
+@media (max-width: 600px) and (orientation: portrait) {
+  .rady-clock { top: max(16px, env(safe-area-inset-top)); }
+  .rady-clock-time { font-size: 21px; }
+  .rady-horizon { bottom: 22%; }
+  .rady-ground { top: 78%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rady-scene,
+  .rady-sky,
+  .rady-stars,
+  .rady-celestial,
+  .rady-ground { transition: none; }
+}
