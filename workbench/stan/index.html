@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#03070b">
-  <title>Stan — Standby</title>
+  <title>STAN / RADY — Standby</title>
   <link rel="stylesheet" href="stan.css?v=20260915-landscape2">
   <link rel="stylesheet" href="stan-speech-ui.css?v=20260916-pause-resume">
   <style>
@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <main class="stan-stage" id="stanStage" aria-label="スタンちゃん">
+  <main class="stan-stage" id="stanStage" data-character="stan" aria-label="デジタルペット">
     <a class="stan-control stan-back" href="../" aria-label="作業台へ戻る" title="Workbench">←</a>
 
     <button class="stan-control camera-toggle" id="cameraToggle" type="button" aria-pressed="false" title="カメラ認識を切り替える">
@@ -35,6 +35,10 @@
     <section class="stan-face" id="stanFace" aria-hidden="true">
       <div class="eye eye-left"><span class="pupil"></span></div>
       <div class="eye eye-right"><span class="pupil"></span></div>
+    </section>
+
+    <section class="rady-pet" id="radyPet" aria-hidden="true">
+      <img src="../assets/rady/pixel/rady_idle_01.png" alt="らでぃ">
     </section>
 
     <div class="stan-presence" aria-hidden="true">
@@ -58,6 +62,18 @@
       </header>
 
       <div class="stan-menu-body">
+        <section class="character-select" aria-labelledby="characterSelectLabel">
+          <span class="character-select-label" id="characterSelectLabel">待機キャラクター</span>
+          <div class="character-choices">
+            <button class="character-choice" id="chooseStan" type="button">
+              <b>STAN</b><small>こちらを見て待つ</small>
+            </button>
+            <button class="character-choice" id="chooseRady" type="button">
+              <b>RADY</b><small>そこに暮らす</small>
+            </button>
+          </div>
+        </section>
+
         <label class="stan-field" for="quickActionUrl">
           <span>メニューから開く場所</span>
           <input id="quickActionUrl" type="text" inputmode="url" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="https://... / shortcuts://...">
@@ -80,6 +96,7 @@
 
   <script src="stan-speech-session.js?v=20260916-pause-resume2"></script>
   <script type="module" src="stan.js?v=20260918-pending-voice"></script>
+  <script type="module" src="stan-character.js?v=20260929-rady-static1"></script>
   <script src="stan-recording-gesture.js?v=20260916-pause-resume"></script>
   <script type="module" src="stan-transcript-scroll.js?v=20260916-horizontal"></script>
   <script type="module" src="stan-github.js?v=20260918-pending-voice"></script>
