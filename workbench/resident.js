@@ -7,7 +7,7 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-hq-static2';
+  const RESIDENT_VERSION = '20260929-rady-hq-static3';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
   const MANIFEST_PATH = './assets/rady/manifest.json';
 
@@ -71,6 +71,25 @@
     return `${String(manifest?.basePath || './assets/rady/web/')}${file}`;
   }
 
+  function layoutFrame() {
+    if (!image.naturalWidth || !image.naturalHeight) return;
+
+    const frameCount = 3;
+    const frameWidth = image.naturalWidth / frameCount;
+    const frameHeight = image.naturalHeight;
+    const boxWidth = avatar.clientWidth || 82;
+    const boxHeight = avatar.clientHeight || 96;
+    const scale = Math.min(boxWidth / frameWidth, boxHeight / frameHeight);
+    const renderedFrameWidth = frameWidth * scale;
+    const renderedHeight = frameHeight * scale;
+    const frame = Math.max(0, Math.min(2, Number(image.dataset.frame) || 0));
+
+    image.style.width = `${image.naturalWidth * scale}px`;
+    image.style.height = `${renderedHeight}px`;
+    image.style.left = `${(boxWidth - renderedFrameWidth) / 2 - frame * renderedFrameWidth}px`;
+    image.style.top = `${(boxHeight - renderedHeight) / 2}px`;
+  }
+
   function setPose(key = 'idle', frame = 0) {
     const safeKey = FALLBACK_ANIMATION[key] ? key : 'idle';
     const safeFrame = Math.max(0, Math.min(2, Number(frame) || 0));
@@ -80,9 +99,12 @@
     image.dataset.mode = safeKey;
     image.dataset.frame = String(safeFrame);
     pet.dataset.radyMode = `${safeKey}:${safeFrame}`;
-    image.style.setProperty('--rady-frame', String(safeFrame));
 
-    if (image.getAttribute('src') !== src) image.src = src;
+    if (image.getAttribute('src') !== src) {
+      image.src = src;
+    } else {
+      layoutFrame();
+    }
   }
 
   function sample(items) {
@@ -191,6 +213,8 @@
     setPose(...POSES[poseIndex]);
   }
 
+  image.addEventListener('load', layoutFrame);
+
   image.addEventListener('error', () => {
     if (image.dataset.asset === 'animation.idle' && image.dataset.frame === '0') return;
     poseIndex = 0;
@@ -226,6 +250,7 @@
   pet.addEventListener('pointercancel', endDrag);
 
   window.addEventListener('resize', () => {
+    layoutFrame();
     if (!pet.style.left) return;
     const rect = pet.getBoundingClientRect();
     setPosition(rect.left, rect.top, true);
