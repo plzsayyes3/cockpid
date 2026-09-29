@@ -27,7 +27,8 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image
+          from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
           root = Path("workbench/assets/rady/web")
           out = Path("workbench/assets/rady/static")
