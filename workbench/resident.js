@@ -7,19 +7,9 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-hq-static-final1';
+  const RESIDENT_VERSION = '20260929-rady-idle-sprite1';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-
-  // Verified HQ standalone frames only.
-  // rady_01..03 are bad crops and rady_10 is invalid, so they are intentionally excluded.
-  const FRAMES = [
-    './assets/rady/static/rady_04.png',
-    './assets/rady/static/rady_05.png',
-    './assets/rady/static/rady_06.png',
-    './assets/rady/static/rady_07.png',
-    './assets/rady/static/rady_08.png',
-    './assets/rady/static/rady_09.png'
-  ];
+  const SPRITE_PATH = './assets/rady/web/animation_01_idle_hq.png?v=20260925-idle-hq1';
 
   const RADY_LINES = [
     'それ、いまやる？',
@@ -40,25 +30,17 @@
     '静かなうちに、ひとつ考える？'
   ];
 
-  let frameIndex = 0;
   let lastSpeech = '';
   let speechTimer = null;
   let drag = null;
 
   avatar.innerHTML = '';
-  const image = document.createElement('img');
-  image.id = 'residentImage';
-  image.className = 'resident-image';
-  image.alt = 'らでぃ';
-  image.draggable = false;
-  avatar.appendChild(image);
-
-  function setFrameIndex(index) {
-    frameIndex = ((Number(index) || 0) % FRAMES.length + FRAMES.length) % FRAMES.length;
-    image.src = FRAMES[frameIndex];
-    image.dataset.frame = String(frameIndex + 1);
-    pet.dataset.radyMode = `static:${frameIndex + 1}`;
-  }
+  const sprite = document.createElement('div');
+  sprite.id = 'residentSprite';
+  sprite.className = 'resident-sprite';
+  sprite.setAttribute('aria-hidden', 'true');
+  sprite.style.setProperty('--rady-sprite', `url("${SPRITE_PATH}")`);
+  avatar.appendChild(sprite);
 
   function sample(items) {
     return items.length ? items[Math.floor(Math.random() * items.length)] : '';
@@ -84,6 +66,7 @@
       messages.push(`これ、拾ってみる？「${title}」`);
       messages.push(`ON HANDに「${title}」がいる。`);
     }
+
     const calendarTitle = sample(visibleTexts('.timeline-event-title, .anytime-item'));
     if (calendarTitle) messages.push(`今日の予定に「${clip(calendarTitle, 34)}」があるよ。`);
     if (capture?.value.trim()) messages.push('そのメモ、いま机に置いておく？');
@@ -104,10 +87,6 @@
     say.classList.add('show');
     clearTimeout(speechTimer);
     speechTimer = setTimeout(() => say.classList.remove('show'), 4200);
-  }
-
-  function nextFrame() {
-    setFrameIndex(frameIndex + 1);
   }
 
   function clampPosition(x, y) {
@@ -148,16 +127,10 @@
       const rect = pet.getBoundingClientRect();
       setPosition(rect.left, rect.top, true);
     } else {
-      nextFrame();
       speak();
     }
     drag = null;
   }
-
-  image.addEventListener('error', () => {
-    if (frameIndex === 0) return;
-    setFrameIndex(0);
-  });
 
   pet.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -193,18 +166,13 @@
     setPosition(rect.left, rect.top, true);
   });
 
-  function setFrame(frame) {
-    setFrameIndex((Number(frame) || 1) - 1);
-  }
-
   function noop() {}
 
   restorePosition();
-  setFrameIndex(0);
 
   window.COCKPID_RESIDENT = Object.freeze({
     speak,
-    setFrame,
+    setFrame: noop,
     press: noop,
     flashColor: noop,
     thinking: noop,
@@ -215,23 +183,21 @@
     sleep: noop,
     wake: noop,
     version: RESIDENT_VERSION,
-    getMode: () => pet.dataset.radyMode || 'static:1',
+    getMode: () => 'idle-sprite',
     debug: () => ({
-      mode: pet.dataset.radyMode || 'static:1',
-      frame: frameIndex + 1,
-      imageSrc: image.src,
-      naturalWidth: image.naturalWidth,
-      naturalHeight: image.naturalHeight,
-      staticMode: true,
-      standaloneFiles: true,
-      verifiedFramesOnly: true
+      mode: 'idle-sprite',
+      sprite: SPRITE_PATH,
+      frameCount: 3,
+      cssAnimation: true,
+      canvas: false,
+      dataUrlCache: false
     }),
     testThinking: noop
   });
 
   console.info('[Rady] resident boot', RESIDENT_VERSION, {
-    staticMode: true,
-    standaloneFiles: true,
-    verifiedFramesOnly: true
+    sprite: SPRITE_PATH,
+    frameCount: 3,
+    cssAnimation: true
   });
 })();
