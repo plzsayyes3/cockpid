@@ -7,9 +7,16 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-pixel-idle1';
+  const RESIDENT_VERSION = '20260929-rady-hq-static-final1';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-  const FRAMES = ['./assets/rady/pixel/rady_idle_01.png'];
+  const FRAMES = [
+    './assets/rady/static/rady_04.png',
+    './assets/rady/static/rady_05.png',
+    './assets/rady/static/rady_06.png',
+    './assets/rady/static/rady_07.png',
+    './assets/rady/static/rady_08.png',
+    './assets/rady/static/rady_09.png'
+  ];
 
   const RADY_LINES = [
     'それ、いまやる？',
@@ -213,10 +220,11 @@
       naturalWidth: image.naturalWidth,
       naturalHeight: image.naturalHeight,
       staticMode: true,
-      standaloneFiles: true
+      standaloneFiles: true,
+      verifiedFramesOnly: true
     }),
     testThinking: noop
   });
 
-  console.info('[Rady] resident boot', RESIDENT_VERSION, { staticMode: true, standaloneFiles: true });
+  console.info('[Rady] resident boot', RESIDENT_VERSION, { staticMode: true, standaloneFiles: true, verifiedFramesOnly: true });
 })();
