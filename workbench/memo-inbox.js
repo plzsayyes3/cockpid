@@ -392,22 +392,7 @@
   }
 
   function escapeRegExp(value) {
-    return String(value).replace(/[.*+?^$()|[\]\\{}]/g, '\\  function markerFor(entry) {
-    return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)}:${encodeURIComponent(entry.sha)} -->`;
-  }
-
-  function visibleEntry(entry) {
-    return `- ${entry.timeStr} ${entry.body}`;
-  }
-
-  function formattedEntry(entry) {
-    return `${visibleEntry(entry)}\n  ${markerFor(entry)}`;
-  }
-
-  function alreadyMerged(content, entry) {
-    return content.includes(markerFor(entry));
-  }
-');
+    return String(value).replace(/[.*+?^$()|[\]\\{}]/g, '\\$&');
   }
 
   function classifyDailyEntry(content, entry) {
