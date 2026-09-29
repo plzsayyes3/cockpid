@@ -1,0 +1,65 @@
+name: Split Rady static frames
+
+on:
+  push:
+    paths:
+      - ".github/workflows/split-rady-static.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Pillow
+        run: python -m pip install --quiet pillow
+
+      - name: Split HQ sprites into standalone PNGs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          root = Path("workbench/assets/rady/web")
+          out = Path("workbench/assets/rady/static")
+          out.mkdir(parents=True, exist_ok=True)
+
+          jobs = [
+              ("animation_01_idle_hq.png", [1, 2, 3]),
+              ("animation_06_click_hq.png", [4, 5, 6]),
+              ("animation_03_thinking_hq.png", [7, 8, 9]),
+              ("animation_02_walk_hq.png", [10]),
+          ]
+
+          for filename, numbers in jobs:
+              image = Image.open(root / filename).convert("RGBA")
+              if image.width % 3:
+                  raise RuntimeError(f"{filename}: width {image.width} is not divisible by 3")
+              frame_w = image.width // 3
+              for frame_index, number in enumerate(numbers):
+                  box = (frame_index * frame_w, 0, (frame_index + 1) * frame_w, image.height)
+                  frame = image.crop(box)
+                  frame.save(out / f"rady_{number:02d}.png", optimize=True)
+                  print(number, filename, box, frame.size)
+          PY
+
+      - name: Commit generated frames
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add workbench/assets/rady/static/rady_*.png
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "workbench: add standalone Rady static frames"
+          git push
