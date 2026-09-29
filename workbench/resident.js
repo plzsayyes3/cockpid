@@ -7,31 +7,12 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-hq-static3';
+  const RESIDENT_VERSION = '20260929-rady-static-files1';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-  const MANIFEST_PATH = './assets/rady/manifest.json';
-
-  const FALLBACK_ANIMATION = {
-    idle: 'animation_01_idle_hq.png?v=20260925-idle-hq1',
-    walk: 'animation_02_walk_hq.png?v=20260925-walk-hq1',
-    thinking: 'animation_03_thinking_hq.png?v=20260925-thinking-hq1',
-    click: 'animation_06_click_hq.png?v=20260925-click-hq1'
-  };
-
-  // HQ sprite sheets are three frames wide. We show exactly one frame at a time.
-  // No canvas splitting, no DataURL cache and no animation timer.
-  const POSES = [
-    ['idle', 0],
-    ['idle', 1],
-    ['idle', 2],
-    ['click', 0],
-    ['click', 1],
-    ['click', 2],
-    ['thinking', 0],
-    ['thinking', 1],
-    ['thinking', 2],
-    ['walk', 1]
-  ];
+  const STATIC_BASE = './assets/rady/static/';
+  const FRAMES = Array.from({ length: 10 }, (_, index) =>
+    `${STATIC_BASE}rady_${String(index + 1).padStart(2, '0')}.png`
+  );
 
   const RADY_LINES = [
     'それ、いまやる？',
@@ -52,8 +33,7 @@
     '静かなうちに、ひとつ考える？'
   ];
 
-  let manifest = { basePath: './assets/rady/web/', groups: { animation: FALLBACK_ANIMATION } };
-  let poseIndex = 0;
+  let frameIndex = 0;
   let lastSpeech = '';
   let speechTimer = null;
   let drag = null;
@@ -61,50 +41,16 @@
   avatar.innerHTML = '';
   const image = document.createElement('img');
   image.id = 'residentImage';
-  image.className = 'resident-image resident-sprite';
+  image.className = 'resident-image';
   image.alt = 'らでぃ';
   image.draggable = false;
   avatar.appendChild(image);
 
-  function animationAsset(key) {
-    const file = manifest?.groups?.animation?.[key] || FALLBACK_ANIMATION[key] || FALLBACK_ANIMATION.idle;
-    return `${String(manifest?.basePath || './assets/rady/web/')}${file}`;
-  }
-
-  function layoutFrame() {
-    if (!image.naturalWidth || !image.naturalHeight) return;
-
-    const frameCount = 3;
-    const frameWidth = image.naturalWidth / frameCount;
-    const frameHeight = image.naturalHeight;
-    const boxWidth = avatar.clientWidth || 82;
-    const boxHeight = avatar.clientHeight || 96;
-    const scale = Math.min(boxWidth / frameWidth, boxHeight / frameHeight);
-    const renderedFrameWidth = frameWidth * scale;
-    const renderedHeight = frameHeight * scale;
-    const frame = Math.max(0, Math.min(2, Number(image.dataset.frame) || 0));
-
-    image.style.width = `${image.naturalWidth * scale}px`;
-    image.style.height = `${renderedHeight}px`;
-    image.style.left = `${(boxWidth - renderedFrameWidth) / 2 - frame * renderedFrameWidth}px`;
-    image.style.top = `${(boxHeight - renderedHeight) / 2}px`;
-  }
-
-  function setPose(key = 'idle', frame = 0) {
-    const safeKey = FALLBACK_ANIMATION[key] ? key : 'idle';
-    const safeFrame = Math.max(0, Math.min(2, Number(frame) || 0));
-    const src = animationAsset(safeKey);
-
-    image.dataset.asset = `animation.${safeKey}`;
-    image.dataset.mode = safeKey;
-    image.dataset.frame = String(safeFrame);
-    pet.dataset.radyMode = `${safeKey}:${safeFrame}`;
-
-    if (image.getAttribute('src') !== src) {
-      image.src = src;
-    } else {
-      layoutFrame();
-    }
+  function setFrameIndex(index) {
+    frameIndex = ((Number(index) || 0) % FRAMES.length + FRAMES.length) % FRAMES.length;
+    image.src = FRAMES[frameIndex];
+    image.dataset.frame = String(frameIndex + 1);
+    pet.dataset.radyMode = `static:${frameIndex + 1}`;
   }
 
   function sample(items) {
@@ -131,7 +77,6 @@
       messages.push(`これ、拾ってみる？「${title}」`);
       messages.push(`ON HANDに「${title}」がいる。`);
     }
-
     const calendarTitle = sample(visibleTexts('.timeline-event-title, .anytime-item'));
     if (calendarTitle) messages.push(`今日の予定に「${clip(calendarTitle, 34)}」があるよ。`);
     if (capture?.value.trim()) messages.push('そのメモ、いま机に置いておく？');
@@ -154,9 +99,8 @@
     speechTimer = setTimeout(() => say.classList.remove('show'), 4200);
   }
 
-  function nextPose() {
-    poseIndex = (poseIndex + 1) % POSES.length;
-    setPose(...POSES[poseIndex]);
+  function nextFrame() {
+    setFrameIndex(frameIndex + 1);
   }
 
   function clampPosition(x, y) {
@@ -181,7 +125,9 @@
   function restorePosition() {
     try {
       const saved = JSON.parse(localStorage.getItem(POSITION_KEY) || 'null');
-      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) setPosition(saved.x, saved.y);
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        setPosition(saved.x, saved.y);
+      }
     } catch (_) {}
   }
 
@@ -195,30 +141,15 @@
       const rect = pet.getBoundingClientRect();
       setPosition(rect.left, rect.top, true);
     } else {
-      nextPose();
+      nextFrame();
       speak();
     }
     drag = null;
   }
 
-  async function loadManifest() {
-    try {
-      const response = await fetch(MANIFEST_PATH, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`Rady manifest ${response.status}`);
-      const data = await response.json();
-      if (data?.groups?.animation) manifest = data;
-    } catch (error) {
-      console.warn('[Rady] manifest fallback', error);
-    }
-    setPose(...POSES[poseIndex]);
-  }
-
-  image.addEventListener('load', layoutFrame);
-
   image.addEventListener('error', () => {
-    if (image.dataset.asset === 'animation.idle' && image.dataset.frame === '0') return;
-    poseIndex = 0;
-    setPose('idle', 0);
+    if (frameIndex === 0) return;
+    setFrameIndex(0);
   });
 
   pet.addEventListener('pointerdown', (event) => {
@@ -250,21 +181,19 @@
   pet.addEventListener('pointercancel', endDrag);
 
   window.addEventListener('resize', () => {
-    layoutFrame();
     if (!pet.style.left) return;
     const rect = pet.getBoundingClientRect();
     setPosition(rect.left, rect.top, true);
   });
 
   function setFrame(frame) {
-    poseIndex = Math.abs(Number(frame) || 0) % POSES.length;
-    setPose(...POSES[poseIndex]);
+    setFrameIndex((Number(frame) || 1) - 1);
   }
 
   function noop() {}
 
   restorePosition();
-  loadManifest();
+  setFrameIndex(0);
 
   window.COCKPID_RESIDENT = Object.freeze({
     speak,
@@ -279,19 +208,18 @@
     sleep: noop,
     wake: noop,
     version: RESIDENT_VERSION,
-    getMode: () => pet.dataset.radyMode || 'idle:0',
+    getMode: () => pet.dataset.radyMode || 'static:1',
     debug: () => ({
-      mode: pet.dataset.radyMode || 'idle:0',
-      asset: image.dataset.asset || '',
-      frame: Number(image.dataset.frame || 0),
+      mode: pet.dataset.radyMode || 'static:1',
+      frame: frameIndex + 1,
       imageSrc: image.src,
       naturalWidth: image.naturalWidth,
       naturalHeight: image.naturalHeight,
       staticMode: true,
-      hqSprite: true
+      standaloneFiles: true
     }),
     testThinking: noop
   });
 
-  console.info('[Rady] resident boot', RESIDENT_VERSION, { staticMode: true, hqSprite: true });
+  console.info('[Rady] resident boot', RESIDENT_VERSION, { staticMode: true, standaloneFiles: true });
 })();
