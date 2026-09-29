@@ -556,3 +556,99 @@ input { font: inherit; }
   .stan-menu-backdrop { transition: none; }
   .stan-stage.is-listening .stan-speech-label::before { animation: none; }
 }
+
+
+/* Digital pet selector: STAN / RADY */
+.rady-pet {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.rady-pet img {
+  display: block;
+  width: clamp(128px, 22vw, 176px);
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 14px 18px rgba(0,0,0,.26));
+  transform: translateY(-4vh);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.stan-stage[data-character='rady'] .stan-face {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stan-stage[data-character='rady'] .rady-pet {
+  opacity: 1;
+}
+
+.stan-stage[data-character='rady'] .camera-toggle {
+  display: none;
+}
+
+.character-select {
+  display: grid;
+  gap: 9px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(196, 231, 246, .08);
+}
+
+.character-select-label {
+  color: rgba(213, 232, 241, .58);
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.character-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.character-choice {
+  min-height: 72px;
+  padding: 10px 8px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid rgba(196, 231, 246, .10);
+  color: rgba(225, 240, 247, .62);
+  background: rgba(10, 20, 27, .42);
+  cursor: pointer;
+}
+
+.character-choice b {
+  color: rgba(235, 247, 252, .88);
+  font-size: 11px;
+  letter-spacing: .08em;
+}
+
+.character-choice small {
+  color: rgba(183, 207, 219, .38);
+  font-size: 7px;
+}
+
+.character-choice.is-active {
+  border-color: rgba(157, 220, 198, .42);
+  background: rgba(157, 220, 198, .05);
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  .rady-pet img {
+    width: clamp(120px, 38vw, 154px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rady-pet { transition: none; }
+}
