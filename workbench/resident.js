@@ -7,9 +7,9 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-idle-sprite1';
+  const RESIDENT_VERSION = '20260929-rady-click-sprite1';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-  const SPRITE_PATH = './assets/rady/web/animation_01_idle_hq.png?v=20260925-idle-hq1';
+  const SPRITE_PATH = './assets/rady/web/animation_06_click_hq.png?v=20260925-click-hq1';
 
   const RADY_LINES = [
     'それ、いまやる？',
