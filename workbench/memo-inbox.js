@@ -367,7 +367,32 @@
     return { fileName: file.name, path, sha: detail.sha, rawText, body: indentedBody, ...parsed };
   }
 
-  function markerFor(entry) {
+  function sourceMarkerFor(entry) {
+    return `<!-- inbox-source:${encodeURIComponent(entry.fileName)} -->`;
+  }
+
+  function legacyMarkerFor(entry) {
+    return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)}:${encodeURIComponent(entry.sha)} -->`;
+  }
+
+  function visibleEntry(entry) {
+    return `- ${entry.timeStr} ${entry.body}`;
+  }
+
+  function formattedEntry(entry) {
+    return `${visibleEntry(entry)}\n  ${sourceMarkerFor(entry)}\n  ${legacyMarkerFor(entry)}`;
+  }
+
+  function normalizeForCompare(value) {
+    return String(value ?? '')
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n[ \t]*/g, '\n')
+      .trim();
+  }
+
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^$()|[\]\\{}]/g, '\\  function markerFor(entry) {
     return `<!-- workbench-memo:${encodeURIComponent(entry.fileName)}:${encodeURIComponent(entry.sha)} -->`;
   }
 
@@ -381,6 +406,30 @@
 
   function alreadyMerged(content, entry) {
     return content.includes(markerFor(entry));
+  }
+');
+  }
+
+  function classifyDailyEntry(content, entry) {
+    const text = String(content || '');
+    if (text.includes(sourceMarkerFor(entry)) || text.includes(legacyMarkerFor(entry))) {
+      return { state: 'existing-id', reason: 'ID一致' };
+    }
+    const normalizedDaily = normalizeForCompare(text);
+    const normalizedEntry = normalizeForCompare(visibleEntry(entry));
+    if (normalizedEntry && normalizedDaily.includes(normalizedEntry)) {
+      return { state: 'existing-content', reason: '時刻＋本文一致' };
+    }
+    const sameTime = new RegExp(`(^|\\n)\\s*-\\s*${escapeRegExp(entry.timeStr)}(?:\\s|$)`, 'm').test(text);
+    if (sameTime) {
+      return { state: 'ambiguous', reason: '同時刻の別内容あり' };
+    }
+    return { state: 'pending', reason: '未処理' };
+  }
+
+  function alreadyMerged(content, entry) {
+    const state = classifyDailyEntry(content, entry).state;
+    return state === 'existing-id' || state === 'existing-content';
   }
 
   function insertUnderHeading(content, appendBlock) {
@@ -460,6 +509,16 @@
       return;
     }
 
+    const inbox = inboxSource();
+    const daily = dailySource();
+    if (unsafeSourceRelationship(inbox, daily)) {
+      setMergeStatus('安全のため統合を停止しました。Inbox / Daily の保存先設定を確認してください。', true);
+      return;
+    }
+
+    setMergeStatus('Inboxの最新状態を取得しています…');
+    loaded = false;
+    await loadInbox(true);
     const files = currentFiles.filter(isMergeCandidateFile);
     if (!files.length) {
       setMergeStatus(currentFiles.length ? '統合対象のMemoはありません。' : '統合対象はありません。');
@@ -470,56 +529,103 @@
       return;
     }
 
-    const inbox = inboxSource();
-    const daily = dailySource();
-    if (unsafeSourceRelationship(inbox, daily)) {
-      setMergeStatus('安全のため統合を停止しました。Inbox / Daily の保存先設定を確認してください。', true);
-      return;
-    }
-
-    const approved = window.confirm(`${inbox.repo}/${inbox.dir} の ${files.length} 件を ${daily.repo}/${daily.dir} の「${TARGET_HEADING}」へ統合し、archiveへ退避します。`);
-    if (!approved) return;
-
     const mergeButton = document.getElementById('memoInboxMerge');
     merging = true;
     if (mergeButton) mergeButton.disabled = true;
     if (refreshButton) refreshButton.disabled = true;
     syncTopMergeButton();
-    setMergeStatus('メモを読み込んでいます…');
 
     try {
       const entries = [];
       for (let index = 0; index < files.length; index += 1) {
-        setMergeStatus(`読み込み ${index + 1}/${files.length}…`);
+        setMergeStatus(`照合準備 ${index + 1}/${files.length}…`);
         entries.push(await readMemo(files[index], inbox));
       }
 
-      const groups = new Map();
-      entries.forEach((entry) => {
-        if (!groups.has(entry.dateStr)) groups.set(entry.dateStr, []);
-        groups.get(entry.dateStr).push(entry);
-      });
-      groups.forEach((group) => group.sort((a, b) => a.fileName.localeCompare(b.fileName)));
-
-      const dates = [...groups.keys()].sort();
-      setMergeStatus('Dailyの存在を確認しています…');
+      const dates = [...new Set(entries.map((entry) => entry.dateStr))].sort();
+      setMergeStatus('Dailyの存在と既存内容を照合しています…');
       await assertDailyFilesExist(dates, daily);
+
+      const dailyCache = new Map();
+      for (const dateStr of dates) {
+        const path = joinPath(daily.dir, `${dateStr}.md`);
+        const file = await gh(path, daily.repo);
+        dailyCache.set(dateStr, file?.content ? decodeContent(file.content) : '');
+      }
+
+      const reconciliation = entries.map((entry) => ({
+        entry,
+        ...classifyDailyEntry(dailyCache.get(entry.dateStr) || '', entry)
+      }));
+      const pendingCount = reconciliation.filter((row) => row.state === 'pending').length;
+      const existingCount = reconciliation.filter((row) => row.state === 'existing-id' || row.state === 'existing-content').length;
+      const ambiguousCount = reconciliation.filter((row) => row.state === 'ambiguous').length;
+      setMergeStatus(`照合 · 未処理 ${pendingCount} / Daily既存 ${existingCount} / 要確認 ${ambiguousCount}`);
+
+      const snapshotSignature = files.map((file) => `${file.name}:${file.sha || ''}`).sort().join('|');
+      const approved = window.confirm(
+        `Inbox最新照合: ${files.length}件\n\n未処理: ${pendingCount}件\nDaily既存: ${existingCount}件\n要確認: ${ambiguousCount}件\n\n未処理はDailyへ追記し、Daily既存は追記せずarchiveします。要確認はInboxに残します。続行しますか？`
+      );
+      if (!approved) return;
+
+      setMergeStatus('実行直前にInboxを再確認しています…');
+      const latestRows = await gh(inbox.dir, inbox.repo);
+      const latestCandidates = (Array.isArray(latestRows) ? latestRows : []).filter(isMergeCandidateFile);
+      const latestSignature = latestCandidates.map((file) => `${file.name}:${file.sha || ''}`).sort().join('|');
+      if (latestSignature !== snapshotSignature) {
+        setMergeStatus('停止 · 確認中にInboxが変更されました。最新状態を再表示しました。', true);
+        loaded = false;
+        await loadInbox(true);
+        return;
+      }
 
       let added = 0;
       let archived = 0;
-      for (let dateIndex = 0; dateIndex < dates.length; dateIndex += 1) {
-        const dateStr = dates[dateIndex];
-        const group = groups.get(dateStr);
-        setMergeStatus(`Daily更新 ${dateIndex + 1}/${dates.length} · ${dateStr}…`);
-        added += await writeDaily(dateStr, group, daily);
-        for (const entry of group) {
-          setMergeStatus(`archive ${archived + 1}/${entries.length}…`);
-          await archiveMemo(entry, inbox);
-          archived += 1;
+      let skipped = 0;
+      let ambiguous = 0;
+
+      for (let index = 0; index < entries.length; index += 1) {
+        const entry = entries[index];
+        setMergeStatus(`処理 ${index + 1}/${entries.length} · ${entry.fileName}`);
+
+        const latestInbox = await gh(entry.path, inbox.repo);
+        if (!latestInbox || Array.isArray(latestInbox) || !latestInbox.sha) {
+          skipped += 1;
+          continue;
         }
+        if (latestInbox.sha !== entry.sha) {
+          skipped += 1;
+          continue;
+        }
+
+        const dailyPath = joinPath(daily.dir, `${entry.dateStr}.md`);
+        const latestDaily = await gh(dailyPath, daily.repo);
+        if (!latestDaily || Array.isArray(latestDaily) || !latestDaily.sha) throw missingDailyError(entry.dateStr);
+        const latestDailyContent = latestDaily.content ? decodeContent(latestDaily.content) : '';
+        const classification = classifyDailyEntry(latestDailyContent, entry);
+
+        if (classification.state === 'ambiguous') {
+          ambiguous += 1;
+          continue;
+        }
+        if (classification.state === 'pending') {
+          added += await writeDaily(entry.dateStr, [entry], daily);
+        }
+
+        const afterWriteInbox = await gh(entry.path, inbox.repo);
+        if (!afterWriteInbox || Array.isArray(afterWriteInbox) || !afterWriteInbox.sha) {
+          skipped += 1;
+          continue;
+        }
+        if (afterWriteInbox.sha !== entry.sha) {
+          skipped += 1;
+          continue;
+        }
+        await archiveMemo(entry, inbox);
+        archived += 1;
       }
 
-      setMergeStatus(`完了 · ${added}件追記 / ${archived}件archive`);
+      setMergeStatus(`完了 · ${added}件追記 / ${archived}件archive / ${ambiguous}件要確認 / ${skipped}件変更検知`);
       loaded = false;
       await loadInbox(true);
     } catch (error) {
