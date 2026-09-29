@@ -7,12 +7,9 @@
   const capture = document.getElementById('captureText');
   if (!pet || !say || !avatar) return;
 
-  const RESIDENT_VERSION = '20260929-rady-static-files1';
+  const RESIDENT_VERSION = '20260929-rady-pixel-idle1';
   const POSITION_KEY = 'cockpid.workbench.pet.position.v1';
-  const STATIC_BASE = './assets/rady/static/';
-  const FRAMES = Array.from({ length: 10 }, (_, index) =>
-    `${STATIC_BASE}rady_${String(index + 1).padStart(2, '0')}.png`
-  );
+  const FRAMES = ['./assets/rady/pixel/rady_idle_01.png'];
 
   const RADY_LINES = [
     'それ、いまやる？',
