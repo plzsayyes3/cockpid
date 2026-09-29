@@ -35,18 +35,18 @@ jobs:
           out.mkdir(parents=True, exist_ok=True)
 
           jobs = [
-              ("animation_01_idle_hq.png", [1, 2, 3]),
-              ("animation_06_click_hq.png", [4, 5, 6]),
-              ("animation_03_thinking_hq.png", [7, 8, 9]),
-              ("animation_02_walk_hq.png", [10]),
+              ("animation_01_idle_hq.png", [(1, 0), (2, 1), (3, 2)]),
+              ("animation_06_click_hq.png", [(4, 0), (5, 1), (6, 2)]),
+              ("animation_03_thinking_hq.png", [(7, 0), (8, 1), (9, 2)]),
+              ("animation_02_walk_hq.png", [(10, 1)]),
           ]
 
-          for filename, numbers in jobs:
+          for filename, frames in jobs:
               image = Image.open(root / filename).convert("RGBA")
               if image.width % 3:
                   raise RuntimeError(f"{filename}: width {image.width} is not divisible by 3")
               frame_w = image.width // 3
-              for frame_index, number in enumerate(numbers):
+              for number, frame_index in frames:
                   box = (frame_index * frame_w, 0, (frame_index + 1) * frame_w, image.height)
                   frame = image.crop(box)
                   frame.save(out / f"rady_{number:02d}.png", optimize=True)
