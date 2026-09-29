@@ -671,7 +671,6 @@ input { font: inherit; }
 
 .rady-sky,
 .rady-stars,
-.rady-horizon,
 .rady-ground {
   position: absolute;
   inset: 0;
@@ -706,15 +705,6 @@ input { font: inherit; }
   background: #fff3a9;
   box-shadow: 0 0 28px rgba(255,235,151,.32);
   transition: left 60s linear, top 60s linear, background 900ms ease, box-shadow 900ms ease;
-}
-
-.rady-horizon {
-  top: auto;
-  bottom: 24%;
-  height: 18%;
-  background:
-    linear-gradient(155deg, transparent 0 35%, rgba(71,112,83,.34) 36% 53%, transparent 54%) 0 100% / 42% 100% no-repeat,
-    linear-gradient(205deg, transparent 0 38%, rgba(65,105,78,.28) 39% 56%, transparent 57%) 100% 100% / 48% 100% no-repeat;
 }
 
 .rady-ground {
@@ -801,9 +791,7 @@ input { font: inherit; }
 
 @media (max-width: 600px) and (orientation: portrait) {
   .rady-clock { top: max(16px, env(safe-area-inset-top)); }
-  .rady-clock-time { font-size: 21px; }
-  .rady-horizon { bottom: 22%; }
-  .rady-ground { top: 78%; }
+  .rady-clock-time { font-size: 21px; }  .rady-ground { top: 78%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
