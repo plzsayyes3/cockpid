@@ -1,6 +1,7 @@
 const STORAGE_PREFIX = 'taskliner_taskchute_line_v1:';
 const marquee = document.getElementById('radyTaskMarquee');
 const textNode = document.getElementById('radyTaskMarqueeText');
+const nextTaskNode = document.getElementById('radyNextTask');
 
 if (marquee && textNode) {
   const REFRESH_INTERVAL_MS = 90 * 1000;
@@ -26,12 +27,32 @@ if (marquee && textNode) {
     }
   }
 
-  function runningTask() {
+  function snapshot() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    const candidates = [...storedTasksFor(today), ...storedTasksFor(yesterday)];
-    return candidates.find((task) => task.start && !task.end && !task.completed && !task.deferred) || null;
+    const todayTasks = storedTasksFor(today);
+    const yesterdayTasks = storedTasksFor(yesterday);
+    const running =
+      todayTasks.find((task) => task.start && !task.end && !task.completed && !task.deferred) ||
+      yesterdayTasks.find((task) => task.start && !task.end && !task.completed && !task.deferred) ||
+      null;
+    return { todayTasks, yesterdayTasks, running };
+  }
+
+  function isTodo(task) {
+    return !!task && !task.start && !task.end && !task.completed && !task.deferred;
+  }
+
+  function nextTask(state) {
+    const { todayTasks, yesterdayTasks, running } = state;
+    if (!running) return todayTasks.find(isTodo) || null;
+
+    const source = todayTasks.includes(running) ? todayTasks : yesterdayTasks;
+    const currentIndex = source.indexOf(running);
+    const after = currentIndex >= 0 ? source.slice(currentIndex + 1).find(isTodo) : null;
+    if (after) return after;
+    return source === yesterdayTasks ? todayTasks.find(isTodo) || null : null;
   }
 
   function cleanTitle(value) {
@@ -51,8 +72,7 @@ if (marquee && textNode) {
     return `${Math.floor(total / 60)}時${pad(total % 60)}分`;
   }
 
-  function message() {
-    const task = runningTask();
+  function message(task) {
     if (!task) return 'ただいま、実行中のタスクはありません。';
     const title = cleanTitle(task.title) || '名称未設定のタスク';
     const end = expectedEnd(task.start, task.estimate);
@@ -62,10 +82,19 @@ if (marquee && textNode) {
   }
 
   function update() {
-    const next = message();
-    if (textNode.textContent === next) return;
-    textNode.textContent = next;
-    marquee.setAttribute('aria-label', next);
+    const state = snapshot();
+    const current = message(state.running);
+    if (textNode.textContent !== current) {
+      textNode.textContent = current;
+      marquee.setAttribute('aria-label', current);
+    }
+
+    if (nextTaskNode) {
+      const upcoming = nextTask(state);
+      const title = upcoming ? cleanTitle(upcoming.title) : '';
+      nextTaskNode.textContent = title ? `NEXT · ${title}` : '';
+      nextTaskNode.hidden = !title;
+    }
   }
 
   function scheduleUpdates() {
