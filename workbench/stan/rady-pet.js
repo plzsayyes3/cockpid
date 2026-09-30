@@ -3,7 +3,7 @@ const radyPet = document.getElementById('radyPet');
 const radySprite = radyPet?.querySelector('img');
 
 if (stage && radyPet && radySprite) {
-  const frameUrl = (name) => new URL(`../assets/rady/pixel/${name}`, import.meta.url).href;
+  const frameUrl = (name) => new URL(`../assets/rady/pixel/${name}?v=20260930-rady-fix2`, import.meta.url).href;
   const FRAMES = Object.freeze({
     idle: frameUrl('rady_idle_01.png'),
     blink: frameUrl('rady_idle_02.png'),
