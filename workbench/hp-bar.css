@@ -30,6 +30,7 @@
 }
 .hp-track,
 .hp-editor-track{
+  display:block;
   position:relative;
   width:100%;
   overflow:hidden;
