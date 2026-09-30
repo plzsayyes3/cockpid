@@ -44,7 +44,7 @@ if (stage && radyPet && radySprite) {
 
   function setPosition(x, bob = 0) {
     currentX = x;
-    radySprite.style.transform = `translate(${Math.round(currentX)}px, calc(-4vh + ${bob}px))`;
+    radySprite.style.transform = `translate(calc(-50% + ${Math.round(currentX)}px), calc(-87.5% + ${bob}px))`;
   }
 
   function movementLimit() {

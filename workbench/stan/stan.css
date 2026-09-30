@@ -33,6 +33,7 @@ a,
 input { font: inherit; }
 
 .stan-stage {
+  --rady-ground-top: 76%;
   position: relative;
   width: 100vw;
   height: 100dvh;
@@ -563,21 +564,23 @@ input { font: inherit; }
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: grid;
-  place-items: center;
+  display: block;
   pointer-events: none;
   opacity: 0;
   transition: opacity 160ms ease;
 }
 
 .rady-pet img {
+  position: absolute;
+  left: 50%;
+  top: var(--rady-ground-top);
   display: block;
   width: clamp(128px, 22vw, 176px);
   height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   filter: drop-shadow(0 14px 18px rgba(0,0,0,.26));
-  transform: translateY(-4vh);
+  transform: translate(-50%, -87.5%);
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -708,7 +711,7 @@ input { font: inherit; }
 }
 
 .rady-ground {
-  top: 76%;
+  top: var(--rady-ground-top);
   background:
     linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
@@ -791,7 +794,7 @@ input { font: inherit; }
 
 @media (max-width: 600px) and (orientation: portrait) {
   .rady-clock { top: max(40px, calc(env(safe-area-inset-top) + 34px)); }
-  .rady-clock-time { font-size: 21px; }  .rady-ground { top: 78%; }
+  .rady-clock-time { font-size: 21px; }  .stan-stage { --rady-ground-top: 78%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

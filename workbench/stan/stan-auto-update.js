@@ -1,10 +1,11 @@
 (() => {
   'use strict';
 
-  const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+  const CHECK_INTERVAL_MS = 90 * 1000;
+  const UPDATE_SETTLE_MS = 30 * 1000;
   const IDLE_RETRY_MS = 3000;
   const VERSION_KEY = 'cockpid.stan.last-seen-version.v1';
-  const COMMITS_URL = 'https://api.github.com/repos/plzsayyes3/cockpid/commits?path=workbench%2Fstan&per_page=1';
+  const COMMITS_URL = 'https://api.github.com/repos/plzsayyes3/cockpid/commits/main';
 
   const stage = document.getElementById('stanStage');
   const transcript = document.getElementById('stanTranscript');
@@ -14,6 +15,7 @@
   let checking = false;
   let pendingSha = '';
   let idleRetryTimer = null;
+  let settleTimer = null;
 
   function readSeenSha() {
     try {
@@ -50,6 +52,7 @@
     writeSeenSha(sha);
     const url = new URL(window.location.href);
     url.searchParams.set('_stan_update', sha.slice(0, 12));
+    url.searchParams.set('_stan_refresh', Date.now().toString(36));
     window.location.replace(url.href);
   }
 
@@ -89,8 +92,8 @@
 
       if (!response.ok) return;
 
-      const commits = await response.json();
-      const latestSha = commits?.[0]?.sha || '';
+      const commit = await response.json();
+      const latestSha = commit?.sha || '';
       if (!latestSha) return;
 
       const seenSha = readSeenSha();
@@ -101,7 +104,12 @@
 
       if (latestSha !== seenSha) {
         pendingSha = latestSha;
-        tryApplyPendingUpdate();
+        if (!settleTimer) {
+          settleTimer = window.setTimeout(() => {
+            settleTimer = null;
+            tryApplyPendingUpdate();
+          }, UPDATE_SETTLE_MS);
+        }
       }
     } catch (error) {
       console.debug('[Stan] Update check skipped:', error);
@@ -118,6 +126,10 @@
   });
 
   window.addEventListener('online', checkForUpdate);
+  window.addEventListener('focus', () => {
+    tryApplyPendingUpdate();
+    checkForUpdate();
+  });
 
   checkForUpdate();
   window.setInterval(checkForUpdate, CHECK_INTERVAL_MS);
