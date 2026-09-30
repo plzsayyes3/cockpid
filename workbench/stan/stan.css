@@ -720,7 +720,7 @@ input { font: inherit; }
 
 .rady-clock {
   position: absolute;
-  top: max(18px, env(safe-area-inset-top));
+  top: max(42px, calc(env(safe-area-inset-top) + 36px));
   left: 50%;
   z-index: 2;
   display: grid;
