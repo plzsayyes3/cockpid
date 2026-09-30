@@ -4,7 +4,13 @@ const radySprite = radyPet?.querySelector('img');
 const mood = document.getElementById('stanMood');
 
 if (stage && radyPet && radySprite) {
-  const frameUrl = (name) => new URL(`../assets/rady/pixel/${name}?v=20260930-rady-life1`, import.meta.url).href;
+  const pageParams = new URLSearchParams(window.location.search);
+  const imageVersion =
+    pageParams.get('_stan_update') ||
+    pageParams.get('_stan_refresh') ||
+    Date.now().toString(36);
+  const frameUrl = (name) =>
+    new URL(`../assets/rady/pixel/${name}?v=${encodeURIComponent(imageVersion)}`, import.meta.url).href;
   const FRAMES = Object.freeze({
     idle: frameUrl('rady_idle_01.png'),
     blink: frameUrl('rady_idle_02.png'),
