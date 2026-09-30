@@ -16,6 +16,7 @@
   let merging = false;
   let currentFiles = [];
   let topMergeButton = null;
+  let topMergeProgress = '';
   let areaRouteButton = null;
   let areaRoutePanel = null;
   let areaRouteAreas = new Map();
@@ -116,9 +117,11 @@
     const button = topMergeButton || document.getElementById('topMemoMerge');
     if (!button) return;
     const count = currentFiles.filter(isMergeCandidateFile).length;
-    button.disabled = merging || loading || !token() || !count;
-    button.textContent = merging ? 'INBOX → DAILY …' : `INBOX → DAILY${count ? ` · ${count}` : ''}`;
-    button.title = count ? `${count}件のInboxメモをDailyへ統合` : 'Dailyへ統合できるInboxメモはありません';
+    button.disabled = Boolean(topMergeProgress) || merging || loading || !token() || !count;
+    button.textContent = topMergeProgress || (merging ? 'INBOX → DAILY …' : `INBOX → DAILY${count ? ` · ${count}` : ''}`);
+    button.title = topMergeProgress
+      ? topMergeProgress
+      : (count ? `${count}件のInboxメモをDailyへ統合` : 'Dailyへ統合できるInboxメモはありません');
   }
 
   function ensureTopMergeUi() {
@@ -245,9 +248,15 @@
 
   function setMergeStatus(message = '', error = false) {
     const status = document.getElementById('memoInboxMergeStatus');
-    if (!status) return;
-    status.textContent = message;
-    status.classList.toggle('is-error', error);
+    if (status) {
+      status.textContent = message;
+      status.classList.toggle('is-error', error);
+    }
+  }
+
+  function setTopMergeProgress(message = '') {
+    topMergeProgress = message;
+    syncTopMergeButton();
   }
 
   function setMode(mode) {
@@ -504,11 +513,13 @@
     // Inbox全体のpullは開始時の1回だけ。
     // この時点の候補を固定キューとして扱い、処理中に増えたMemoは次回へ回す。
     setMergeStatus('Inboxを取得して処理キューを作っています…');
+    setTopMergeProgress('INBOX取得中…');
     loaded = false;
     await loadInbox(true);
 
     const queue = currentFiles.filter(isMergeCandidateFile).map((file) => ({ ...file }));
     if (!queue.length) {
+      setTopMergeProgress('');
       setMergeStatus(currentFiles.length ? '統合対象のMemoはありません。' : '統合対象はありません。');
       if (!currentFiles.length && topMergeButton) {
         topMergeButton.textContent = 'INBOX EMPTY';
@@ -520,7 +531,10 @@
     const approved = window.confirm(
       `Inboxから${queue.length}件を処理します。\n\n1件ずつ Daily確認 → 必要なら追記 → 成功確認 → archive の順で処理します。\n失敗したMemoはInboxに残し、後続のMemoは続行します。\n\n続行しますか？`
     );
-    if (!approved) return;
+    if (!approved) {
+      setTopMergeProgress('');
+      return;
+    }
 
     const mergeButton = document.getElementById('memoInboxMerge');
     merging = true;
@@ -541,6 +555,7 @@
         const file = queue[index];
         const remaining = queue.length - index;
         setMergeStatus(`処理 ${index + 1}/${queue.length} · 残り${remaining} · ${file.name}`);
+        setTopMergeProgress(`INBOX → DAILY ${index + 1}/${queue.length}`);
 
         try {
           // 対象Memoだけを最新取得。Inbox一覧は再pullしない。
@@ -611,6 +626,9 @@
         `失敗 ${failed}件`
       ];
       setMergeStatus(`完了 · ${parts.join(' / ')}`, failed > 0 || ambiguous > 0);
+      setTopMergeProgress(failed > 0 || ambiguous > 0
+        ? `完了 · ${archived}/${queue.length}`
+        : `完了 · ${queue.length}/${queue.length}`);
 
       if (failedNames.length) {
         console.warn('[Inbox → Daily] Inboxに残したMemo', failedNames);
@@ -621,6 +639,12 @@
       const button = document.getElementById('memoInboxMerge');
       if (button) button.disabled = !currentFiles.some(isMergeCandidateFile);
       syncTopMergeButton();
+      if (topMergeProgress) {
+        setTimeout(() => {
+          topMergeProgress = '';
+          syncTopMergeButton();
+        }, 1800);
+      }
     }
   }
 
