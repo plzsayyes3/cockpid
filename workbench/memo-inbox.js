@@ -394,7 +394,7 @@
   }
 
   function formattedEntry(entry) {
-    return `${visibleEntry(entry)}\n  ${sourceMarkerFor(entry)}\n  ${legacyMarkerFor(entry)}`;
+    return `${visibleEntry(entry)}\n  ${sourceMarkerFor(entry)}`;
   }
 
   function normalizeForCompare(value) {
@@ -522,7 +522,10 @@
     loaded = false;
     await loadInbox(true);
 
-    const queue = currentFiles.filter(isMergeCandidateFile).map((file) => ({ ...file }));
+    const queue = currentFiles
+      .filter(isMergeCandidateFile)
+      .map((file) => ({ ...file }))
+      .sort((a, b) => a.name.localeCompare(b.name));
     activeMergeQueueNames = new Set(queue.map((file) => file.name));
     completedMergeNames = new Set();
     if (!queue.length) {
