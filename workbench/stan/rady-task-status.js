@@ -3,8 +3,8 @@ const marquee = document.getElementById('radyTaskMarquee');
 const textNode = document.getElementById('radyTaskMarqueeText');
 
 if (marquee && textNode) {
-  let minuteTimer = 0;
-  let minuteAlignTimer = 0;
+  const REFRESH_INTERVAL_MS = 90 * 1000;
+  let refreshTimer = 0;
 
   function pad(n) {
     return String(n).padStart(2, '0');
@@ -68,14 +68,9 @@ if (marquee && textNode) {
     marquee.setAttribute('aria-label', next);
   }
 
-  function scheduleMinuteUpdates() {
-    window.clearTimeout(minuteAlignTimer);
-    window.clearInterval(minuteTimer);
-    const delay = 60000 - (Date.now() % 60000) + 30;
-    minuteAlignTimer = window.setTimeout(() => {
-      update();
-      minuteTimer = window.setInterval(update, 60000);
-    }, delay);
+  function scheduleUpdates() {
+    window.clearInterval(refreshTimer);
+    refreshTimer = window.setInterval(update, REFRESH_INTERVAL_MS);
   }
 
   window.addEventListener('storage', (event) => {
@@ -87,5 +82,5 @@ if (marquee && textNode) {
   });
 
   update();
-  scheduleMinuteUpdates();
+  scheduleUpdates();
 }
