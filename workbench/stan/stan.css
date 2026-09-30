@@ -879,3 +879,23 @@ input { font: inherit; }
     animation: none;
   }
 }
+
+
+/* RADY life interaction */
+.stan-stage[data-character='rady'] .rady-pet img {
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.rady-pet[data-state='sleeping'] img {
+  cursor: default;
+}
+
+.rady-pet[data-state='playing'] img {
+  filter: drop-shadow(0 11px 15px rgba(0,0,0,.24)) brightness(1.025);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rady-pet[data-state='playing'] img { transition: none; }
+}
