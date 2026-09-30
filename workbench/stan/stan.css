@@ -735,7 +735,7 @@ input { font: inherit; }
 }
 
 .rady-clock-time {
-  font-size: clamp(44px, 7.6vw, 60px);
+  font-size: clamp(64px, 10vw, 88px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: .12em;
@@ -811,7 +811,7 @@ input { font: inherit; }
 
 @media (max-width: 600px) and (orientation: portrait) {
   .rady-clock { top: max(40px, calc(env(safe-area-inset-top) + 34px)); }
-  .rady-clock-time { font-size: 52px; }  .stan-stage { --rady-ground-top: 78%; }
+  .rady-clock-time { font-size: 72px; }  .stan-stage { --rady-ground-top: 78%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
