@@ -8,7 +8,7 @@
   position:fixed;
   z-index:70;
   left:50%;
-  bottom:114px;
+  bottom:var(--hp-dock-bottom,114px);
   transform:translateX(-50%);
   width:min(460px,calc(100vw - 32px));
   height:14px;
@@ -175,7 +175,7 @@
   .hp-dock{
     left:16px;
     right:16px;
-    bottom:158px;
+    bottom:var(--hp-dock-bottom,158px);
     transform:none;
     width:auto;
   }
