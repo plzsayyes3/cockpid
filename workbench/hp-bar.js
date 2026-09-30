@@ -26,6 +26,8 @@
   let previousEntry = null;
   let openingValue = .5;
   let saving = false;
+  const dock = document.querySelector('.dock');
+  let dockResizeObserver = null;
 
   const token = () => {
     try { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -188,6 +190,16 @@
     renderCompact();
   }
 
+  function syncDockPosition() {
+    if (!dock) return;
+    const rect = dock.getBoundingClientRect();
+    if (!Number.isFinite(rect.top)) return;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const gap = 10;
+    const bottom = Math.max(12, Math.round(viewportHeight - rect.top + gap));
+    compact.closest('.hp-dock')?.style.setProperty('--hp-dock-bottom', `${bottom}px`);
+  }
+
   function renderCompact() {
     compact.classList.toggle('has-value', Boolean(currentEntry));
     compact.classList.toggle('has-ghost', Boolean(previousEntry));
@@ -320,6 +332,13 @@
   }
 
   compact.addEventListener('click', openEditor);
+  window.addEventListener('resize', syncDockPosition, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(syncDockPosition, 80), { passive: true });
+  window.visualViewport?.addEventListener('resize', syncDockPosition, { passive: true });
+  if (dock && 'ResizeObserver' in window) {
+    dockResizeObserver = new ResizeObserver(syncDockPosition);
+    dockResizeObserver.observe(dock);
+  }
   backdrop?.addEventListener('click', closeEditor);
   closeButton?.addEventListener('click', closeEditor);
   range.addEventListener('input', renderEditor);
@@ -331,6 +350,7 @@
     if (event.key === TOKEN_KEY) loadHistory().catch((error) => console.error('[HP]', error));
   });
 
+  syncDockPosition();
   renderCompact();
   loadHistory().catch((error) => {
     console.error('[HP]', error);
