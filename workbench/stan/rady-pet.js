@@ -61,7 +61,28 @@ if (stage && radyPet && radySprite) {
   }
 
   function movementLimit() {
-    return Math.max(36, Math.min(132, window.innerWidth * 0.22));
+    const spriteWidth = radySprite.getBoundingClientRect().width || 148;
+    const edgePadding = Math.max(14, Math.min(28, window.innerWidth * 0.025));
+    return Math.max(36, (window.innerWidth / 2) - (spriteWidth / 2) - edgePadding);
+  }
+
+  function pickRoamTarget(limit, fromX = currentX) {
+    const minDistance = Math.min(Math.max(72, limit * 0.34), limit * 0.8);
+    let target = fromX;
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const candidate = randomBetween(Math.round(-limit), Math.round(limit));
+      if (Math.abs(candidate - fromX) >= minDistance) {
+        target = candidate;
+        break;
+      }
+    }
+
+    if (target === fromX) {
+      target = fromX >= 0 ? -limit * 0.7 : limit * 0.7;
+    }
+
+    return Math.max(-limit, Math.min(limit, target));
   }
 
   function clearActivityTimers() {
@@ -137,7 +158,7 @@ if (stage && radyPet && radySprite) {
   function scheduleAutoPlay() {
     window.clearTimeout(autoPlayTimer);
     if (!isRadyActive() || state !== 'awake' || reduceMotion.matches) return;
-    autoPlayTimer = window.setTimeout(() => startPlay(false), randomBetween(75000, 150000));
+    autoPlayTimer = window.setTimeout(startSoloPlay, randomBetween(70000, 140000));
   }
 
   function resumeAwakeLife() {
@@ -312,6 +333,84 @@ if (stage && radyPet && radySprite) {
     advance();
   }
 
+  function startSoloPlay() {
+    if (!isRadyActive() || isSleepTime() || state === 'playing' || reduceMotion.matches) return;
+
+    clearActivityTimers();
+    walking = true;
+    applyState('playing');
+    setMood('ひとり遊び中');
+
+    const limit = movementLimit();
+    const stops = randomBetween(2, 4);
+    const route = [];
+    let fromX = currentX;
+
+    for (let i = 0; i < stops; i += 1) {
+      const target = pickRoamTarget(limit, fromX);
+      route.push(target);
+      fromX = target;
+    }
+
+    let routeIndex = 0;
+
+    const moveToNext = () => {
+      if (!isRadyActive() || state !== 'playing') {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        return;
+      }
+
+      if (routeIndex >= route.length) {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        resumeAwakeLife();
+        return;
+      }
+
+      const targetX = route[routeIndex];
+      const delta = targetX - currentX;
+
+      if (Math.abs(delta) <= 7) {
+        currentX = targetX;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        routeIndex += 1;
+
+        playTimer = window.setTimeout(() => {
+          if (!isRadyActive() || state !== 'playing') return;
+
+          if (Math.random() < 0.45) {
+            setFrame(FRAMES.blink);
+            playTimer = window.setTimeout(() => {
+              if (state !== 'playing') return;
+              setFrame(FRAMES.idle);
+              moveToNext();
+            }, randomBetween(220, 420));
+          } else {
+            moveToNext();
+          }
+        }, randomBetween(550, 1250));
+        return;
+      }
+
+      const direction = delta < 0 ? -1 : 1;
+      facing = direction;
+      const stepPx = Math.min(Math.abs(delta), randomBetween(9, 13));
+      currentX = Math.max(-limit, Math.min(limit, currentX + direction * stepPx));
+
+      const phase = Math.round(Math.abs(currentX)) % 2;
+      setFrame(phase === 0 ? FRAMES.walk1 : FRAMES.walk2);
+      setPosition(currentX, phase === 0 ? -2 : 0);
+
+      stepTimer = window.setTimeout(moveToNext, randomBetween(105, 135));
+    };
+
+    moveToNext();
+  }
+
   function startPlay(fromTap = true) {
     if (!isRadyActive() || isSleepTime() || state === 'playing') return;
 
@@ -452,7 +551,8 @@ if (stage && radyPet && radySprite) {
 
   window.RADY_PET = Object.freeze({
     getState: () => state,
-    play: () => startPlay(true)
+    play: () => startPlay(true),
+    soloPlay: () => startSoloPlay()
   });
 
   if (stage.dataset.character === 'rady') start();
