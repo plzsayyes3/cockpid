@@ -36,6 +36,7 @@ if (stage && radyPet && radySprite) {
   let autoPlayTimer = 0;
   let lifeTimer = 0;
   let currentX = 0;
+  let facing = 1;
   let walking = false;
 
   const randomBetween = (min, max) => Math.round(min + Math.random() * (max - min));
@@ -56,7 +57,7 @@ if (stage && radyPet && radySprite) {
   function setPosition(x, bob = 0) {
     currentX = x;
     radySprite.style.transform =
-      `translate(calc(-50% + ${Math.round(currentX)}px), calc(-87.5% + ${bob}px))`;
+      `translate(calc(-50% + ${Math.round(currentX)}px), calc(-87.5% + ${bob}px)) scaleX(${facing})`;
   }
 
   function movementLimit() {
@@ -119,10 +120,18 @@ if (stage && radyPet && radySprite) {
     }, randomBetween(2400, 5200));
   }
 
-  function scheduleWalk() {
+  function scheduleActivity() {
     window.clearTimeout(walkTimer);
     if (!isRadyActive() || state !== 'awake' || reduceMotion.matches) return;
-    walkTimer = window.setTimeout(startWalk, randomBetween(6500, 11500));
+
+    walkTimer = window.setTimeout(() => {
+      const roll = Math.random();
+
+      if (roll < 0.42) startWalk();
+      else if (roll < 0.64) startRun();
+      else if (roll < 0.84) startHop();
+      else startDrowse();
+    }, randomBetween(6500, 11500));
   }
 
   function scheduleAutoPlay() {
@@ -139,11 +148,17 @@ if (stage && radyPet && radySprite) {
     }
     applyState('awake');
     scheduleBlink();
-    scheduleWalk();
+    scheduleActivity();
     scheduleAutoPlay();
   }
 
-  function startWalk() {
+  function startWalkPattern({
+    minSteps = 6,
+    maxSteps = 10,
+    stepPx = 8,
+    intervalMs = 185,
+    bobPx = 1
+  } = {}) {
     if (!isRadyActive() || state !== 'awake' || reduceMotion.matches || walking) return;
 
     walking = true;
@@ -153,8 +168,9 @@ if (stage && radyPet && radySprite) {
     let direction = Math.random() < 0.5 ? -1 : 1;
     if (currentX > limit * 0.7) direction = -1;
     if (currentX < -limit * 0.7) direction = 1;
+    facing = direction < 0 ? -1 : 1;
 
-    const totalSteps = randomBetween(6, 10);
+    const totalSteps = randomBetween(minSteps, maxSteps);
     let step = 0;
 
     const advance = () => {
@@ -168,18 +184,129 @@ if (stage && radyPet && radySprite) {
         walking = false;
         setFrame(FRAMES.idle);
         setPosition(currentX, 0);
+        setMood('のんびりしてる');
         scheduleBlink();
-        scheduleWalk();
+        scheduleActivity();
         return;
       }
 
       const frame = step % 2 === 0 ? FRAMES.walk1 : FRAMES.walk2;
-      const bob = step % 2 === 0 ? -1 : 0;
-      currentX = Math.max(-limit, Math.min(limit, currentX + direction * 8));
+      const bob = step % 2 === 0 ? -bobPx : 0;
+      currentX = Math.max(-limit, Math.min(limit, currentX + direction * stepPx));
       setFrame(frame);
       setPosition(currentX, bob);
       step += 1;
-      stepTimer = window.setTimeout(advance, 185);
+      stepTimer = window.setTimeout(advance, intervalMs);
+    };
+
+    advance();
+  }
+
+  function startWalk() {
+    setMood('おさんぽ中');
+    startWalkPattern({
+      minSteps: 6,
+      maxSteps: 10,
+      stepPx: 8,
+      intervalMs: 185,
+      bobPx: 1
+    });
+  }
+
+  function startRun() {
+    setMood('小走り中');
+    startWalkPattern({
+      minSteps: 9,
+      maxSteps: 14,
+      stepPx: 12,
+      intervalMs: 110,
+      bobPx: 2
+    });
+  }
+
+  function startHop() {
+    if (!isRadyActive() || state !== 'awake' || reduceMotion.matches || walking) return;
+
+    walking = true;
+    clearActivityTimers();
+    setMood('ぴょこぴょこ');
+
+    const totalHops = randomBetween(2, 4);
+    const totalPhases = totalHops * 4;
+    let phase = 0;
+
+    const advance = () => {
+      if (!isRadyActive() || state !== 'awake') {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        return;
+      }
+
+      if (phase >= totalPhases) {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        setMood('のんびりしてる');
+        scheduleBlink();
+        scheduleActivity();
+        scheduleAutoPlay();
+        return;
+      }
+
+      const hopPhase = phase % 4;
+      const bob = hopPhase === 1 ? -9 : hopPhase === 2 ? -5 : 0;
+      const frame = hopPhase < 2 ? FRAMES.walk1 : FRAMES.walk2;
+      setFrame(frame);
+      setPosition(currentX, bob);
+
+      phase += 1;
+      stepTimer = window.setTimeout(advance, 120);
+    };
+
+    advance();
+  }
+
+  function startDrowse() {
+    if (!isRadyActive() || state !== 'awake' || walking) return;
+
+    walking = true;
+    clearActivityTimers();
+    setMood('うとうと');
+
+    const sequence = [
+      { frame: FRAMES.blink, bob: 1, wait: 760 },
+      { frame: FRAMES.idle, bob: 0, wait: 240 },
+      { frame: FRAMES.blink, bob: 1, wait: 980 },
+      { frame: FRAMES.idle, bob: 0, wait: 280 },
+      { frame: FRAMES.blink, bob: 1, wait: 620 }
+    ];
+    let index = 0;
+
+    const advance = () => {
+      if (!isRadyActive() || state !== 'awake') {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        return;
+      }
+
+      if (index >= sequence.length) {
+        walking = false;
+        setFrame(FRAMES.idle);
+        setPosition(currentX, 0);
+        setMood('のんびりしてる');
+        scheduleBlink();
+        scheduleActivity();
+        scheduleAutoPlay();
+        return;
+      }
+
+      const item = sequence[index];
+      setFrame(item.frame);
+      setPosition(currentX, item.bob);
+      index += 1;
+      stepTimer = window.setTimeout(advance, item.wait);
     };
 
     advance();
@@ -201,6 +328,7 @@ if (stage && radyPet && radySprite) {
     const limit = movementLimit();
     const startX = currentX;
     const direction = currentX > limit * 0.55 ? -1 : currentX < -limit * 0.55 ? 1 : (Math.random() < 0.5 ? -1 : 1);
+    facing = direction < 0 ? -1 : 1;
     const totalSteps = fromTap ? 16 : 12;
     let step = 0;
 
