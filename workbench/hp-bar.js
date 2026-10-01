@@ -366,7 +366,7 @@
     statusId: 'hpStatus',
     dockSelector: '.hp-dock',
     cssBottomVar: '--hp-dock-bottom',
-    dockGap: 10
+    dockGap: 36
   });
 
   window.COCKPID_MP = createGauge({
@@ -385,6 +385,6 @@
     statusId: 'mpStatus',
     dockSelector: '.mp-dock',
     cssBottomVar: '--mp-dock-bottom',
-    dockGap: 36
+    dockGap: 10
   });
 })();
