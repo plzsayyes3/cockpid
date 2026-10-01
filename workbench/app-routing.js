@@ -6,10 +6,26 @@
   const appContent = document.getElementById('appContent');
   if (!appWindow || !appTitle || !appContent) return;
 
+  const ZEN_BASE = 'https://plzsayyes3.github.io/zen-note/';
+  const ZEN_MAIN_KEY = 'cockpid.zen.main.v1';
+  const ZEN_PATHS = new Set(['', 'v1/', 'v2/', 'v2v/', 'v3/', 'v4/', 'v5/', 'v6/', 'v7/', 'v8/', 'v9/']);
+
+  function mainZenPath() {
+    try {
+      const value = localStorage.getItem(ZEN_MAIN_KEY);
+      if (value !== null && ZEN_PATHS.has(value)) return value;
+    } catch (_) {}
+    return 'v9/';
+  }
+
+  function mainZenUrl() {
+    return ZEN_BASE + mainZenPath();
+  }
+
   const apps = Object.freeze({
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html?v=20260918-main-branch2' },
-    zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: 'https://plzsayyes3.github.io/zen-note/' },
+    zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: ZEN_BASE },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '8', title: '8 / ON HAND', type: 'iframe', src: 'onhand.html' },
@@ -204,7 +220,8 @@
 
     appTitle.textContent = app.title;
     if (app.type === 'iframe') {
-      appContent.innerHTML = `<iframe src="${app.src}" title="${app.title}"></iframe>`;
+      const src = name === 'zen' ? mainZenUrl() : app.src;
+      appContent.innerHTML = `<iframe src="${src}" title="${app.title}"></iframe>`;
     } else if (app.type === 'board') {
       renderBoard();
     } else if (app.type === 'dictionary') {
@@ -240,5 +257,5 @@
     openApp(name);
   }, true);
 
-  window.COCKPID_ROUTER = Object.freeze({ apps, openApp });
+  window.COCKPID_ROUTER = Object.freeze({ apps, openApp, mainZenPath, mainZenUrl });
 })();
