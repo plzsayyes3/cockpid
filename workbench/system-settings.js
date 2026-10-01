@@ -3,6 +3,8 @@
 
   const READ_KEY = 'cockpid.advice.read.v1';
   const REMOTE_PATH = 'app-state/cockpid/message-state.json';
+  const ZEN_MAIN_KEY = 'cockpid.zen.main.v1';
+  const ZEN_PATHS = new Set(['', 'v1/', 'v2/', 'v2v/', 'v3/', 'v4/', 'v5/', 'v6/', 'v7/', 'v8/', 'v9/']);
   const systemOpen = document.getElementById('systemOpen');
   const mailOpen = document.getElementById('mailOpen');
   const mailUnread = document.getElementById('mailUnread');
@@ -187,6 +189,26 @@
     }
   }
 
+  function initMainZenSetting() {
+    const select = document.getElementById('mainZenSelect');
+    const status = document.getElementById('mainZenStatus');
+    if (!select) return;
+
+    let current = 'v9/';
+    try {
+      const saved = localStorage.getItem(ZEN_MAIN_KEY);
+      if (saved !== null && ZEN_PATHS.has(saved)) current = saved;
+    } catch (_) {}
+    select.value = current;
+    if (status) status.textContent = current ? `CURRENT · ${current.replace('/', '')}` : 'CURRENT · ZEN TOP';
+
+    select.addEventListener('change', () => {
+      const next = ZEN_PATHS.has(select.value) ? select.value : 'v9/';
+      try { localStorage.setItem(ZEN_MAIN_KEY, next); } catch (_) {}
+      if (status) status.textContent = next ? `SAVED · ${next.replace('/', '')}` : 'SAVED · ZEN TOP';
+    });
+  }
+
   function readSet() {
     try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); }
     catch (_) { return new Set(); }
@@ -267,5 +289,6 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshMail(); });
   setInterval(refreshMail, 60000);
   renderSourceSettings();
+  initMainZenSetting();
   refreshMail();
 })();
