@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Slime / Rady Soft Body</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #10141c;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  canvas {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .hud {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .chip {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(12,16,24,.72);
+    color: #f3f6fa;
+    border-radius: 999px;
+    padding: 9px 12px;
+    font-size: 12px;
+    line-height: 1;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  button.chip {
+    pointer-events: auto;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .hint {
+    margin-left: auto;
+    opacity: .72;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas" aria-label="Rady soft body physics sample"></canvas>
+<div class="hud">
+  <button class="chip" id="reset" type="button">RESET</button>
+  <button class="chip" id="gravity" type="button">GRAVITY ON</button>
+  <div class="chip hint">つまむ → 引っぱる → 離す</div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const BASE_W = 180;
+  let BASE_H = 320;
+  const POINT_COUNT = 14;
+
+  const GRAVITY = 0.060;
+  const DAMPING = 0.992;
+  const FLOOR_BOUNCE = 0.48;
+  const WALL_BOUNCE = 0.42;
+  const FLOOR_FRICTION = 0.985;
+  const SOLVER_ITERATIONS = 9;
+
+  let gravityOn = true;
+  let points = [];
+  let springs = [];
+  let restArea = 1;
+  let floorY = 0;
+  let grabbed = -1;
+
+  const pointer = {
+    x: 0,
+    y: 0,
+    down: false,
+    vx: 0,
+    vy: 0,
+    lastX: 0,
+    lastY: 0
+  };
+
+  class Point {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.px = x;
+      this.py = y;
+    }
+
+    integrate() {
+      const vx = (this.x - this.px) * DAMPING;
+      const vy = (this.y - this.py) * DAMPING;
+
+      this.px = this.x;
+      this.py = this.y;
+
+      this.x += vx;
+      this.y += vy + (gravityOn ? GRAVITY : 0);
+    }
+  }
+
+  function resize() {
+    const aspect = innerHeight / innerWidth;
+    BASE_H = Math.max(220, Math.round(BASE_W * aspect));
+    canvas.width = BASE_W;
+    canvas.height = BASE_H;
+    floorY = BASE_H - 42;
+    ctx.imageSmoothingEnabled = false;
+    reset();
+  }
+
+  function distance(a, b) {
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  }
+
+  function polygonArea(poly) {
+    let sum = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      sum += a.x * b.y - b.x * a.y;
+    }
+    return Math.abs(sum) * 0.5;
+  }
+
+  function centroid() {
+    let x = 0;
+    let y = 0;
+    for (const p of points) {
+      x += p.x;
+      y += p.y;
+    }
+    return { x: x / points.length, y: y / points.length };
+  }
+
+  function addSpring(a, b, stiffness) {
+    springs.push({
+      a,
+      b,
+      length: distance(points[a], points[b]),
+      stiffness
+    });
+  }
+
+  function reset() {
+    points = [];
+    springs = [];
+    grabbed = -1;
+    pointer.down = false;
+
+    const cx = BASE_W * 0.5;
+    const cy = Math.min(BASE_H * 0.33, floorY - 92);
+    const rx = 29;
+    const ry = 25;
+
+    for (let i = 0; i < POINT_COUNT; i++) {
+      const angle = (i / POINT_COUNT) * Math.PI * 2 - Math.PI / 2;
+      const bottomBias = Math.sin(angle) > 0 ? 1.08 : 1;
+      points.push(
+        new Point(
+          cx + Math.cos(angle) * rx * bottomBias,
+          cy + Math.sin(angle) * ry
+        )
+      );
+    }
+
+    for (let i = 0; i < POINT_COUNT; i++) {
+      addSpring(i, (i + 1) % POINT_COUNT, 0.90);
+      addSpring(i, (i + 2) % POINT_COUNT, 0.32);
+      addSpring(i, (i + Math.floor(POINT_COUNT / 2)) % POINT_COUNT, 0.07);
+    }
+
+    restArea = polygonArea(points);
+  }
+
+  function solveSpring(spring) {
+    const a = points[spring.a];
+    const b = points[spring.b];
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 0.001;
+    const correction = ((len - spring.length) / len) * 0.5 * spring.stiffness;
+
+    const ox = dx * correction;
+    const oy = dy * correction;
+
+    a.x += ox;
+    a.y += oy;
+    b.x -= ox;
+    b.y -= oy;
+  }
+
+  function solveArea() {
+    const c = centroid();
+    const currentArea = polygonArea(points);
+    const error = (restArea - currentArea) / restArea;
+    const pressure = 0.115;
+
+    for (const p of points) {
+      p.x += (p.x - c.x) * error * pressure;
+      p.y += (p.y - c.y) * error * pressure;
+    }
+  }
+
+  function collide(p) {
+    const margin = 3;
+
+    if (p.y > floorY) {
+      const vx = p.x - p.px;
+      const vy = p.y - p.py;
+      p.y = floorY;
+      p.py = p.y + vy * FLOOR_BOUNCE;
+      p.px = p.x - vx * FLOOR_FRICTION;
+    }
+
+    if (p.x < margin) {
+      const vx = p.x - p.px;
+      p.x = margin;
+      p.px = p.x + vx * WALL_BOUNCE;
+    }
+
+    if (p.x > BASE_W - margin) {
+      const vx = p.x - p.px;
+      p.x = BASE_W - margin;
+      p.px = p.x + vx * WALL_BOUNCE;
+    }
+
+    if (p.y < margin) {
+      const vy = p.y - p.py;
+      p.y = margin;
+      p.py = p.y + vy * WALL_BOUNCE;
+    }
+  }
+
+  function physicsStep() {
+    for (const p of points) {
+      p.integrate();
+    }
+
+    if (grabbed >= 0 && pointer.down) {
+      const p = points[grabbed];
+
+      // Grip follows the finger with a little elasticity.
+      p.x += (pointer.x - p.x) * 0.88;
+      p.y += (pointer.y - p.y) * 0.88;
+
+      // Preserve pointer velocity so releasing throws the slime.
+      p.px = p.x - pointer.vx * 0.78;
+      p.py = p.y - pointer.vy * 0.78;
+    }
+
+    for (let i = 0; i < SOLVER_ITERATIONS; i++) {
+      for (const spring of springs) {
+        solveSpring(spring);
+      }
+      solveArea();
+      for (const p of points) {
+        collide(p);
+      }
+    }
+  }
+
+  function metrics() {
+    const c = centroid();
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+
+    return {
+      c,
+      minX,
+      minY,
+      maxX,
+      maxY,
+      w: maxX - minX,
+      h: maxY - minY
+    };
+  }
+
+  function slimePath() {
+    ctx.beginPath();
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    ctx.moveTo((last.x + first.x) * 0.5, (last.y + first.y) * 0.5);
+
+    for (let i = 0; i < points.length; i++) {
+      const current = points[i];
+      const next = points[(i + 1) % points.length];
+      ctx.quadraticCurveTo(
+        current.x,
+        current.y,
+        (current.x + next.x) * 0.5,
+        (current.y + next.y) * 0.5
+      );
+    }
+
+    ctx.closePath();
+  }
+
+  function drawFace(m) {
+    // The face intentionally deforms much less than the body.
+    const squash = Math.max(0.84, Math.min(1.12, m.h / 50));
+    const faceY = m.c.y + 4 * squash;
+    const eyeDistance = Math.max(5, Math.min(8, m.w * 0.18));
+
+    ctx.strokeStyle = "#18334a";
+    ctx.lineWidth = 1.55;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.arc(m.c.x - eyeDistance, faceY, 2.05, Math.PI * 1.10, Math.PI * 1.90);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(m.c.x + eyeDistance, faceY, 2.05, Math.PI * 1.10, Math.PI * 1.90);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(m.c.x, faceY + 5.2, 2.2, 0.12 * Math.PI, 0.88 * Math.PI);
+    ctx.stroke();
+  }
+
+  function draw() {
+    const m = metrics();
+
+    ctx.fillStyle = "#101722";
+    ctx.fillRect(0, 0, BASE_W, BASE_H);
+
+    ctx.fillStyle = "#141e2b";
+    ctx.fillRect(0, 0, BASE_W, floorY);
+
+    ctx.fillStyle = "#202b38";
+    ctx.fillRect(0, floorY, BASE_W, BASE_H - floorY);
+    ctx.fillStyle = "#314050";
+    ctx.fillRect(0, floorY, BASE_W, 2);
+
+    // shadow
+    const heightFromFloor = Math.max(0, floorY - m.maxY);
+    const shadowAlpha = Math.max(0.08, 0.25 - heightFromFloor * 0.0025);
+    ctx.globalAlpha = shadowAlpha;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(
+      m.c.x,
+      floorY + 2,
+      Math.max(10, Math.min(36, m.w * 0.46)),
+      3,
+      0,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // soft body
+    slimePath();
+    ctx.fillStyle = "#82cff6";
+    ctx.fill();
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#315f83";
+    ctx.stroke();
+
+    // highlight
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = "#e2f7ff";
+    ctx.beginPath();
+    ctx.ellipse(
+      m.minX + m.w * 0.34,
+      m.minY + m.h * 0.27,
+      Math.max(3, m.w * 0.12),
+      Math.max(2, m.h * 0.075),
+      -0.52,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    drawFace(m);
+
+    if (grabbed >= 0) {
+      const p = points[grabbed];
+      ctx.fillStyle = "rgba(255,255,255,.8)";
+      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 3, 3);
+    }
+  }
+
+  function pointerPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) / rect.width * canvas.width,
+      y: (event.clientY - rect.top) / rect.height * canvas.height
+    };
+  }
+
+  function nearestPoint(x, y) {
+    let nearest = -1;
+    let nearestDistance = Infinity;
+
+    for (let i = 0; i < points.length; i++) {
+      const d = Math.hypot(points[i].x - x, points[i].y - y);
+      if (d < nearestDistance) {
+        nearestDistance = d;
+        nearest = i;
+      }
+    }
+
+    return nearestDistance < 36 ? nearest : -1;
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    canvas.setPointerCapture(event.pointerId);
+
+    const p = pointerPosition(event);
+    pointer.x = pointer.lastX = p.x;
+    pointer.y = pointer.lastY = p.y;
+    pointer.vx = 0;
+    pointer.vy = 0;
+    pointer.down = true;
+
+    grabbed = nearestPoint(p.x, p.y);
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    const p = pointerPosition(event);
+    pointer.vx = p.x - pointer.x;
+    pointer.vy = p.y - pointer.y;
+    pointer.lastX = pointer.x;
+    pointer.lastY = pointer.y;
+    pointer.x = p.x;
+    pointer.y = p.y;
+  });
+
+  function release() {
+    pointer.down = false;
+    grabbed = -1;
+  }
+
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointercancel", release);
+
+  document.getElementById("reset").addEventListener("click", reset);
+
+  document.getElementById("gravity").addEventListener("click", (event) => {
+    gravityOn = !gravityOn;
+    event.currentTarget.textContent = gravityOn ? "GRAVITY ON" : "GRAVITY OFF";
+  });
+
+  function loop() {
+    physicsStep();
+    physicsStep();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  addEventListener("resize", resize);
+  resize();
+  loop();
+})();
+</script>
+</body>
+</html>
