@@ -96,7 +96,7 @@ const renderer = new THREE.WebGLRenderer({
   alpha: false,
   powerPreference: "high-performance"
 });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -286,7 +286,7 @@ function makeShadowTexture() {
 }
 
 const blobShadow = new THREE.Mesh(
-  new THREE.PlaneGeometry(2.5, 2.0),
+  new THREE.PlaneGeometry(1.65, 1.28),
   new THREE.MeshBasicMaterial({
     map: makeShadowTexture(),
     transparent: true,
@@ -305,7 +305,7 @@ scene.add(blobShadow);
 const jellyGroup = new THREE.Group();
 scene.add(jellyGroup);
 
-const jellyGeometry = new THREE.SphereGeometry(0.92, 48, 34);
+const jellyGeometry = new THREE.SphereGeometry(0.62, 36, 28);
 const positionAttribute = jellyGeometry.attributes.position;
 const basePositions = new Float32Array(positionAttribute.array.length);
 basePositions.set(positionAttribute.array);
@@ -335,7 +335,7 @@ jellyGroup.add(jelly);
 
 // A very faint inner mass makes the body feel denser like warabi-mochi.
 const core = new THREE.Mesh(
-  new THREE.SphereGeometry(0.71, 36, 26),
+  new THREE.SphereGeometry(0.47, 28, 20),
   new THREE.MeshPhysicalMaterial({
     color: 0xd6edf4,
     roughness: 0.16,
@@ -357,34 +357,37 @@ jellyGroup.add(core);
 const face = new THREE.Group();
 jellyGroup.add(face);
 
-const faceMaterial = new THREE.MeshStandardMaterial({
-  color: 0x425462,
-  roughness: 0.6,
-  metalness: 0,
+const faceMaterial = new THREE.MeshBasicMaterial({
+  color: 0x3b4b57,
   transparent: true,
-  opacity: 0.86
+  opacity: 0.95,
+  depthTest: false,
+  depthWrite: false
 });
 
-const eyeGeometry = new THREE.SphereGeometry(0.055, 18, 12);
+const eyeGeometry = new THREE.SphereGeometry(0.038, 14, 10);
 
 const leftEye = new THREE.Mesh(eyeGeometry, faceMaterial);
 const rightEye = new THREE.Mesh(eyeGeometry, faceMaterial);
 leftEye.scale.set(1.0, 0.65, 0.55);
 rightEye.scale.copy(leftEye.scale);
 face.add(leftEye, rightEye);
+leftEye.renderOrder = 20;
+rightEye.renderOrder = 20;
 
 const mouthCurve = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-0.075, 0.02, 0),
-  new THREE.Vector3(-0.03, -0.015, 0.02),
-  new THREE.Vector3(0.03, -0.015, 0.02),
-  new THREE.Vector3(0.075, 0.02, 0)
+  new THREE.Vector3(-0.050, 0.013, 0),
+  new THREE.Vector3(-0.020, -0.010, 0.014),
+  new THREE.Vector3(0.020, -0.010, 0.014),
+  new THREE.Vector3(0.050, 0.013, 0)
 ]);
 
 const mouth = new THREE.Mesh(
-  new THREE.TubeGeometry(mouthCurve, 18, 0.012, 8, false),
+  new THREE.TubeGeometry(mouthCurve, 14, 0.008, 6, false),
   faceMaterial
 );
 face.add(mouth);
+mouth.renderOrder = 20;
 
 // -----------------------------------------------------------------------------
 // Body dynamics
@@ -414,7 +417,7 @@ const state = {
   grabWeights: new Float32Array(positionAttribute.count)
 };
 
-const NATURAL_RADIUS_Y = 0.91;
+const NATURAL_RADIUS_Y = 0.60;
 
 function currentShapeScale() {
   const sy = THREE.MathUtils.clamp(1 - state.squash, 0.58, 1.48);
@@ -431,7 +434,7 @@ function currentBottomRadius() {
 }
 
 function resetJelly() {
-  state.position.set(0, 2.65, 0);
+  state.position.set(0, 1.95, 0);
   state.velocity.set(0, 0, 0);
   state.squash = 0;
   state.squashVelocity = 0;
@@ -458,7 +461,7 @@ function physicsStep(dt) {
     const toTarget = new THREE.Vector3().subVectors(state.grabTarget, state.position);
 
     // Clamp the pull so accidental swipes remain stable.
-    if (toTarget.length() > 3.2) toTarget.setLength(3.2);
+    if (toTarget.length() > 2.15) toTarget.setLength(2.15);
 
     state.velocity.addScaledVector(toTarget, 34 * dt);
     state.velocity.multiplyScalar(Math.pow(0.18, dt));
@@ -470,8 +473,8 @@ function physicsStep(dt) {
     state.wobbleXVelocity += -toTarget.x * 0.75 * dt;
     state.wobbleZVelocity += -toTarget.z * 0.75 * dt;
   } else {
-    state.velocity.x *= Math.pow(0.70, dt);
-    state.velocity.z *= Math.pow(0.70, dt);
+    state.velocity.x *= Math.pow(0.91, dt);
+    state.velocity.z *= Math.pow(0.91, dt);
   }
 
   state.position.addScaledVector(state.velocity, dt);
@@ -486,13 +489,13 @@ function physicsStep(dt) {
       const impact = -state.velocity.y;
       state.velocity.y = impact * 0.08;
 
-      state.squashVelocity += impact * 0.125;
+      state.squashVelocity += impact * 0.185;
       state.wobbleXVelocity += -state.velocity.x * 0.19;
       state.wobbleZVelocity += -state.velocity.z * 0.19;
 
       // sticky contact
-      state.velocity.x *= 0.74;
-      state.velocity.z *= 0.74;
+      state.velocity.x *= 0.94;
+      state.velocity.z *= 0.94;
     }
 
     if (Math.abs(state.velocity.y) < 0.08) state.velocity.y = 0;
@@ -520,13 +523,13 @@ function physicsStep(dt) {
   }
 
   [state.squash, state.squashVelocity] =
-    updateSpring(state.squash, state.squashVelocity, 48, 8.2, dt);
+    updateSpring(state.squash, state.squashVelocity, 27, 4.3, dt);
 
   [state.wobbleX, state.wobbleXVelocity] =
-    updateSpring(state.wobbleX, state.wobbleXVelocity, 34, 6.4, dt);
+    updateSpring(state.wobbleX, state.wobbleXVelocity, 21, 3.8, dt);
 
   [state.wobbleZ, state.wobbleZVelocity] =
-    updateSpring(state.wobbleZ, state.wobbleZVelocity, 34, 6.4, dt);
+    updateSpring(state.wobbleZ, state.wobbleZVelocity, 21, 3.8, dt);
 
   state.squash = THREE.MathUtils.clamp(state.squash, -0.34, 0.38);
   state.wobbleX = THREE.MathUtils.clamp(state.wobbleX, -0.42, 0.42);
@@ -536,6 +539,7 @@ function physicsStep(dt) {
 const localTarget = new THREE.Vector3();
 const localGrab = new THREE.Vector3();
 const grabDelta = new THREE.Vector3();
+let normalUpdateFrame = 0;
 
 function deformJelly(time) {
   const scales = currentShapeScale();
@@ -547,8 +551,8 @@ function deformJelly(time) {
   grabDelta.subVectors(localTarget, localGrab);
 
   const speed = state.velocity.length();
-  const travelShearX = THREE.MathUtils.clamp(-state.velocity.x * 0.018, -0.13, 0.13);
-  const travelShearZ = THREE.MathUtils.clamp(-state.velocity.z * 0.018, -0.13, 0.13);
+  const travelShearX = THREE.MathUtils.clamp(-state.velocity.x * 0.038, -0.22, 0.22);
+  const travelShearZ = THREE.MathUtils.clamp(-state.velocity.z * 0.038, -0.22, 0.22);
 
   for (let i = 0; i < positionAttribute.count; i++) {
     const ix = i * 3;
@@ -556,7 +560,7 @@ function deformJelly(time) {
     const by = basePositions[ix + 1];
     const bz = basePositions[ix + 2];
 
-    const height01 = THREE.MathUtils.clamp((by + 0.92) / 1.84, 0, 1);
+    const height01 = THREE.MathUtils.clamp((by + 0.62) / 1.24, 0, 1);
 
     // Volume-preserving squash/stretch.
     let x = bx * scales.sx;
@@ -571,7 +575,7 @@ function deformJelly(time) {
 
     // Flatten the contact patch against the desk without making the whole body flat.
     const localTableY = TABLE_Y - state.position.y;
-    const flattenBand = 0.17;
+    const flattenBand = 0.13;
     if (y < localTableY + flattenBand) {
       const t = THREE.MathUtils.clamp(
         (localTableY + flattenBand - y) / flattenBand,
@@ -584,33 +588,44 @@ function deformJelly(time) {
     }
 
     // Whole-body lag while travelling.
-    x += by * (travelShearX + state.wobbleX * 0.16);
-    z += by * (travelShearZ + state.wobbleZ * 0.16);
+    x += by * (travelShearX + state.wobbleX * 0.26);
+    z += by * (travelShearZ + state.wobbleZ * 0.26);
 
     // Tiny damped ripples after impact, strongest around the middle skin.
     const radial = Math.sqrt(bx * bx + bz * bz);
-    const rippleWeight = Math.sin(Math.PI * height01) * THREE.MathUtils.clamp(radial / 0.92, 0, 1);
+    const rippleWeight = Math.sin(Math.PI * height01) * THREE.MathUtils.clamp(radial / 0.62, 0, 1);
     const ripple =
       Math.sin(time * 8.0 + by * 5.2 + Math.atan2(bz, bx) * 1.7) *
       (Math.abs(state.squashVelocity) + speed * 0.05) *
-      0.0035 *
+      0.0082 *
       rippleWeight;
 
     const radialLen = Math.hypot(bx, bz) || 1;
     x += (bx / radialLen) * ripple;
     z += (bz / radialLen) * ripple;
 
+    // Slow skin-flow layer: a low-frequency travelling deformation gives
+    // the surface a viscous "nurunuru" motion instead of rubber-only wobble.
+    const theta = Math.atan2(bz, bx);
+    const flowWeight = Math.sin(Math.PI * height01) * Math.min(1, radial / 0.62);
+    const flow =
+      Math.sin(time * 3.0 + theta * 2.15 + by * 5.2) *
+      (0.005 + Math.min(speed, 5) * 0.0022) *
+      flowWeight;
+    x += Math.cos(theta) * flow;
+    z += Math.sin(theta) * flow;
+
     // True local grip deformation on the actual 3D mesh.
     if (state.dragging) {
       const weight = state.grabWeights[i];
       if (weight > 0.001) {
-        const localFollow = 0.72 * weight;
+        const localFollow = 0.91 * weight;
         x += grabDelta.x * localFollow;
         y += grabDelta.y * localFollow;
         z += grabDelta.z * localFollow;
 
         // Nearby skin gets slightly pinched toward the grasp point.
-        const pinch = weight * 0.055;
+        const pinch = weight * 0.088;
         x = THREE.MathUtils.lerp(x, localGrab.x + grabDelta.x, pinch);
         y = THREE.MathUtils.lerp(y, localGrab.y + grabDelta.y, pinch);
         z = THREE.MathUtils.lerp(z, localGrab.z + grabDelta.z, pinch);
@@ -623,7 +638,10 @@ function deformJelly(time) {
   }
 
   positionAttribute.needsUpdate = true;
-  jellyGeometry.computeVertexNormals();
+  // Recomputing normals on every frame was expensive on iPhone and made the
+  // face appear to trail. Half-rate normal updates keep the jelly smooth.
+  normalUpdateFrame++;
+  if ((normalUpdateFrame & 1) === 0) jellyGeometry.computeVertexNormals();
 
   // The inner mass follows the big deformation but not the local skin pinch.
   core.scale.set(
@@ -638,21 +656,23 @@ function deformJelly(time) {
   );
 
   // Face is intentionally steadier than the skin.
+  // Face sits just outside the refractive shell and follows the same shear
+  // immediately, so transparency sorting/refraction cannot make it lag.
   face.position.set(
-    state.wobbleX * 0.075,
-    0.01 - Math.max(state.squash, 0) * 0.07,
-    0.74 * scales.sz
+    state.wobbleX * 0.030 + travelShearX * 0.010,
+    0.004 - Math.max(state.squash, 0) * 0.038,
+    0.628 * scales.sz + 0.018
   );
   face.rotation.z = THREE.MathUtils.clamp(-state.velocity.x * 0.025, -0.16, 0.16);
   face.scale.set(
-    scales.sx * 0.96,
-    THREE.MathUtils.lerp(1, scales.sy, 0.42),
+    scales.sx,
+    THREE.MathUtils.lerp(1, scales.sy, 0.62),
     1
   );
 
-  leftEye.position.set(-0.21, 0.08, 0);
-  rightEye.position.set(0.21, 0.08, 0);
-  mouth.position.set(0, -0.07, 0.008);
+  leftEye.position.set(-0.142, 0.052, 0);
+  rightEye.position.set(0.142, 0.052, 0);
+  mouth.position.set(0, -0.047, 0.006);
 
   jellyGroup.position.copy(state.position);
 
@@ -685,7 +705,7 @@ function setPointerNDC(event) {
 }
 
 function updateGrabWeights(localPoint) {
-  const sigma = 0.48;
+  const sigma = 0.32;
   let max = 0;
 
   for (let i = 0; i < positionAttribute.count; i++) {
@@ -795,7 +815,7 @@ gravityButton.addEventListener("click", () => {
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.setSize(innerWidth, innerHeight, false);
 });
 
