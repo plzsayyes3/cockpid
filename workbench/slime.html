@@ -62,7 +62,7 @@
 <div class="hud">
   <button class="chip" id="reset" type="button">RESET</button>
   <button class="chip" id="gravity" type="button">GRAVITY ON</button>
-  <div class="chip hint">つまむ → 引っぱる → 離す</div>
+  <div class="chip hint">つかむ → 引っぱる → 投げる</div>
 </div>
 
 <script>
@@ -72,23 +72,31 @@
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d", { alpha: false });
 
-  const BASE_W = 180;
-  let BASE_H = 320;
-  const POINT_COUNT = 14;
+  // Keep the simulation small enough for iPhone, but use more body points
+  // than the first prototype so deformation travels through the body.
+  const BASE_W = 240;
+  let BASE_H = 426;
+  const POINT_COUNT = 20;
 
-  const GRAVITY = 0.060;
-  const DAMPING = 0.992;
-  const FLOOR_BOUNCE = 0.48;
-  const WALL_BOUNCE = 0.42;
-  const FLOOR_FRICTION = 0.985;
-  const SOLVER_ITERATIONS = 9;
+  // Fixed-step simulation: the feel no longer changes much with frame rate.
+  const STEP_MS = 1000 / 120;
+  const MAX_STEPS_PER_FRAME = 6;
+  const GRAVITY = 0.036;
+  const AIR_DAMPING = 0.9972;
+  const FLOOR_RESTITUTION = 0.12;
+  const WALL_RESTITUTION = 0.20;
+  const FLOOR_FRICTION = 0.91;
+  const SOLVER_ITERATIONS = 8;
 
   let gravityOn = true;
   let points = [];
-  let springs = [];
+  let constraints = [];
   let restArea = 1;
   let floorY = 0;
-  let grabbed = -1;
+
+  let grabWeights = null;
+  let lastTime = performance.now();
+  let accumulator = 0;
 
   const pointer = {
     x: 0,
@@ -96,8 +104,7 @@
     down: false,
     vx: 0,
     vy: 0,
-    lastX: 0,
-    lastY: 0
+    lastMoveAt: 0
   };
 
   class Point {
@@ -106,42 +113,33 @@
       this.y = y;
       this.px = x;
       this.py = y;
+      this.contact = false;
     }
 
     integrate() {
-      const vx = (this.x - this.px) * DAMPING;
-      const vy = (this.y - this.py) * DAMPING;
+      const vx = (this.x - this.px) * AIR_DAMPING;
+      const vy = (this.y - this.py) * AIR_DAMPING;
 
       this.px = this.x;
       this.py = this.y;
-
       this.x += vx;
       this.y += vy + (gravityOn ? GRAVITY : 0);
+      this.contact = false;
     }
   }
 
   function resize() {
     const aspect = innerHeight / innerWidth;
-    BASE_H = Math.max(220, Math.round(BASE_W * aspect));
+    BASE_H = Math.max(300, Math.round(BASE_W * aspect));
     canvas.width = BASE_W;
     canvas.height = BASE_H;
-    floorY = BASE_H - 42;
+    floorY = BASE_H - 58;
     ctx.imageSmoothingEnabled = false;
     reset();
   }
 
   function distance(a, b) {
     return Math.hypot(b.x - a.x, b.y - a.y);
-  }
-
-  function polygonArea(poly) {
-    let sum = 0;
-    for (let i = 0; i < poly.length; i++) {
-      const a = poly[i];
-      const b = poly[(i + 1) % poly.length];
-      sum += a.x * b.y - b.x * a.y;
-    }
-    return Math.abs(sum) * 0.5;
   }
 
   function centroid() {
@@ -154,8 +152,22 @@
     return { x: x / points.length, y: y / points.length };
   }
 
-  function addSpring(a, b, stiffness) {
-    springs.push({
+  function signedArea(poly) {
+    let sum = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      sum += a.x * b.y - b.x * a.y;
+    }
+    return sum * 0.5;
+  }
+
+  function polygonArea(poly) {
+    return Math.abs(signedArea(poly));
+  }
+
+  function addConstraint(a, b, stiffness) {
+    constraints.push({
       a,
       b,
       length: distance(points[a], points[b]),
@@ -165,46 +177,60 @@
 
   function reset() {
     points = [];
-    springs = [];
-    grabbed = -1;
+    constraints = [];
+    grabWeights = null;
     pointer.down = false;
 
     const cx = BASE_W * 0.5;
-    const cy = Math.min(BASE_H * 0.33, floorY - 92);
-    const rx = 29;
-    const ry = 25;
+    const cy = Math.min(BASE_H * 0.30, floorY - 125);
+    const rx = 38;
+    const ry = 33;
 
     for (let i = 0; i < POINT_COUNT; i++) {
       const angle = (i / POINT_COUNT) * Math.PI * 2 - Math.PI / 2;
-      const bottomBias = Math.sin(angle) > 0 ? 1.08 : 1;
-      points.push(
-        new Point(
-          cx + Math.cos(angle) * rx * bottomBias,
-          cy + Math.sin(angle) * ry
-        )
-      );
+
+      // Slightly wider at the bottom: closer to a blob resting under its own mass.
+      const lower = Math.sin(angle) > 0 ? 1.07 : 1;
+      points.push(new Point(
+        cx + Math.cos(angle) * rx * lower,
+        cy + Math.sin(angle) * ry
+      ));
     }
 
     for (let i = 0; i < POINT_COUNT; i++) {
-      addSpring(i, (i + 1) % POINT_COUNT, 0.90);
-      addSpring(i, (i + 2) % POINT_COUNT, 0.32);
-      addSpring(i, (i + Math.floor(POINT_COUNT / 2)) % POINT_COUNT, 0.07);
+      // Skin / surface tension.
+      addConstraint(i, (i + 1) % POINT_COUNT, 0.48);
+
+      // Bending resistance. This keeps local dents soft rather than angular.
+      addConstraint(i, (i + 2) % POINT_COUNT, 0.115);
+      addConstraint(i, (i + 3) % POINT_COUNT, 0.035);
+
+      // Very weak cross-body memory prevents the blob from folding through itself,
+      // while still allowing a big squash and stretch.
+      addConstraint(
+        i,
+        (i + Math.floor(POINT_COUNT / 2)) % POINT_COUNT,
+        0.010
+      );
     }
 
     restArea = polygonArea(points);
+    lastTime = performance.now();
+    accumulator = 0;
   }
 
-  function solveSpring(spring) {
-    const a = points[spring.a];
-    const b = points[spring.b];
+  function solveDistance(c) {
+    const a = points[c.a];
+    const b = points[c.b];
 
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 0.001;
-    const correction = ((len - spring.length) / len) * 0.5 * spring.stiffness;
+    const len = Math.hypot(dx, dy) || 0.0001;
+    const difference = (len - c.length) / len;
+    const amount = difference * 0.5 * c.stiffness;
 
-    const ox = dx * correction;
-    const oy = dy * correction;
+    const ox = dx * amount;
+    const oy = dy * amount;
 
     a.x += ox;
     a.y += oy;
@@ -214,9 +240,12 @@
 
   function solveArea() {
     const c = centroid();
-    const currentArea = polygonArea(points);
-    const error = (restArea - currentArea) / restArea;
-    const pressure = 0.115;
+    const current = polygonArea(points);
+    const error = (restArea - current) / restArea;
+
+    // Volume preservation acts as the slime's internal pressure.
+    // Low per-iteration strength gives a delayed "puff back" rather than rubber.
+    const pressure = 0.032;
 
     for (const p of points) {
       p.x += (p.x - c.x) * error * pressure;
@@ -224,62 +253,156 @@
     }
   }
 
+  function smoothSurface() {
+    // Tiny curvature relaxation behaves like surface tension.
+    // It removes sharp kinks while preserving the large deformation.
+    const next = points.map((p, i) => {
+      const before = points[(i - 1 + points.length) % points.length];
+      const after = points[(i + 1) % points.length];
+      return {
+        x: ((before.x + after.x) * 0.5 - p.x) * 0.010,
+        y: ((before.y + after.y) * 0.5 - p.y) * 0.010
+      };
+    });
+
+    for (let i = 0; i < points.length; i++) {
+      points[i].x += next[i].x;
+      points[i].y += next[i].y;
+    }
+  }
+
+  function applyViscosity() {
+    // Neighboring particles partially share velocity.
+    // This is what makes it read as a cohesive jelly instead of a rubber ring.
+    const velocities = points.map(p => ({
+      x: p.x - p.px,
+      y: p.y - p.py
+    }));
+
+    for (let i = 0; i < points.length; i++) {
+      const prev = velocities[(i - 1 + points.length) % points.length];
+      const cur = velocities[i];
+      const next = velocities[(i + 1) % points.length];
+
+      const avgX = (prev.x + cur.x * 2 + next.x) * 0.25;
+      const avgY = (prev.y + cur.y * 2 + next.y) * 0.25;
+
+      const mix = points[i].contact ? 0.18 : 0.055;
+      const vx = cur.x + (avgX - cur.x) * mix;
+      const vy = cur.y + (avgY - cur.y) * mix;
+
+      points[i].px = points[i].x - vx;
+      points[i].py = points[i].y - vy;
+    }
+  }
+
   function collide(p) {
-    const margin = 3;
+    const margin = 4;
 
     if (p.y > floorY) {
       const vx = p.x - p.px;
       const vy = p.y - p.py;
+
       p.y = floorY;
-      p.py = p.y + vy * FLOOR_BOUNCE;
+      p.contact = true;
+
+      // Slime absorbs most impact instead of bouncing like a ball.
+      if (vy > 0.16) {
+        p.py = p.y + vy * FLOOR_RESTITUTION;
+      } else {
+        p.py = p.y;
+      }
+
+      // Strong floor friction gives a short-lived "sticky" contact patch.
       p.px = p.x - vx * FLOOR_FRICTION;
     }
 
     if (p.x < margin) {
       const vx = p.x - p.px;
       p.x = margin;
-      p.px = p.x + vx * WALL_BOUNCE;
-    }
-
-    if (p.x > BASE_W - margin) {
+      p.px = p.x + vx * WALL_RESTITUTION;
+    } else if (p.x > BASE_W - margin) {
       const vx = p.x - p.px;
       p.x = BASE_W - margin;
-      p.px = p.x + vx * WALL_BOUNCE;
+      p.px = p.x + vx * WALL_RESTITUTION;
     }
 
     if (p.y < margin) {
       const vy = p.y - p.py;
       p.y = margin;
-      p.py = p.y + vy * WALL_BOUNCE;
+      p.py = p.y + vy * WALL_RESTITUTION;
     }
   }
 
-  function physicsStep() {
+  function applyGrab() {
+    if (!pointer.down || !grabWeights) return;
+
+    let ax = 0;
+    let ay = 0;
+    let total = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      const w = grabWeights[i];
+      if (w <= 0.001) continue;
+      ax += points[i].x * w;
+      ay += points[i].y * w;
+      total += w;
+    }
+
+    if (total <= 0) return;
+
+    ax /= total;
+    ay /= total;
+
+    let dx = pointer.x - ax;
+    let dy = pointer.y - ay;
+
+    // Prevent one accidental swipe from numerically exploding the body.
+    const len = Math.hypot(dx, dy);
+    const maxPull = 95;
+    if (len > maxPull) {
+      dx *= maxPull / len;
+      dy *= maxPull / len;
+    }
+
+    for (let i = 0; i < points.length; i++) {
+      const w = grabWeights[i];
+      if (w <= 0.001) continue;
+
+      // Local grab: the nearest skin points lead, the rest of the mass lags.
+      const strength = 0.17 * w;
+      points[i].x += dx * strength;
+      points[i].y += dy * strength;
+    }
+  }
+
+  function stepPhysics() {
     for (const p of points) {
       p.integrate();
     }
 
-    if (grabbed >= 0 && pointer.down) {
-      const p = points[grabbed];
+    applyGrab();
 
-      // Grip follows the finger with a little elasticity.
-      p.x += (pointer.x - p.x) * 0.88;
-      p.y += (pointer.y - p.y) * 0.88;
-
-      // Preserve pointer velocity so releasing throws the slime.
-      p.px = p.x - pointer.vx * 0.78;
-      p.py = p.y - pointer.vy * 0.78;
-    }
-
-    for (let i = 0; i < SOLVER_ITERATIONS; i++) {
-      for (const spring of springs) {
-        solveSpring(spring);
+    for (let iteration = 0; iteration < SOLVER_ITERATIONS; iteration++) {
+      for (const c of constraints) {
+        solveDistance(c);
       }
+
       solveArea();
+      smoothSurface();
+
+      // Re-apply the grab inside the solver so the held area stays under the finger
+      // while the rest of the body stretches behind it.
+      if ((iteration & 1) === 1) {
+        applyGrab();
+      }
+
       for (const p of points) {
         collide(p);
       }
     }
+
+    applyViscosity();
   }
 
   function metrics() {
@@ -288,12 +411,18 @@
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
+    let vx = 0;
+    let vy = 0;
+    let contacts = 0;
 
     for (const p of points) {
       minX = Math.min(minX, p.x);
       minY = Math.min(minY, p.y);
       maxX = Math.max(maxX, p.x);
       maxY = Math.max(maxY, p.y);
+      vx += p.x - p.px;
+      vy += p.y - p.py;
+      if (p.contact) contacts++;
     }
 
     return {
@@ -303,7 +432,10 @@
       maxX,
       maxY,
       w: maxX - minX,
-      h: maxY - minY
+      h: maxY - minY,
+      vx: vx / points.length,
+      vy: vy / points.length,
+      contacts
     };
   }
 
@@ -312,11 +444,15 @@
 
     const first = points[0];
     const last = points[points.length - 1];
-    ctx.moveTo((last.x + first.x) * 0.5, (last.y + first.y) * 0.5);
+    ctx.moveTo(
+      (last.x + first.x) * 0.5,
+      (last.y + first.y) * 0.5
+    );
 
     for (let i = 0; i < points.length; i++) {
       const current = points[i];
       const next = points[(i + 1) % points.length];
+
       ctx.quadraticCurveTo(
         current.x,
         current.y,
@@ -329,26 +465,47 @@
   }
 
   function drawFace(m) {
-    // The face intentionally deforms much less than the body.
-    const squash = Math.max(0.84, Math.min(1.12, m.h / 50));
-    const faceY = m.c.y + 4 * squash;
-    const eyeDistance = Math.max(5, Math.min(8, m.w * 0.18));
+    // The face rides on the inner mass rather than the deforming skin.
+    // It tilts a little from inertia but does not melt with the outline.
+    const speed = Math.hypot(m.vx, m.vy);
+    const tilt = Math.max(-0.15, Math.min(0.15, m.vx * 0.035));
+    const squish = Math.max(0.82, Math.min(1.12, m.h / 66));
 
-    ctx.strokeStyle = "#18334a";
-    ctx.lineWidth = 1.55;
+    ctx.save();
+    ctx.translate(m.c.x, m.c.y + 5);
+    ctx.rotate(tilt);
+
+    const eyeDistance = Math.max(7, Math.min(11, m.w * 0.16));
+    const eyeY = 1.5 * squish;
+
+    ctx.strokeStyle = "#17324a";
+    ctx.lineWidth = 2;
     ctx.lineCap = "round";
 
-    ctx.beginPath();
-    ctx.arc(m.c.x - eyeDistance, faceY, 2.05, Math.PI * 1.10, Math.PI * 1.90);
-    ctx.stroke();
+    const blink = speed > 4.7 || (m.contacts >= 5 && m.h < 54);
+
+    if (blink) {
+      ctx.beginPath();
+      ctx.moveTo(-eyeDistance - 2, eyeY);
+      ctx.lineTo(-eyeDistance + 2, eyeY);
+      ctx.moveTo(eyeDistance - 2, eyeY);
+      ctx.lineTo(eyeDistance + 2, eyeY);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(-eyeDistance, eyeY, 2.6, Math.PI * 1.10, Math.PI * 1.90);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(eyeDistance, eyeY, 2.6, Math.PI * 1.10, Math.PI * 1.90);
+      ctx.stroke();
+    }
 
     ctx.beginPath();
-    ctx.arc(m.c.x + eyeDistance, faceY, 2.05, Math.PI * 1.10, Math.PI * 1.90);
+    ctx.arc(0, eyeY + 7, 2.7, 0.14 * Math.PI, 0.86 * Math.PI);
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(m.c.x, faceY + 5.2, 2.2, 0.12 * Math.PI, 0.88 * Math.PI);
-    ctx.stroke();
+    ctx.restore();
   }
 
   function draw() {
@@ -362,46 +519,53 @@
 
     ctx.fillStyle = "#202b38";
     ctx.fillRect(0, floorY, BASE_W, BASE_H - floorY);
+
     ctx.fillStyle = "#314050";
     ctx.fillRect(0, floorY, BASE_W, 2);
 
-    // shadow
     const heightFromFloor = Math.max(0, floorY - m.maxY);
-    const shadowAlpha = Math.max(0.08, 0.25 - heightFromFloor * 0.0025);
+    const shadowAlpha = Math.max(0.06, 0.24 - heightFromFloor * 0.0016);
+    const shadowWidth = Math.max(16, Math.min(54, m.w * 0.52));
+
     ctx.globalAlpha = shadowAlpha;
     ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.ellipse(
-      m.c.x,
-      floorY + 2,
-      Math.max(10, Math.min(36, m.w * 0.46)),
-      3,
-      0,
-      0,
-      Math.PI * 2
-    );
+    ctx.ellipse(m.c.x, floorY + 3, shadowWidth, 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // soft body
     slimePath();
-    ctx.fillStyle = "#82cff6";
+
+    const grad = ctx.createRadialGradient(
+      m.minX + m.w * 0.33,
+      m.minY + m.h * 0.24,
+      2,
+      m.c.x,
+      m.c.y,
+      Math.max(m.w, m.h) * 0.72
+    );
+    grad.addColorStop(0, "#d9f4ff");
+    grad.addColorStop(0.18, "#9fe0ff");
+    grad.addColorStop(0.66, "#78c7ee");
+    grad.addColorStop(1, "#5aa9d3");
+
+    ctx.fillStyle = grad;
     ctx.fill();
 
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.strokeStyle = "#315f83";
     ctx.stroke();
 
-    // highlight
-    ctx.globalAlpha = 0.42;
-    ctx.fillStyle = "#e2f7ff";
+    // Gloss follows the upper-left skin but is intentionally smaller than the body.
+    ctx.globalAlpha = 0.48;
+    ctx.fillStyle = "#f3fbff";
     ctx.beginPath();
     ctx.ellipse(
       m.minX + m.w * 0.34,
-      m.minY + m.h * 0.27,
-      Math.max(3, m.w * 0.12),
-      Math.max(2, m.h * 0.075),
-      -0.52,
+      m.minY + m.h * 0.24,
+      Math.max(4, m.w * 0.11),
+      Math.max(2.5, m.h * 0.055),
+      -0.55,
       0,
       Math.PI * 2
     );
@@ -410,11 +574,61 @@
 
     drawFace(m);
 
-    if (grabbed >= 0) {
-      const p = points[grabbed];
-      ctx.fillStyle = "rgba(255,255,255,.8)";
-      ctx.fillRect(Math.round(p.x) - 1, Math.round(p.y) - 1, 3, 3);
+    if (pointer.down && grabWeights) {
+      let maxW = 0;
+      let maxI = 0;
+      for (let i = 0; i < grabWeights.length; i++) {
+        if (grabWeights[i] > maxW) {
+          maxW = grabWeights[i];
+          maxI = i;
+        }
+      }
+      const p = points[maxI];
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
+  }
+
+  function pointInPolygon(x, y) {
+    let inside = false;
+
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const a = points[i];
+      const b = points[j];
+
+      const intersects =
+        ((a.y > y) !== (b.y > y)) &&
+        (x < (b.x - a.x) * (y - a.y) / ((b.y - a.y) || 0.0001) + a.x);
+
+      if (intersects) inside = !inside;
+    }
+
+    return inside;
+  }
+
+  function makeGrabWeights(x, y) {
+    // Allow grabbing anywhere inside the slime, or just outside its skin.
+    let nearest = Infinity;
+    for (const p of points) {
+      nearest = Math.min(nearest, Math.hypot(p.x - x, p.y - y));
+    }
+
+    if (!pointInPolygon(x, y) && nearest > 18) {
+      return null;
+    }
+
+    const sigma = 28;
+    const weights = points.map(p => {
+      const d = Math.hypot(p.x - x, p.y - y);
+      return Math.exp(-(d * d) / (2 * sigma * sigma));
+    });
+
+    const max = Math.max(...weights) || 1;
+    return weights.map(w => w / max);
   }
 
   function pointerPosition(event) {
@@ -425,47 +639,55 @@
     };
   }
 
-  function nearestPoint(x, y) {
-    let nearest = -1;
-    let nearestDistance = Infinity;
-
-    for (let i = 0; i < points.length; i++) {
-      const d = Math.hypot(points[i].x - x, points[i].y - y);
-      if (d < nearestDistance) {
-        nearestDistance = d;
-        nearest = i;
-      }
-    }
-
-    return nearestDistance < 36 ? nearest : -1;
-  }
-
-  canvas.addEventListener("pointerdown", (event) => {
-    canvas.setPointerCapture(event.pointerId);
-
+  canvas.addEventListener("pointerdown", event => {
     const p = pointerPosition(event);
-    pointer.x = pointer.lastX = p.x;
-    pointer.y = pointer.lastY = p.y;
+    const weights = makeGrabWeights(p.x, p.y);
+
+    if (!weights) return;
+
+    canvas.setPointerCapture(event.pointerId);
+    grabWeights = weights;
+    pointer.x = p.x;
+    pointer.y = p.y;
     pointer.vx = 0;
     pointer.vy = 0;
     pointer.down = true;
-
-    grabbed = nearestPoint(p.x, p.y);
+    pointer.lastMoveAt = performance.now();
   });
 
-  canvas.addEventListener("pointermove", (event) => {
+  canvas.addEventListener("pointermove", event => {
+    if (!pointer.down) return;
+
+    const now = performance.now();
     const p = pointerPosition(event);
-    pointer.vx = p.x - pointer.x;
-    pointer.vy = p.y - pointer.y;
-    pointer.lastX = pointer.x;
-    pointer.lastY = pointer.y;
+    const elapsed = Math.max(8, now - pointer.lastMoveAt);
+    const scale = 16.667 / elapsed;
+
+    pointer.vx = (p.x - pointer.x) * scale;
+    pointer.vy = (p.y - pointer.y) * scale;
     pointer.x = p.x;
     pointer.y = p.y;
+    pointer.lastMoveAt = now;
   });
 
   function release() {
+    if (pointer.down && grabWeights) {
+      // Give the mass the finger's release velocity. Nearby particles receive
+      // more of the throw, which makes the body trail and rotate naturally.
+      const vx = Math.max(-10, Math.min(10, pointer.vx));
+      const vy = Math.max(-10, Math.min(10, pointer.vy));
+
+      for (let i = 0; i < points.length; i++) {
+        const w = grabWeights[i];
+        points[i].px = points[i].x - vx * 0.72 * w;
+        points[i].py = points[i].y - vy * 0.72 * w;
+      }
+    }
+
     pointer.down = false;
-    grabbed = -1;
+    grabWeights = null;
+    pointer.vx = 0;
+    pointer.vy = 0;
   }
 
   canvas.addEventListener("pointerup", release);
@@ -473,21 +695,33 @@
 
   document.getElementById("reset").addEventListener("click", reset);
 
-  document.getElementById("gravity").addEventListener("click", (event) => {
+  document.getElementById("gravity").addEventListener("click", event => {
     gravityOn = !gravityOn;
     event.currentTarget.textContent = gravityOn ? "GRAVITY ON" : "GRAVITY OFF";
   });
 
-  function loop() {
-    physicsStep();
-    physicsStep();
+  function frame(now) {
+    let delta = now - lastTime;
+    lastTime = now;
+
+    // Ignore giant jumps after returning from another app/tab.
+    delta = Math.min(delta, 50);
+    accumulator += delta;
+
+    let steps = 0;
+    while (accumulator >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
+      stepPhysics();
+      accumulator -= STEP_MS;
+      steps++;
+    }
+
     draw();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(frame);
   }
 
   addEventListener("resize", resize);
   resize();
-  loop();
+  requestAnimationFrame(frame);
 })();
 </script>
 </body>
