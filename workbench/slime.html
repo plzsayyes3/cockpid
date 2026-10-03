@@ -420,12 +420,12 @@ const state = {
 const NATURAL_RADIUS_Y = 0.60;
 
 function currentShapeScale() {
-  const sy = THREE.MathUtils.clamp(1 - state.squash, 0.58, 1.48);
+  const sy = THREE.MathUtils.clamp(1 - state.squash, 0.48, 1.60);
   const lateral = 1 / Math.sqrt(sy);
   return {
-    sx: THREE.MathUtils.clamp(lateral, 0.78, 1.42),
+    sx: THREE.MathUtils.clamp(lateral, 0.72, 1.58),
     sy,
-    sz: THREE.MathUtils.clamp(lateral, 0.78, 1.42)
+    sz: THREE.MathUtils.clamp(lateral, 0.72, 1.58)
   };
 }
 
@@ -452,6 +452,62 @@ function updateSpring(value, velocity, stiffness, damping, dt) {
   return [value, velocity];
 }
 
+const cameraSpaceJelly = new THREE.Vector3();
+
+function keepJellyInView() {
+  const scales = currentShapeScale();
+  cameraSpaceJelly.copy(state.position);
+  camera.worldToLocal(cameraSpaceJelly);
+
+  const depth = Math.max(0.6, -cameraSpaceJelly.z);
+  const halfHeight =
+    Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * depth;
+  const halfWidth = halfHeight * camera.aspect;
+
+  // Extra padding keeps the translucent rim and wobble inside the viewport.
+  const radiusX = 0.62 * scales.sx + 0.075;
+  const radiusY = 0.62 * Math.max(scales.sy, scales.sx * 0.82) + 0.075;
+
+  const xLimit = Math.max(0.02, halfWidth - radiusX);
+  const topLimit = Math.max(0.02, halfHeight - radiusY);
+
+  let changed = false;
+
+  if (cameraSpaceJelly.x < -xLimit) {
+    cameraSpaceJelly.x = -xLimit;
+    state.velocity.x = Math.abs(state.velocity.x) * 0.10;
+    state.wobbleXVelocity -= 0.55;
+    changed = true;
+  } else if (cameraSpaceJelly.x > xLimit) {
+    cameraSpaceJelly.x = xLimit;
+    state.velocity.x = -Math.abs(state.velocity.x) * 0.10;
+    state.wobbleXVelocity += 0.55;
+    changed = true;
+  }
+
+  // The desk already guards the lower edge. This guards only the top edge,
+  // allowing upward throws without ever losing the jelly outside the screen.
+  if (cameraSpaceJelly.y > topLimit) {
+    cameraSpaceJelly.y = topLimit;
+    state.velocity.y = Math.min(0, state.velocity.y) * 0.08;
+    state.velocity.z *= 0.88;
+    state.squashVelocity -= 0.12;
+    changed = true;
+  }
+
+  if (changed) {
+    camera.localToWorld(cameraSpaceJelly);
+    state.position.copy(cameraSpaceJelly);
+
+    // Re-resolve the desk after vertical frustum correction.
+    const bottom = state.position.y - currentBottomRadius();
+    if (bottom < TABLE_Y) {
+      state.position.y += TABLE_Y - bottom;
+      if (state.velocity.y < 0) state.velocity.y = 0;
+    }
+  }
+}
+
 function physicsStep(dt) {
   if (state.gravityOn && !state.dragging) {
     state.velocity.y -= 7.7 * dt;
@@ -463,8 +519,9 @@ function physicsStep(dt) {
     // Clamp the pull so accidental swipes remain stable.
     if (toTarget.length() > 2.15) toTarget.setLength(2.15);
 
-    state.velocity.addScaledVector(toTarget, 34 * dt);
-    state.velocity.multiplyScalar(Math.pow(0.18, dt));
+    // Softer body: the grabbed skin leads while the mass catches up more slowly.
+    state.velocity.addScaledVector(toTarget, 24 * dt);
+    state.velocity.multiplyScalar(Math.pow(0.16, dt));
 
     // A grabbed point leads; the rest of the jelly lags behind.
     state.squashVelocity +=
@@ -489,7 +546,7 @@ function physicsStep(dt) {
       const impact = -state.velocity.y;
       state.velocity.y = impact * 0.08;
 
-      state.squashVelocity += impact * 0.185;
+      state.squashVelocity += impact * 0.23;
       state.wobbleXVelocity += -state.velocity.x * 0.19;
       state.wobbleZVelocity += -state.velocity.z * 0.19;
 
@@ -501,39 +558,31 @@ function physicsStep(dt) {
     if (Math.abs(state.velocity.y) < 0.08) state.velocity.y = 0;
   }
 
-  // Keep the sample on top of the desk.
-  const edge = 3.35;
-  if (state.position.x < -edge) {
-    state.position.x = -edge;
-    state.velocity.x = Math.abs(state.velocity.x) * 0.2;
-    state.wobbleXVelocity -= 0.8;
-  } else if (state.position.x > edge) {
-    state.position.x = edge;
-    state.velocity.x = -Math.abs(state.velocity.x) * 0.2;
-    state.wobbleXVelocity += 0.8;
-  }
-
-  const zEdge = 1.65;
+  // Keep depth on the desk, then clamp the whole jelly to the visible
+  // camera frustum so a fast throw can never disappear off-screen.
+  const zEdge = 1.55;
   if (state.position.z < -zEdge) {
     state.position.z = -zEdge;
-    state.velocity.z = Math.abs(state.velocity.z) * 0.2;
+    state.velocity.z = Math.abs(state.velocity.z) * 0.12;
   } else if (state.position.z > zEdge) {
     state.position.z = zEdge;
-    state.velocity.z = -Math.abs(state.velocity.z) * 0.2;
+    state.velocity.z = -Math.abs(state.velocity.z) * 0.12;
   }
 
+  keepJellyInView();
+
   [state.squash, state.squashVelocity] =
-    updateSpring(state.squash, state.squashVelocity, 27, 4.3, dt);
+    updateSpring(state.squash, state.squashVelocity, 16, 2.9, dt);
 
   [state.wobbleX, state.wobbleXVelocity] =
-    updateSpring(state.wobbleX, state.wobbleXVelocity, 21, 3.8, dt);
+    updateSpring(state.wobbleX, state.wobbleXVelocity, 13.5, 2.7, dt);
 
   [state.wobbleZ, state.wobbleZVelocity] =
-    updateSpring(state.wobbleZ, state.wobbleZVelocity, 21, 3.8, dt);
+    updateSpring(state.wobbleZ, state.wobbleZVelocity, 13.5, 2.7, dt);
 
-  state.squash = THREE.MathUtils.clamp(state.squash, -0.34, 0.38);
-  state.wobbleX = THREE.MathUtils.clamp(state.wobbleX, -0.42, 0.42);
-  state.wobbleZ = THREE.MathUtils.clamp(state.wobbleZ, -0.42, 0.42);
+  state.squash = THREE.MathUtils.clamp(state.squash, -0.42, 0.52);
+  state.wobbleX = THREE.MathUtils.clamp(state.wobbleX, -0.52, 0.52);
+  state.wobbleZ = THREE.MathUtils.clamp(state.wobbleZ, -0.52, 0.52);
 }
 
 const localTarget = new THREE.Vector3();
