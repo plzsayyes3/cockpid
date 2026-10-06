@@ -7,15 +7,18 @@
   if (!appWindow || !appTitle || !appContent) return;
 
   const ZEN_BASE = 'https://plzsayyes3.github.io/zen-note/';
-  const ZEN_MAIN_KEY = 'cockpid.zen.main.v1';
-  const ZEN_PATHS = new Set(['', 'v1/', 'v2/', 'v2v/', 'v3/', 'v4/', 'v5/', 'v6/', 'v7/', 'v8/', 'v9/']);
+  const ZEN_MAIN_KEY = 'cockpid.zen.main.v2';
+  const ZEN_LEGACY_KEY = 'cockpid.zen.main.v1';
+  const ZEN_PATHS = new Set(['', 'v1/', 'v2/', 'v2v/', 'v3/', 'v4/', 'v5/', 'v6/', 'v7/', 'v8/', 'v9/', 'v10/']);
 
   function mainZenPath() {
     try {
       const value = localStorage.getItem(ZEN_MAIN_KEY);
       if (value !== null && ZEN_PATHS.has(value)) return value;
+      const legacy = localStorage.getItem(ZEN_LEGACY_KEY);
+      if (legacy !== null && ZEN_PATHS.has(legacy) && legacy !== 'v9/') return legacy;
     } catch (_) {}
-    return 'v9/';
+    return 'v10/';
   }
 
   function mainZenUrl() {
