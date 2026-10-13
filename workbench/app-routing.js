@@ -22,7 +22,9 @@
   }
 
   function mainZenUrl() {
-    return ZEN_BASE + mainZenPath();
+    const path = mainZenPath();
+    // Bust iframe cache specifically for Zen v10; leave other versions untouched.
+    return ZEN_BASE + path + (path === 'v10/' ? '?build=20261014-kana-send3' : '');
   }
 
   const apps = Object.freeze({
