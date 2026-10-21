@@ -74,24 +74,28 @@ Runtime routingの正本:
 
 - `workbench/app-routing.js`
 
-現在のDock / routing:
+現在のDock / routing（2026-10-21、`workbench/app-routing.js` 照合）:
 
 | Key | App | Route / behavior |
 |---|---|---|
 | 1 | Calendar | `workbench/calendar.html` |
 | 2 | Tasks | `workbench/taskliner-bridge.html` → external TaskLiner |
-| 3 | Zen | external `zen-note` |
+| 3 | Zen | external `zen-note`（既定はv10） |
 | 4 | News | external `My_Internet_place` |
 | — | Advice | Dock外。Mail Statusから `workbench/advice.html` |
-| 5 | On Hand | `workbench/onhand.html` |
-| 6 | Dictionary | `workbench/dictionary.js` / StickS3 Voice Capture dictionary editor |
-| 7 | Projects | `workbench/backstage.html` — Overview / Town status |
-| 8 | Thinking | `workbench/thinking.html` — ideas / themes / questions / hypotheses / actions |
-| — | Project Town | `workbench/project-town.html` — standalone compatibility view |
-| 9 | Keyboard | external `https://plzsayyes3.github.io/Keyboard/?v=c83f529` — 作業台App枠内に薙刀式練習サイトを直接表示 |
-| 0 | Secret Desk | local easter egg |
+| 5 | Dictionary | dictionary module |
+| 6 | Area | `workbench/project-town.html` |
+| 7 | Backstage | `workbench/backstage.html` |
+| 8 | On Hand | `workbench/onhand.html` |
+| 9 | Thinking | `workbench/thinking.html` |
+| 0 | For My Sons | external `for_my_sons` |
+| — | Keyboard | Dock番号なし。外部薙刀式練習サイトへの既存route |
+| — | Stan | ヘッダーのマイクアイコンから独立ページ |
+| — | Board | ヘッダーのステータス入口 |
 
-`5=On Hand / 6=Dictionary / 7=Projects / 8=Thinking / 9=Keyboard` が現在値です。Stanはヘッダーの電池型Settingsアイコン横にあるマイクアイコンから開けます。Project Townは7番の詳細画面に統合し、旧URLは互換用に残しています。旧Boardはヘッダーのステータスボタンから開けます。
+`5=Dictionary / 6=Area / 7=Backstage / 8=On Hand / 9=Thinking / 0=For My Sons` が実装上の現行値です。旧Keyboard=9 / Secret Desk=0の記載は過去の状態です。
+
+Google CalendarのOAuth・読み取り・3か月同期のコードは存在しますが、Google Cloud設定・認証成功・データ同期の実機確認は未了です。実装ありと運用完了を区別します。
 
 ## HOME principle
 
