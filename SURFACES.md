@@ -109,7 +109,7 @@ Mail badge. This is intentionally **not** in the app dock — `index.html`'s own
 copy says so explicitly: "AdviceはMENUから外し、Mail Statusから既存画面を開きます" (Advice
 is deliberately treated as a notification, not a peer app).
 
-### 3.4 Dictionary (key 9)
+### 3.4 Dictionary (key 5)
 
 Reads the manual and auto transcription dictionaries from `plzsayyes3/sticks3-voice-capture`.
 The manual `local-receiver/transcription-dictionary.txt` is editable and saved through the
