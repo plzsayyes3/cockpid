@@ -32,3 +32,57 @@ test('slider saves only UI size locally, preserving app routing', () => {
   assert.match(js, /localStorage\.getItem\(KEY/);
   assert.doesNotMatch(js, /github_pat_|fetch\(|location\.reload\(/);
 });
+
+test('UI size change, persistence, reset, and text-entry behavior work', () => {
+  const { runInNewContext } = require('node:vm');
+  const callbacks = {};
+  const props = {};
+  const values = {};
+  const makeControl = () => ({
+    value: '100',
+    events: {},
+    addEventListener(type, handler) { this.events[type] = handler; }
+  });
+  const slider = makeControl();
+  const reset = makeControl();
+  const output = { textContent: '' };
+  const document = {
+    documentElement: { style: { setProperty(name, value) { props[name] = value; } } },
+    body: { classList: {
+      add(name) { values.activeClass = name; },
+      remove() { values.activeClass = ''; }
+    } },
+    getElementById(id) {
+      return { uiSizeRange: slider, uiSizeReset: reset, uiSizeOutput: output }[id];
+    },
+    addEventListener(name, handler) { callbacks[name] = handler; }
+  };
+  const window = { addEventListener(name, handler) { callbacks['window-' + name] = handler; } };
+  const localStorage = {
+    getItem(key) { return values[key] ?? null; },
+    setItem(key, value) { values[key] = value; }
+  };
+  class HTMLElement {
+    constructor(tag) { this.tag = tag; }
+    matches(selector) {
+      return this.tag === 'textarea' ? selector.startsWith('textarea') : selector === 'input' && this.tag === 'input';
+    }
+  }
+  runInNewContext(read('adaptive-layout.js'), { document, window, localStorage, HTMLElement });
+  assert.equal(output.textContent, '100%');
+  slider.value = '85';
+  slider.events.input();
+  assert.equal(props['--wb-capture-adjust'], '-24px');
+  slider.events.change();
+  assert.equal(values['cockpid.workbench.ui-size.v1'], '85');
+  reset.events.click();
+  assert.equal(slider.value, '100');
+  assert.equal(values['cockpid.workbench.ui-size.v1'], '100');
+  callbacks.focusin({ target: new HTMLElement('textarea') });
+  assert.equal(values.activeClass, 'wb-text-entry');
+  callbacks.focusout();
+  assert.equal(values.activeClass, '');
+  values['cockpid.workbench.ui-size.v1'] = '110';
+  callbacks['window-storage']({ key: 'cockpid.workbench.ui-size.v1' });
+  assert.equal(output.textContent, '110%');
+});
