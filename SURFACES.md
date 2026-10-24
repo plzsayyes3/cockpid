@@ -50,6 +50,8 @@ Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-
 
 ### Adaptive HOME layout (code-verified 2026-10-24, device verification pending)
 
+2026-10-24 update: on narrow screens (≤720px), the launcher now starts closed and can be expanded via a bottom MENU toggle; backdrop / Escape / selecting an app collapses it. The closed Dock is removed from tab focus using `inert` and `aria-hidden`. Entering `#captureText` hides the Calendar / ON HAND / News home panels, compresses the header, and grows the writing region relative to `visualViewport.height`, while preserving 16px text. Keyboard focus hides the launcher and HP/MP bars. On wider screens the original Dock remains available. This behavior is implemented, but visual verification on the target device is pending.
+
 The HOME loads `workbench/adaptive-layout.css` after the existing HOME styles, and
 `workbench/adaptive-layout.js` after the Settings script. Width ≤720px uses a
 shortened 5×2 Dock with ≥44px tap targets and a smaller capture panel. Width ≤720px
