@@ -48,6 +48,24 @@ candidate handled. This distinction is implemented in `onhand-core.js`, `onhand.
 Bottom **dock** is the app launcher (see §3). Most apps open full-screen-in-an-overlay
 (`app-window`); Stan is intentionally a separate full-page route under `workbench/stan/`.
 
+### Adaptive HOME layout (code-verified 2026-10-24, device verification pending)
+
+The HOME loads `workbench/adaptive-layout.css` after the existing HOME styles, and
+`workbench/adaptive-layout.js` after the Settings script. Width ≤720px uses a
+shortened 5×2 Dock with ≥44px tap targets and a smaller capture panel. Width ≤720px
+and height ≤700px reduces the capture panel further; height ≤520px swaps to a
+horizontally scrollable single-row Dock to preserve tappable targets. Width ≥721px
+and height ≤700px displays the 10-launcher Dock on one row.
+
+Settings → General provides a UI size slider (85–110%, 5% increments) changing
+padding, spacing, capture height, and mobile Dock height without scaling the
+whole document or shrinking typing text below 16px. It persists only in
+`localStorage['cockpid.workbench.ui-size.v1']` on that browser/device. On a coarse
+pointer, focusing a text editor hides the floating Dock, HP/MP bars, and resident
+until focus leaves. The existing app route handlers and SOURCE/Knowledge System
+writes are unchanged. Visual verification on the physical folding device and
+in Safari/PWA remains outstanding.
+
 ---
 
 ## 3. The apps
