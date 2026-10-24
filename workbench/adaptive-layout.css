@@ -1,0 +1,180 @@
+/* Adaptive Workbench layout — width, available height, and device-local UI size.
+   This stylesheet intentionally follows all legacy HOME stylesheets. */
+:root {
+  --wb-pad-adjust:0px;
+  --wb-gap-adjust:0px;
+  --wb-capture-adjust:0px;
+  --wb-dock-adjust:0px;
+}
+
+.desk { gap:calc(16px + var(--wb-gap-adjust)); }
+.object { padding:calc(18px + var(--wb-pad-adjust)); }
+.capture-object {
+  padding:calc(22px + var(--wb-pad-adjust));
+  min-height:calc(300px + var(--wb-capture-adjust));
+}
+.capture-object textarea { min-height:calc(180px + var(--wb-capture-adjust)); }
+
+.display-settings {
+  display:grid;
+  gap:9px;
+  max-width:520px;
+  margin-top:18px;
+  padding:14px;
+  border-radius:9px;
+  background:#efede6;
+}
+.display-settings-head,.display-settings-limits {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.display-settings-head label { font-size:12px;font-weight:700;color:#45423d; }
+.display-settings-head output { font:700 12px ui-monospace,monospace;color:#45423d; }
+.display-settings input[type="range"] {
+  display:block;
+  width:100%;
+  min-height:40px;
+  margin:0;
+  accent-color:#6d786e;
+  touch-action:pan-y;
+}
+.display-settings-limits { color:#77736c;font-size:10px; }
+.display-settings small { color:#77736c;line-height:1.5; }
+.display-settings button {
+  width:max-content;
+  min-height:40px;
+  padding:0 12px;
+  border:1px solid #d6d1c7;
+  border-radius:6px;
+  color:#45423d;
+  background:#fffef9;
+  font-size:11px;
+}
+
+@media(max-width:720px) {
+  :root {
+    --wb-mobile-dock-height:clamp(44px,calc(48px + var(--wb-dock-adjust)),52px);
+    --wb-mobile-dock-gap:clamp(4px,calc(6px + var(--wb-gap-adjust)),8px);
+    --wb-mobile-dock-stack:calc(var(--wb-mobile-dock-height) + var(--wb-mobile-dock-height) + var(--wb-mobile-dock-gap) + 8px + env(safe-area-inset-bottom));
+  }
+  .shell {
+    padding:calc(12px + var(--wb-pad-adjust)) 12px calc(var(--wb-mobile-dock-stack) + 70px);
+  }
+  .topbar { gap:8px;margin-bottom:calc(12px + var(--wb-gap-adjust)); }
+  .brand-sub { display:none; }
+  .desk { gap:calc(10px + var(--wb-gap-adjust)); }
+  .object { padding:calc(14px + var(--wb-pad-adjust)); }
+  .capture-object {
+    padding:calc(16px + var(--wb-pad-adjust));
+    min-height:calc(185px + var(--wb-capture-adjust));
+  }
+  .capture-object textarea {
+    margin-top:9px;
+    min-height:calc(82px + var(--wb-capture-adjust));
+    font-size:16px; /* Avoid iOS input auto-zoom. */
+    line-height:1.5;
+  }
+  .capture-actions { margin-top:8px;padding-top:8px; }
+  .capture-help-note { display:none; }
+  .capture-object:focus-within { min-height:calc(235px + var(--wb-capture-adjust)); }
+  .capture-object:focus-within textarea { min-height:calc(140px + var(--wb-capture-adjust)); }
+  .today-object,.news-object { min-height:0; }
+  .dock {
+    left:max(8px,env(safe-area-inset-left));
+    right:max(8px,env(safe-area-inset-right));
+    bottom:calc(8px + env(safe-area-inset-bottom));
+    width:auto;
+    max-width:none;
+    padding:0;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    grid-template-rows:repeat(2,var(--wb-mobile-dock-height));
+    gap:var(--wb-mobile-dock-gap);
+    overflow:visible;
+  }
+  .app-btn {
+    width:100%;
+    min-width:0;
+    height:var(--wb-mobile-dock-height);
+    min-height:44px;
+    aspect-ratio:auto;
+    padding:3px 2px;
+    grid-template-columns:16px 18px;
+    grid-template-rows:18px 9px;
+    column-gap:2px;
+    row-gap:2px;
+    align-content:center;
+    justify-content:center;
+    border-radius:8px;
+  }
+  .app-btn .dock-icon { width:18px;height:18px; }
+  .app-btn .dock-key { width:16px;height:16px;font-size:9px; }
+  .app-btn .dock-label { font-size:7px;line-height:1; }
+  .hp-dock { bottom:calc(var(--wb-mobile-dock-stack) + 11px); }
+  .mp-dock { bottom:calc(var(--wb-mobile-dock-stack) + 35px); }
+  .pet { bottom:calc(var(--wb-mobile-dock-stack) + 62px); }
+}
+
+@media(max-width:720px) and (max-height:700px) {
+  .topbar { margin-bottom:8px; }
+  .capture-object { min-height:calc(146px + var(--wb-capture-adjust)); }
+  .capture-object textarea { min-height:calc(54px + var(--wb-capture-adjust));margin-top:6px; }
+  .capture-object:focus-within { min-height:calc(218px + var(--wb-capture-adjust)); }
+  .capture-object:focus-within textarea { min-height:calc(126px + var(--wb-capture-adjust)); }
+  .capture-help { display:none; }
+  .today-object,.news-object { min-height:0; }
+}
+
+/* Very short usable height: keep 44px tap targets while letting the dock scroll horizontally. */
+@media(max-width:720px) and (max-height:520px) {
+  :root { --wb-mobile-dock-stack:calc(48px + 8px + env(safe-area-inset-bottom)); }
+  .dock {
+    grid-template-columns:repeat(10,minmax(64px,68px));
+    grid-template-rows:48px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    touch-action:pan-x;
+    justify-content:start;
+  }
+  .dock::-webkit-scrollbar { display:none; }
+  .app-btn { height:48px;min-height:44px;scroll-snap-align:start; }
+  .shell { padding-bottom:calc(var(--wb-mobile-dock-stack) + 68px); }
+}
+
+/* Unfolded / landscape windows: use the width, not two deep dock rows. */
+@media(min-width:721px) and (max-height:700px) {
+  .shell { padding-top:12px;padding-bottom:130px; }
+  .topbar { margin-bottom:10px; }
+  .desk { gap:calc(10px + var(--wb-gap-adjust)); }
+  .capture-object { min-height:calc(155px + var(--wb-capture-adjust)); }
+  .capture-object textarea { min-height:calc(72px + var(--wb-capture-adjust));margin-top:8px;line-height:1.5; }
+  .today-object,.news-object { min-height:0; }
+  .dock {
+    width:min(960px,calc(100vw - 24px));
+    display:grid;
+    grid-template-columns:repeat(10,minmax(0,1fr));
+    grid-template-rows:44px;
+    gap:6px;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  .app-btn { width:100%;height:44px;min-width:0;min-height:44px;padding:0 5px;gap:4px; }
+  .app-btn span { font-size:7px; }
+  .hp-dock { bottom:calc(69px + env(safe-area-inset-bottom)); }
+  .mp-dock { bottom:calc(93px + env(safe-area-inset-bottom)); }
+  .pet { bottom:calc(108px + env(safe-area-inset-bottom)); }
+}
+
+@media (pointer:coarse) {
+  body.wb-text-entry .dock,
+  body.wb-text-entry .hp-dock,
+  body.wb-text-entry .mp-dock,
+  body.wb-text-entry .pet {
+    visibility:hidden;
+    pointer-events:none;
+  }
+}
