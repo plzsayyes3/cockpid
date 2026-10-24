@@ -32,7 +32,7 @@
 .drawer-backdrop{background:rgba(42,40,35,.18)!important;z-index:110!important}.drawer{background:#f8f7f2!important;color:var(--ink)!important;border-left:0!important;box-shadow:-18px 0 45px rgba(30,28,24,.16)!important;z-index:111!important}.drawer-head{border-bottom:1px solid var(--line)!important}.drawer-head strong{color:var(--ink)!important}.drawer textarea,.token-box input{background:#fff!important;color:var(--ink)!important;border:1px solid #d7d3ca!important}.token-box{border-color:var(--line)!important}.btn{border:0;border-radius:6px;background:#e9e7e0;color:var(--ink);padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.btn.primary{background:var(--ink);color:#faf9f5}.small,.drawer-status,.zen-hint,.token-box label{color:var(--muted)!important}
 .memo-area-route{border:0;border-radius:6px;background:#dce8f4;color:#315d91;padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.memo-area-route-panel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding:7px;border:1px solid #c9d8e6;border-radius:6px;background:#f5f9fd;color:#315d91;font:700 8px ui-monospace,monospace}.memo-area-route-panel[hidden]{display:none}.memo-area-route-panel button{border:1px solid #b8cbe0;border-radius:999px;background:#fff;color:#315d91;padding:5px 8px;cursor:pointer;font:inherit}.memo-area-route-label{letter-spacing:.08em}
 </style>
-<link rel="stylesheet" href="adaptive-layout.css?v=20261024-duo1">
+<link rel="stylesheet" href="adaptive-layout.css?v=20261024-duo2">
 </head>
 <body>
 <div class="shell">
@@ -56,7 +56,9 @@
     <span class="hp-track" aria-hidden="true"><span class="hp-ghost" id="hpCompactGhost"></span><span class="hp-fill" id="hpCompactCurrent"></span></span>
   </button>
 </div>
-<nav class="dock" aria-label="Workbench apps"><button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button><button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button><button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button><button class="app-btn" data-app="news"><b>4</b><span>News</span></button><button class="app-btn" data-app="dictionary"><b>5</b><span>Dictionary</span></button><button class="app-btn" data-app="projecttown"><b>6</b><span>Area</span></button><button class="app-btn" data-app="backstage"><b>7</b><span>Backstage</span></button><button class="app-btn" data-app="onhand"><b>8</b><span>On Hand</span></button><button class="app-btn" data-app="thinking"><b>9</b><span>Thinking</span></button><button class="app-btn" data-app="formysons"><b>0</b><span>For My Sons</span></button></nav>
+<nav class="dock" id="appDock" aria-label="Workbench apps"><button class="app-btn" data-app="calendar"><b>1</b><span>Calendar</span></button><button class="app-btn" data-app="tasks"><b>2</b><span>Tasks</span></button><button class="app-btn" data-app="zen"><b>3</b><span>Zen</span></button><button class="app-btn" data-app="news"><b>4</b><span>News</span></button><button class="app-btn" data-app="dictionary"><b>5</b><span>Dictionary</span></button><button class="app-btn" data-app="projecttown"><b>6</b><span>Area</span></button><button class="app-btn" data-app="backstage"><b>7</b><span>Backstage</span></button><button class="app-btn" data-app="onhand"><b>8</b><span>On Hand</span></button><button class="app-btn" data-app="thinking"><b>9</b><span>Thinking</span></button><button class="app-btn" data-app="formysons"><b>0</b><span>For My Sons</span></button></nav>
+<div class="dock-scrim" id="dockScrim" hidden aria-hidden="true"></div>
+<button class="dock-toggle" id="dockToggle" type="button" aria-expanded="false" aria-controls="appDock" aria-label="アプリメニューを開く"><span class="dock-toggle-symbol" aria-hidden="true">⌃</span><span class="dock-toggle-label">MENU</span></button>
 <section class="hp-sheet" id="hpSheet" aria-hidden="true">
   <button class="hp-sheet-backdrop" id="hpSheetBackdrop" type="button" aria-label="HP編集を閉じる"></button>
   <div class="hp-panel" role="dialog" aria-modal="true" aria-labelledby="hpEditorTitle">
@@ -140,7 +142,7 @@
 <script src="navigation.js"></script>
 <script>document.write(`<script src="app-routing.js?cb=${Date.now()}"><\/script>`);</script>
 <script src="system-settings.js?v=20260918-workbench-review2"></script>
-<script src="adaptive-layout.js?v=20261024-duo1"></script>
+<script src="adaptive-layout.js?v=20261024-duo2"></script>
 <script src="area-source-adapter.js?v=20260923-private-area-read1"></script>
 <script src="area-model.js"></script>
 <script src="memo-inbox.js?v=20260918-workbench-review"></script>
