@@ -32,6 +32,7 @@
 .drawer-backdrop{background:rgba(42,40,35,.18)!important;z-index:110!important}.drawer{background:#f8f7f2!important;color:var(--ink)!important;border-left:0!important;box-shadow:-18px 0 45px rgba(30,28,24,.16)!important;z-index:111!important}.drawer-head{border-bottom:1px solid var(--line)!important}.drawer-head strong{color:var(--ink)!important}.drawer textarea,.token-box input{background:#fff!important;color:var(--ink)!important;border:1px solid #d7d3ca!important}.token-box{border-color:var(--line)!important}.btn{border:0;border-radius:6px;background:#e9e7e0;color:var(--ink);padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.btn.primary{background:var(--ink);color:#faf9f5}.small,.drawer-status,.zen-hint,.token-box label{color:var(--muted)!important}
 .memo-area-route{border:0;border-radius:6px;background:#dce8f4;color:#315d91;padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.memo-area-route-panel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding:7px;border:1px solid #c9d8e6;border-radius:6px;background:#f5f9fd;color:#315d91;font:700 8px ui-monospace,monospace}.memo-area-route-panel[hidden]{display:none}.memo-area-route-panel button{border:1px solid #b8cbe0;border-radius:999px;background:#fff;color:#315d91;padding:5px 8px;cursor:pointer;font:inherit}.memo-area-route-label{letter-spacing:.08em}
 </style>
+<link rel="stylesheet" href="adaptive-layout.css?v=20261024-duo1">
 </head>
 <body>
 <div class="shell">
@@ -107,7 +108,18 @@
     <div class="settings-layout">
       <nav class="settings-nav" aria-label="Settings sections"><button class="settings-nav-btn active" type="button" data-settings-section="general">General</button><button class="settings-nav-btn" type="button" data-settings-section="paths">Paths / Data</button><button class="settings-nav-btn" type="button" data-settings-section="github">GitHub</button><button class="settings-nav-btn" type="button" data-settings-section="notifications">Notifications</button><button class="settings-nav-btn" type="button" data-settings-section="apps">Apps</button></nav>
       <div class="settings-content">
-        <section class="settings-section active" data-settings-panel="general"><div class="settings-section-kicker">GENERAL</div><h3>Workbench</h3><p>作業台全体の設定入口です。現時点では接続設定と、今後集約する保存先の受け皿を置いています。</p></section>
+        <section class="settings-section active" data-settings-panel="general">
+          <div class="settings-section-kicker">GENERAL</div>
+          <h3>Workbench</h3>
+          <p>画面の幅と高さに合わせて、作業台の並び方とDockを自動調整します。</p>
+          <div class="display-settings" aria-label="表示の設定">
+            <div class="display-settings-head"><label for="uiSizeRange">UIサイズ</label><output id="uiSizeOutput" for="uiSizeRange">100%</output></div>
+            <input id="uiSizeRange" type="range" min="85" max="110" step="5" value="100" aria-label="作業台のUIサイズ">
+            <div class="display-settings-limits"><span>85% · 小さく</span><span>110% · 大きく</span></div>
+            <small>配置は自動のまま、パネルの余白・高さ・Dockのサイズを調整します。この端末だけに保存されます。</small>
+            <button id="uiSizeReset" type="button">標準の100%に戻す</button>
+          </div>
+        </section>
         <section class="settings-section" data-settings-panel="paths"><div class="settings-section-kicker">PATHS / DATA</div><h3>保存先</h3><p>今回は構造のみです。未接続の項目は既存ロジックを変更していません。</p><div class="path-list"><div class="path-row"><span>Daily Note folder</span><b>NOT CONNECTED</b></div><div class="path-row"><span>Inbox folder</span><b>mynotebook / 00_inbox</b></div><div class="path-row"><span>Short Memo destination</span><b>mynotebook / 00_inbox · CURRENT</b></div><div class="path-row"><span>Project root</span><b>AUTO · CANONICAL VIEW</b></div><div class="path-row"><span>TaskLiner data folder</span><b>NOT CONNECTED</b></div><div class="path-row"><span>HP log</span><b>my-storage-note / app-state/cockpid/hp</b></div><div class="path-row"><span>MP log</span><b>my-storage-note / app-state/cockpid/mp</b></div></div></section>
         <section class="settings-section" data-settings-panel="github"><div class="settings-section-kicker">GITHUB</div><h3>Connection</h3><p class="token-copy">Workbenchが <b>my-storage-note</b> と <b>mynotebook</b> を読む・書くためのFine-grained tokenです。この端末のlocalStorageだけに保存します。</p><div class="token-field"><label for="workbenchTokenInput">GITHUB FINE-GRAINED TOKEN</label><div class="token-input-wrap"><input id="workbenchTokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button class="token-eye" id="tokenReveal" type="button">SHOW</button></div></div><div class="token-status" id="tokenStatus">TOKEN REQUIRED</div><div class="token-actions"><button class="token-btn danger" id="tokenClearWorkbench" type="button">REMOVE</button><button class="token-btn" id="tokenTest" type="button">TEST</button><button class="token-btn primary" id="tokenSaveWorkbench" type="button">SAVE &amp; RELOAD</button></div></section>
         <section class="settings-section" data-settings-panel="notifications"><div class="settings-section-kicker">NOTIFICATIONS</div><h3>Status</h3><p>MailはヘッダーのStatusとして表示します。現在はAI Advice受信箱の未読件数を利用します。</p><div class="settings-note">通知方式そのものの設定は未実装です。</div></section>
@@ -128,6 +140,7 @@
 <script src="navigation.js"></script>
 <script>document.write(`<script src="app-routing.js?cb=${Date.now()}"><\/script>`);</script>
 <script src="system-settings.js?v=20260918-workbench-review2"></script>
+<script src="adaptive-layout.js?v=20261024-duo1"></script>
 <script src="area-source-adapter.js?v=20260923-private-area-read1"></script>
 <script src="area-model.js"></script>
 <script src="memo-inbox.js?v=20260918-workbench-review"></script>
