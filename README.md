@@ -106,6 +106,8 @@ HOMEは「全部を監視するMission Control」ではなく、必要な道具�
 - Projectの正本をCockpitへ複製しない
 - 各Appは必要に応じて直接URLでも開ける
 - スマートフォンでは独立Appを全画面で扱える構造を基本とする
+- HOMEは画面の幅に加え高さが短いときも密度を調整する（`workbench/adaptive-layout.css`）
+- Settings > GeneralのUIサイズ（85〜110%）は端末内の`cockpid.workbench.ui-size.v1`に保存し、全画面`scale()`は使わない。実機表示・開閉時の評価は未了
 
 ## Project surfaces
 
