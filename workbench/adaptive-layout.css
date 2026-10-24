@@ -60,7 +60,7 @@
     --wb-mobile-dock-stack:calc(var(--wb-mobile-dock-height) + var(--wb-mobile-dock-height) + var(--wb-mobile-dock-gap) + 8px + env(safe-area-inset-bottom));
   }
   .shell {
-    padding:calc(12px + var(--wb-pad-adjust)) 12px calc(var(--wb-mobile-dock-stack) + 70px);
+    padding:calc(12px + env(safe-area-inset-top) + var(--wb-pad-adjust)) 12px calc(var(--wb-mobile-dock-stack) + 70px);
   }
   .topbar { gap:8px;margin-bottom:calc(12px + var(--wb-gap-adjust)); }
   .brand-sub { display:none; }
