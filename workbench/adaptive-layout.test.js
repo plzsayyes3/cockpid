@@ -50,7 +50,9 @@ test('UI size change, persistence, reset, and text-entry behavior work', () => {
     documentElement: { style: { setProperty(name, value) { props[name] = value; } } },
     body: { classList: {
       add(name) { values.activeClass = name; },
-      remove() { values.activeClass = ''; }
+      remove() { values.activeClass = ''; },
+      toggle(name, enabled) { values['class:' + name] = Boolean(enabled); },
+      contains(name) { return Boolean(values['class:' + name]); }
     } },
     getElementById(id) {
       return { uiSizeRange: slider, uiSizeReset: reset, uiSizeOutput: output }[id];
@@ -85,4 +87,74 @@ test('UI size change, persistence, reset, and text-entry behavior work', () => {
   values['cockpid.workbench.ui-size.v1'] = '110';
   callbacks['window-storage']({ key: 'cockpid.workbench.ui-size.v1' });
   assert.equal(output.textContent, '110%');
+});
+
+test('compact Dock opens, closes, and stays out of the way during capture typing', () => {
+  const { runInNewContext } = require('node:vm');
+  const callbacks = {};
+  const values = {};
+  const classes = new Set();
+  const events = () => ({
+    handlers: {},
+    addEventListener(name, cb) { this.handlers[name] = cb; },
+    setAttribute(name, value) { this[name] = value; }
+  });
+  const dock = { ...events(), classList: {
+    toggle(name, active) { if (active) classes.add(name); else classes.delete(name); },
+    contains(name) { return classes.has(name); }
+  }};
+  const toggle = events();
+  const scrim = { ...events(), hidden: true };
+  const slider = { ...events(), value: '100' };
+  const output = { textContent: '' };
+  const reset = events();
+  const bodyClasses = new Set();
+  const document = {
+    body: { classList: {
+      add(n) { bodyClasses.add(n); },
+      remove(n) { bodyClasses.delete(n); },
+      contains(n) { return bodyClasses.has(n); },
+      toggle(n, enabled) { if (enabled) bodyClasses.add(n); else bodyClasses.delete(n); }
+    } },
+    documentElement: { style: { setProperty() {} } },
+    getElementById(id) {
+      return { appDock: dock, dockToggle: toggle, dockScrim: scrim,
+        uiSizeRange: slider, uiSizeOutput: output, uiSizeReset: reset }[id];
+    },
+    addEventListener(name, cb) { callbacks[name] = cb; }
+  };
+  class HTMLElement {
+    constructor(id, kind) { this.id = id; this.kind = kind; }
+    matches(selector) {
+      return this.kind === 'textarea' && selector.startsWith('textarea');
+    }
+  }
+  const visualViewport = { height:300, addEventListener(name, cb) {
+    callbacks['vv:' + name] = cb;
+  }};
+  const window = {
+    innerWidth:340, innerHeight:600, visualViewport,
+    matchMedia() { return { matches:true,addEventListener(_name, cb) { callbacks.media = cb; } }; },
+    addEventListener(name, cb) { callbacks['win:' + name] = cb; }
+  };
+  const localStorage = { getItem() {return null;},setItem() {} };
+  runInNewContext(read('adaptive-layout.js'),
+    { document, window, localStorage, HTMLElement });
+  assert.equal(dock.inert, true);
+  assert.equal(toggle['aria-expanded'], 'false');
+  toggle.handlers.click();
+  assert.equal(dock.inert, false);
+  assert.equal(toggle['aria-expanded'], 'true');
+  assert.equal(scrim.hidden, false);
+  callbacks.keydown({ key:'Escape' });
+  assert.equal(dock.inert, true);
+  assert.equal(scrim.hidden, true);
+  toggle.handlers.click();
+  callbacks.focusin({ target:new HTMLElement('captureText','textarea') });
+  assert.equal(toggle['aria-expanded'], 'false');
+  assert.equal(bodyClasses.has('wb-capture-writing'),true);
+  assert.equal(bodyClasses.has('wb-text-entry'),true);
+  callbacks.focusout();
+  assert.equal(bodyClasses.has('wb-capture-writing'),false);
+  assert.equal(bodyClasses.has('wb-text-entry'),false);
 });
