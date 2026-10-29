@@ -236,46 +236,153 @@
     loadToday();
   }
 
+
+  const CAPTURE_WRITE_TIMEOUT_MS = 20000;
+  const CAPTURE_VERIFY_TIMEOUT_MS = 10000;
+  const captureOriginalLabel = captureBtn.textContent;
+  let captureSaving = false;
+  let pendingCapture = null;
+  let captureStatusTimer = null;
+  let captureLabelTimer = null;
+
   function captureStatus(message, reset = true) {
     if (!captureHint) return;
+    clearTimeout(captureStatusTimer);
     captureHint.textContent = message;
-    if (reset) setTimeout(() => { captureHint.textContent = captureDefaultHint(); }, 2200);
+    if (reset) captureStatusTimer = setTimeout(() => {
+      captureHint.textContent = captureDefaultHint();
+    }, 3500);
+  }
+
+  // Aborting a PUT does not prove GitHub rejected it: always verify ambiguous writes.
+  async function captureRequest(url, options, timeoutMs) {
+    const controller = new AbortController();
+    let timeoutId;
+    let timedOut = false;
+    try {
+      return await Promise.race([
+        fetch(url, { ...options, signal: controller.signal }),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+            reject(new Error('通信がタイムアウトしました'));
+          }, timeoutMs);
+        })
+      ]);
+    } catch (error) {
+      if (timedOut) throw new Error(`通信タイムアウト（${Math.round(timeoutMs / 1000)}秒）`);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function captureUrl(entry) {
+    return `https://api.github.com/repos/${OWNER}/${entry.repo}/contents/${encodeApiPath(entry.path)}`;
+  }
+
+  function captureHeaders(currentToken) {
+    return { Accept: 'application/vnd.github+json', Authorization: `Bearer ${currentToken}` };
+  }
+
+  async function captureStoredState(entry, currentToken) {
+    const response = await captureRequest(captureUrl(entry), {
+      method: 'GET', headers: captureHeaders(currentToken), cache: 'no-store'
+    }, CAPTURE_VERIFY_TIMEOUT_MS);
+    if (response.status === 404) return 'missing';
+    if (!response.ok) throw new Error(`保存確認 ${response.status}`);
+    const payload = await response.json();
+    if (!payload || typeof payload.content !== 'string') {
+      throw new Error('保存確認の応答に本文がありません');
+    }
+    return payload.content.replace(/\s/g, '') === encodeUtf8(`${entry.text}\n`)
+      ? 'saved' : 'different';
+  }
+
+  function captureSaved(entry) {
+    // Keep any text edited while the save request was in progress.
+    const editedDuringSave = captureText.value.trim() !== entry.text;
+    if (!editedDuringSave) captureText.value = '';
+    pendingCapture = null;
+    try { window.COCKPID_MEMO_ROUTE?.recordMemo(entry.name); }
+    catch (error) { console.warn('memo route metadata could not be recorded', error); }
+    captureBtn.textContent = '保存済み ✓';
+    captureStatus(editedDuringSave
+      ? `保存しました · ${entry.name}（入力中の変更は未保存です）`
+      : `保存しました · ${entry.name}`);
+    window.COCKPID_RESIDENT?.complete?.('capture-save');
+    clearTimeout(captureLabelTimer);
+    captureLabelTimer = setTimeout(() => { captureBtn.textContent = captureOriginalLabel; }, 1600);
   }
 
   async function saveCaptureDirect() {
+    // The shortcut bypasses disabled button state, so guard concurrent calls in code.
+    if (captureSaving) return;
     const text = captureText.value.trim();
     if (!text) return captureText.focus();
     const currentToken = token();
     if (!currentToken) return captureStatus('GitHub token が必要です');
 
     const source = sourceFor('inbox', 'mynotebook', '00_inbox');
-    const name = `${inboxStamp()}.md`;
-    const path = joinPath(source.dir, name);
-    const originalLabel = captureBtn.textContent;
+    const reusePending = pendingCapture && pendingCapture.text === text &&
+      pendingCapture.repo === source.repo && pendingCapture.dir === source.dir;
+    const entry = reusePending ? pendingCapture : {
+      text, repo: source.repo, dir: source.dir, name: `${inboxStamp()}.md`
+    };
+    if (!reusePending) entry.path = joinPath(source.dir, entry.name);
+    pendingCapture = entry;
+    captureSaving = true;
+    let writeAttempted = false;
+    clearTimeout(captureLabelTimer);
     captureBtn.disabled = true;
-    captureBtn.textContent = '保存中…';
+    captureBtn.textContent = reusePending ? '保存結果を確認中…' : '保存中…';
     captureStatus(`${source.repo}/${source.dir} へ保存しています…`, false);
     window.COCKPID_RESIDENT?.working?.('capture-save');
     try {
-      const response = await fetch(`https://api.github.com/repos/${OWNER}/${source.repo}/contents/${encodeApiPath(path)}`, {
+      if (reusePending) {
+        const prior = await captureStoredState(entry, currentToken);
+        if (prior === 'saved') {
+          captureSaved(entry);
+          return;
+        }
+        if (prior === 'different') {
+          pendingCapture = null;
+          throw new Error('同名ファイルに異なる内容があります。もう一度保存してください。');
+        }
+      }
+      writeAttempted = true;
+      const response = await captureRequest(captureUrl(entry), {
         method: 'PUT',
-        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: `cockpid workbench: capture ${name}`, content: encodeUtf8(`${text}\n`) })
-      });
+        headers: { ...captureHeaders(currentToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `cockpid workbench: capture ${entry.name}`,
+          content: encodeUtf8(`${text}\n`)
+        })
+      }, CAPTURE_WRITE_TIMEOUT_MS);
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
-      window.COCKPID_MEMO_ROUTE?.recordMemo(name);
-      captureText.value = '';
-      captureBtn.textContent = '保存済み ✓';
-      captureStatus(`保存しました · ${name}`);
-      window.COCKPID_RESIDENT?.complete?.('capture-save');
-      setTimeout(() => { captureBtn.textContent = originalLabel; }, 1400);
+      captureSaved(entry);
     } catch (error) {
-      console.error(error);
-      captureBtn.textContent = '保存失敗';
-      captureStatus(String(error?.message || error));
+      console.error('capture save', error);
+      let state = 'unknown';
+      if (writeAttempted) {
+        try { state = await captureStoredState(entry, currentToken); }
+        catch (verificationError) {
+          console.warn('capture verification unavailable', verificationError);
+        }
+        if (state === 'saved') {
+          captureSaved(entry);
+          return;
+        }
+      }
+      if (state === 'different') pendingCapture = null;
+      captureBtn.textContent = state === 'different' ? '別名で再保存' : '再確認して保存';
+      captureStatus(state === 'different'
+        ? '同名ファイルに別の内容があります。次の保存では新しい名前を使用します。'
+        : `保存結果を確認できません（${error.message}）。文章は保持しました。再試行時は同じ保存先を確認します。`, false);
       window.COCKPID_RESIDENT?.error?.('capture-save');
-      setTimeout(() => { captureBtn.textContent = originalLabel; }, 1800);
     } finally {
+      captureSaving = false;
       captureBtn.disabled = false;
     }
   }
