@@ -110,7 +110,7 @@ test('confirmed remote content after a lost response counts as success', async (
     }
     return {
       ok: true, status: 200,
-      json: async () => ({ content: Buffer.from('hello\\n').toString('base64') })
+      json: async () => ({ content: Buffer.from('hello\n').toString('base64') })
     };
   });
   await app.save();
