@@ -32,6 +32,7 @@
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html?v=20260918-main-branch2' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: ZEN_BASE },
     news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
+    cards: { key: null, title: 'CARDS / カード', type: 'iframe', src: 'cards.html?v=20261105-1' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
     onhand: { key: '8', title: '8 / ON HAND', type: 'iframe', src: 'onhand.html' },
     thinking: { key: '9', title: '9 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },

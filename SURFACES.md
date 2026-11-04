@@ -437,3 +437,12 @@ The 2026-09-23 reorganization moved For My Sons to `0` and Keyboard to a header 
 menu pass established the current dock order: `5=Dictionary / 6=Area / 7=Backstage / 8=On Hand /
 9=Thinking`. Earlier intermediate notes that described key 7 as unassigned or Backstage as key 6
 are superseded by this runtime order. The Secret Desk easter egg remains retired.
+
+
+## Cards / スクショとIdea (2026-11-05)
+
+Header ▦ opens `workbench/cards.html` as an independent app; existing numbered apps remain intact. Two columns: mixed screenshot/Idea grid and Inbox composer, collapsed sidebar below 850 px. Raster uploads (PNG/JPEG/WebP/GIF, 15 MB each) via picker, paste or drop retain original bytes at private `mynotebook/03_scrap/assets/`; per-card metadata/title/memo/handled state at `03_scrap/cards/<uuid>.json`. Public cockpid holds application code only. No personal images, previews, or token URLs are committed.
+
+Default shows unhandled captures; checkbox means handled/no longer needed and never deletes the asset. Handled tab restores cards. Details allow editing titles/memos; Ideas remain read-only. Reads `my-storage-note/views/ideas.json`, ranks using Japanese word overlap with the latest 14 JST days of configured Daily notes and up to 30 recent Inbox notes, mixes 70% relevance / 30% random where enough matches exist; otherwise fills randomly. This is lexical ranking, not an LLM semantic judgment. Explicit Idea refresh only. Pinned Idea IDs and Inbox draft are local to the browser. Idea pins are not changes to canonical objects.
+
+Sidebar creates normal timestamped Inbox Markdown files, compatible with existing Inbox → Daily workflow, with stable retry identity. Captures use separate files and cannot be accidentally merged by that workflow. SHA-conflict retries preserve unrelated card fields. Network failures keep input for retry. Browser QA uses synthetic fixtures only.
