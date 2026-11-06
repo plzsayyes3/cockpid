@@ -12,9 +12,9 @@
   try { captureRawMode = window.localStorage?.getItem(CAPTURE_INPUT_MODE_KEY) === 'raw'; } catch (_) {}
   function syncCaptureMode() {
     if (!captureModeBtn) return;
-    captureModeBtn.textContent = captureRawMode ? 'RAW / 通常' : '通常 / RAW';
+    captureModeBtn.textContent = captureRawMode ? 'RAW かな / 通常' : '通常 / RAW かな';
     captureModeBtn.setAttribute('aria-pressed', String(captureRawMode));
-    captureModeBtn.setAttribute('aria-label', captureRawMode ? '半角RAW入力中。通常入力に切り替え' : '通常入力中。半角RAW入力に切り替え');
+    captureModeBtn.setAttribute('aria-label', captureRawMode ? 'ローマ字をひらがなへ直接変換中。通常入力に切り替え' : '通常入力中。ローマ字からひらがなへの直接変換に切り替え');
     captureText.setAttribute('lang', captureRawMode ? 'en' : 'ja');
     captureText.setAttribute('autocorrect', 'off');
     captureText.setAttribute('autocapitalize', 'off');
@@ -26,6 +26,77 @@
     try { window.localStorage?.setItem(CAPTURE_INPUT_MODE_KEY, captureRawMode ? 'raw' : 'normal'); } catch (_) {}
     syncCaptureMode();
     captureText.focus();
+  }
+  // RAW: roman letters become hiragana immediately, without any kanji conversion.
+  // Adapted from Zen Flow's local romaji mapping.
+  const CAPTURE_ROMA = Object.freeze({
+    a:'あ',i:'い',u:'う',e:'え',o:'お',
+    ka:'か',ki:'き',ku:'く',ke:'け',ko:'こ',kya:'きゃ',kyu:'きゅ',kyo:'きょ',
+    sa:'さ',shi:'し',si:'し',su:'す',se:'せ',so:'そ',sha:'しゃ',shu:'しゅ',sho:'しょ',sya:'しゃ',syu:'しゅ',syo:'しょ',
+    ta:'た',chi:'ち',ti:'ち',tsu:'つ',tu:'つ',te:'て',to:'と',cha:'ちゃ',chu:'ちゅ',cho:'ちょ',tya:'ちゃ',tyu:'ちゅ',tyo:'ちょ',
+    na:'な',ni:'に',nu:'ぬ',ne:'ね',no:'の',nya:'にゃ',nyu:'にゅ',nyo:'にょ',
+    ha:'は',hi:'ひ',fu:'ふ',hu:'ふ',he:'へ',ho:'ほ',hya:'ひゃ',hyu:'ひゅ',hyo:'ひょ',fa:'ふぁ',fi:'ふぃ',fe:'ふぇ',fo:'ふぉ',
+    ma:'ま',mi:'み',mu:'む',me:'め',mo:'も',mya:'みゃ',myu:'みゅ',myo:'みょ',
+    ya:'や',yu:'ゆ',yo:'よ',
+    ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',rya:'りゃ',ryu:'りゅ',ryo:'りょ',
+    wa:'わ',wo:'を',
+    ga:'が',gi:'ぎ',gu:'ぐ',ge:'げ',go:'ご',gya:'ぎゃ',gyu:'ぎゅ',gyo:'ぎょ',
+    za:'ざ',ji:'じ',zi:'じ',zu:'ず',ze:'ぜ',zo:'ぞ',ja:'じゃ',ju:'じゅ',jo:'じょ',jya:'じゃ',jyu:'じゅ',jyo:'じょ',
+    da:'だ',di:'ぢ',du:'づ',de:'で',do:'ど',dya:'ぢゃ',dyu:'ぢゅ',dyo:'ぢょ',
+    ba:'ば',bi:'び',bu:'ぶ',be:'べ',bo:'ぼ',bya:'びゃ',byu:'びゅ',byo:'びょ',
+    pa:'ぱ',pi:'ぴ',pu:'ぷ',pe:'ぺ',po:'ぽ',pya:'ぴゃ',pyu:'ぴゅ',pyo:'ぴょ',
+    va:'ゔぁ',vi:'ゔぃ',vu:'ゔ',ve:'ゔぇ',vo:'ゔぉ',wi:'うぃ',we:'うぇ',thi:'てぃ',dhi:'でぃ',twu:'とぅ',dwu:'どぅ',xtsu:'っ',ltsu:'っ',ltu:'っ',xa:'ぁ',xi:'ぃ',xu:'ぅ',xe:'ぇ',xo:'ぉ',la:'ぁ',li:'ぃ',lu:'ぅ',le:'ぇ',lo:'ぉ',xya:'ゃ',xyu:'ゅ',xyo:'ょ',lya:'ゃ',lyu:'ゅ',lyo:'ょ',she:'しぇ',che:'ちぇ',je:'じぇ'
+  });
+  const captureIsVowel=c=>c!==''&&'aiueo'.includes(c);
+  const captureIsConsonant=c=>/^[a-z]$/.test(c)&&!captureIsVowel(c);
+  function captureToHiragana(raw,final=false){
+    if(!/^[a-z]+$/.test(raw))return raw;
+    let out='',i=0;
+    while(i<raw.length){
+      const ch=raw[i],next=raw[i+1]||'';
+      if(ch==='n'){
+        if(next==='n'){
+          const after=raw[i+2]||'';
+          if(!after){out+=final?'ん':raw.slice(i);break;}
+          out+='ん';i+=captureIsVowel(after)||after==='y'?1:2;continue;
+        }
+        if(!next){out+=final?'ん':'n';break;}
+        if(captureIsConsonant(next)&&next!=='y'){out+='ん';i++;continue;}
+      }
+      if(ch===next&&ch!=='n'&&captureIsConsonant(ch)){
+        if(i+2>=raw.length&&!final){out+=raw.slice(i);break;}
+        out+='っ';i++;continue;
+      }
+      let found='',width=0;
+      for(let len=4;len>=1;len--){
+        const seq=raw.slice(i,i+len);
+        if(CAPTURE_ROMA[seq]){found=ROMA[seq];width=len;break;}
+      }
+      if(found){out+=found;i+=width;continue;}
+      out+=raw.slice(i);break;
+    }
+    return out;
+  }
+
+  function convertCaptureAtCaret() {
+    if(!captureRawMode || captureComposing || captureText.selectionStart!==captureText.selectionEnd) return;
+    const pos=captureText.selectionStart;
+    const prefix=captureText.value.slice(0,pos);
+    const boundary=/([a-z]+)([^A-Za-z])$/.exec(prefix);
+    let from,to,kana;
+    if(boundary){
+      from=pos-boundary[0].length;
+      to=from+boundary[1].length;
+      kana=captureToHiragana(boundary[1],true);
+    }else{
+      const found=/[a-z]+$/.exec(prefix);
+      if(!found)return;
+      from=pos-found[0].length;
+      to=pos;
+      kana=captureToHiragana(found[0],false);
+    }
+    if(captureText.value.slice(from,to)===kana)return;
+    captureText.setRangeText(kana,from,to,'end');
   }
   // Physical keyboard raw ASCII: insert characters from code rather than relying on IME conversion.
   // OS / IME shortcuts may intercept a key before it reaches the browser.
@@ -429,7 +500,13 @@
   syncCaptureMode();
   captureModeBtn?.addEventListener('click', toggleCaptureMode);
   captureText.addEventListener('compositionstart', () => { captureComposing = true; });
-  captureText.addEventListener('compositionend', () => { captureComposing = false; });
+  captureText.addEventListener('compositionend', () => {
+    captureComposing = false;
+    convertCaptureAtCaret();
+  });
+  captureText.addEventListener('input', () => {
+    if (!captureComposing) convertCaptureAtCaret();
+  });
   captureBtn.addEventListener('click', saveCaptureDirect);
   $w('prevDate')?.addEventListener('click', () => moveCalendar(-1));
   $w('nextDate')?.addEventListener('click', () => moveCalendar(1));
@@ -453,6 +530,7 @@
     const start = captureText.selectionStart;
     const end = captureText.selectionEnd;
     captureText.setRangeText(character, start, end, 'end');
+    convertCaptureAtCaret();
     captureText.dispatchEvent(new Event('input', { bubbles: true }));
   });
   window.addEventListener('cockpid:sources-changed', () => {
