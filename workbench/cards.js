@@ -195,6 +195,40 @@
     }catch(e){setStatus('inboxStatus',`保存できませんでした。入力は残っています。${e.message}`,true);}
     finally{state.inboxBusy=false;$('sendInbox').disabled=false;}
   }
+  async function pasteFromClipboard() {
+    const trigger=$('pasteImage');
+    if(trigger.disabled || state.uploading)return;
+    const hint=$('clipboardStatus');
+    hint.hidden=true;
+    trigger.disabled=true;
+    try {
+      if(!navigator.clipboard?.read)throw Error('Clipboard API unavailable');
+      const items=await navigator.clipboard.read();
+      const files=[];
+      for(const item of items) {
+        const type=item.types.find(t=>['image/png','image/jpeg','image/webp','image/gif'].includes(t));
+        if(!type)continue;
+        const blob=await item.getType(type);
+        const extension=({'image/png':'png','image/jpeg':'jpg','image/webp':'webp','image/gif':'gif'})[type];
+        files.push(new File([blob],`クリップボード画像-${Date.now()}.${extension}`,{type}));
+      }
+      if(!files.length) {
+        hint.textContent='クリップボードに画像がありません。スクリーンショットや「画像をコピー」で画像をコピーしてから、もう一度お試しください。';
+        hint.hidden=false;
+        return;
+      }
+      if($('detailDialog').open || $('uploadDialog').open) {
+        hint.textContent='開いている編集画面を閉じてから、画像を貼り付けてください。';
+        hint.hidden=false;
+        return;
+      }
+      addFiles(files);
+    } catch(error) {
+      hint.textContent='ボタンから読み取れませんでした。カード画面で Ctrl＋V（Macは ⌘＋V）を押すと画像を貼り付けられます。ブラウザの許可を求められた場合は、許可して再試行できます。';
+      hint.hidden=false;
+    } finally {trigger.disabled=false;}
+  }
+  $('pasteImage').addEventListener('click',pasteFromClipboard);
   $('addImages').addEventListener('click',()=>state.queue.length?$('uploadDialog').showModal():$('imageFiles').click());
   $('emptyAdd').addEventListener('click',()=>$('imageFiles').click());
   $('imageFiles').addEventListener('change',e=>{addFiles(e.target.files);e.target.value='';});
@@ -222,8 +256,9 @@
   $('inboxForm').addEventListener('submit',submitInbox);
   document.addEventListener('paste',event=>{
     if($('uploadDialog').open || $('detailDialog').open)return;
-    const images=Array.from(event.clipboardData?.files||[]).filter(f=>f.type.startsWith('image/'));
-    if(images.length){event.preventDefault();addFiles(images);}
+    let images=Array.from(event.clipboardData?.files||[]).filter(f=>f.type.startsWith('image/'));
+    if(!images.length)images=Array.from(event.clipboardData?.items||[]).filter(item=>item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
+    if(images.length){event.preventDefault();$('clipboardStatus').hidden=true;addFiles(images);}
   });
   let dragDepth=0;
   document.addEventListener('dragenter',event=>{if(Array.from(event.dataTransfer?.types||[]).includes('Files')){event.preventDefault();dragDepth++;document.body.classList.add('drag-over');}});

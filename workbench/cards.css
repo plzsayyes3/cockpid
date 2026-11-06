@@ -25,3 +25,10 @@ dialog{width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding
 .ocr-section h3 { font-size:12px; font-weight:600; margin-bottom:12px; }
 .ocr-transcript { font-size:13px; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; }
 .ocr-date,.ocr-pending { font-size:11px; color:var(--muted); line-height:1.8; margin-top:12px; }
+
+.clipboard-short { display:none; }
+.clipboard-status { border-left:2px solid var(--accent); padding:8px 12px; margin:0 0 14px; background:#e9eee4; }
+@media(max-width:600px) {
+  .clipboard-long { display:none; }
+  .clipboard-short { display:inline; }
+}

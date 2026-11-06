@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f4f3ee"><title>カード — 作業台</title>
-<link rel="stylesheet" href="cards.css?v=20261106-separate2">
+<link rel="stylesheet" href="cards.css?v=20261106-clipboard3">
 </head>
 <body>
 <header class="page-head">
   <div class="head-title"><a href="./" class="home-link" aria-label="作業台に戻る">作業台 /</a><h1>カード</h1><span class="subtitle">手元に置いて、ひとつずつ。</span></div>
-  <div class="head-actions"><button id="addImages" class="primary" type="button">＋ 画像を追加</button><button id="toggleInbox" type="button" aria-controls="inboxSidebar" aria-expanded="false">INBOX</button></div>
+  <div class="head-actions"><button id="addImages" class="primary" type="button">＋ 画像を追加</button><button id="pasteImage" type="button" title="クリップボードから画像を追加（Ctrl＋V / ⌘＋V）"><span class="clipboard-long">クリップボードから追加</span><span class="clipboard-short">貼り付け</span></button><button id="toggleInbox" type="button" aria-controls="inboxSidebar" aria-expanded="false">INBOX</button></div>
 </header>
 <div class="workspace">
 <main>
@@ -17,6 +17,7 @@
     <button id="refreshIdeas" type="button" title="画像カードはそのまま、Ideaを選び直します">Ideaを入れ替え ↻</button>
   </div>
   <p class="board-caption" id="boardCaption">撮ったままのスクショに、もう一度出会う。</p>
+  <p id="clipboardStatus" class="field-status clipboard-status" role="status" hidden></p>
   <div id="sourceStatus" role="status" class="source-status">読み込んでいます…</div>
   <div id="cardGrid" class="card-grid" aria-label="画像とIdeaのカード"></div>
   <div id="emptyState" class="empty-state" hidden><span class="empty-mark">＋</span><h2>気になったものを、ここへ。</h2><p>画像を追加すると、メモを添えてカードにできます。<br>貼り付け・ドラッグ＆ドロップにも対応しています。</p><button id="emptyAdd" type="button">画像を追加する</button></div>
@@ -33,5 +34,5 @@
 <dialog id="detailDialog" aria-labelledby="detailHeading"><div class="dialog-head"><h2 id="detailHeading">カード</h2><button id="closeDetail" type="button" aria-label="閉じる">×</button></div><div id="detailBody"></div><p id="detailStatus" role="status" class="field-status"></p><div class="dialog-footer" id="detailActions"></div></dialog>
 <div id="toast" class="toast" role="status" hidden></div>
 <script src="../prototype-common.js?v=20260918-workbench-review"></script>
-<script src="scrap-model.js?v=20261105-1"></script><script src="scrap-store.js?v=20261105-1"></script><script src="scrap-ocr.js?v=20261106-separate2"></script><script src="cards.js?v=20261106-separate2"></script>
+<script src="scrap-model.js?v=20261105-1"></script><script src="scrap-store.js?v=20261105-1"></script><script src="scrap-ocr.js?v=20261106-clipboard3"></script><script src="cards.js?v=20261106-clipboard3"></script>
 </body></html>

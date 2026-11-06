@@ -453,3 +453,8 @@ Sidebar creates normal timestamped Inbox Markdown files, compatible with existin
 Capture thumbnails use a centered square crop (`object-fit: cover`); the original image is unchanged and details keep its full aspect ratio. Title is one line. Manual memo and OCR have separate labelled sections with a divider: when both exist, memo previews one line and OCR two lines; either alone previews up to three lines. Details show read-only OCR below the editable manual memo.
 
 A daily ChatGPT automation reads pending private images and records `ocr` (status, source_image_sha, processed_at, engine, text, transcript_path) plus `03_scrap/text/<id>.md` in private mynotebook. Worker contract: `docs/cards-transcription-worker.md`. The card checkbox remains handled/no-longer-needed. Already handled captures and successful OCR for an unchanged image SHA are skipped. No-text success is distinct from download/reading failure. Latest-SHA atomic commits preserve manual fields and unknown metadata.
+
+
+### Desktop clipboard image capture (2026-11-06)
+
+Cards has an explicit clipboard button (short label on narrow screens). It reads `navigator.clipboard.read()` only after a user click, selects an image representation from ClipboardItems, and opens the existing image/memo confirmation editor. No automatic clipboard reads occur. Ctrl/Cmd+V supports both clipboard `files` and image `items`; ordinary text pastes remain unchanged. If button access is unsupported/denied, an inline keyboard-paste hint is shown. Empty/non-image clipboard contents cannot create a card. Original image picker and drop behavior are preserved.
