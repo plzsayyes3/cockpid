@@ -15,7 +15,12 @@ dialog{width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding
 .capture-card .card-image > button { width:100%; height:100%; min-height:0; }
 .capture-card .card-image img { width:100%; height:100%; max-height:none; object-fit:cover; object-position:center center; }
 .capture-card .card-title { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-.capture-card .capture-preview { -webkit-line-clamp:3; }
+.capture-text-label { display:block; font-size:9px; color:var(--muted); letter-spacing:.03em; margin-bottom:5px; }
+.capture-text-section + .capture-text-section { border-top:1px solid var(--line); margin-top:10px; padding-top:10px; }
+.capture-text-section .card-text { -webkit-line-clamp:3; }
+.capture-previews:has(.capture-ocr) .capture-memo .card-text { -webkit-line-clamp:1; }
+.capture-previews:has(.capture-memo) .capture-ocr .card-text { -webkit-line-clamp:2; }
+.capture-ocr .capture-text-label { color:var(--accent); }
 .ocr-section { margin-top:24px; border-top:1px solid var(--line); padding-top:18px; }
 .ocr-section h3 { font-size:12px; font-weight:600; margin-bottom:12px; }
 .ocr-transcript { font-size:13px; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; }

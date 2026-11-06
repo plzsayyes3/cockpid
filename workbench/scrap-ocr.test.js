@@ -25,9 +25,13 @@ test('no text is completed without fabricating content',()=>{
  const result=O.buildResult(card,'  ','abc123','2026-11-06T03:00:00Z');
  assert.equal(result.status,'no_text');assert.equal(result.text,'');assert.match(O.displayText({ocr:result}),/読み取れる文字はありません/);
 });
-test('preview keeps manual memo first and adds OCR within a shared three-line text area',()=>{
- assert.equal(O.previewText({...card,ocr:{status:'completed',text:'画像の文字'}}),'自分のメモ\n画像の文字');
- assert.equal(O.previewText(card),'自分のメモ');
+test('preview distinguishes manual memo and OCR as separately labelled sections',()=>{
+ assert.deepEqual(O.previewSections({...card,ocr:{status:'completed',text:'画像の文字'}}),[
+   {kind:'memo',label:'自分のメモ',text:'自分のメモ'},
+   {kind:'ocr',label:'画像の文字起こし',text:'画像の文字'}
+ ]);
+ assert.deepEqual(O.previewSections(card),[{kind:'memo',label:'自分のメモ',text:'自分のメモ'}]);
+ assert.deepEqual(O.previewSections({...card,memo:'',ocr:{status:'completed',text:'画像の文字'}}),[{kind:'ocr',label:'画像の文字起こし',text:'画像の文字'}]);
  assert.equal(O.displayText({ocr:{status:'failed',text:'未確認の文字'}}),'');
 });
 test('unsafe pairing paths and missing image SHA cannot be marked completed',()=>{

@@ -450,6 +450,6 @@ Sidebar creates normal timestamped Inbox Markdown files, compatible with existin
 
 ### Cards transcription and square previews (2026-11-06)
 
-Capture thumbnails use a centered square crop (`object-fit: cover`); the original image is unchanged and details keep its full aspect ratio. Title is one line and the combined manual memo/OCR preview is at most three lines. Details show read-only OCR below the editable manual memo.
+Capture thumbnails use a centered square crop (`object-fit: cover`); the original image is unchanged and details keep its full aspect ratio. Title is one line. Manual memo and OCR have separate labelled sections with a divider: when both exist, memo previews one line and OCR two lines; either alone previews up to three lines. Details show read-only OCR below the editable manual memo.
 
 A daily ChatGPT automation reads pending private images and records `ocr` (status, source_image_sha, processed_at, engine, text, transcript_path) plus `03_scrap/text/<id>.md` in private mynotebook. Worker contract: `docs/cards-transcription-worker.md`. The card checkbox remains handled/no-longer-needed. Already handled captures and successful OCR for an unchanged image SHA are skipped. No-text success is distinct from download/reading failure. Latest-SHA atomic commits preserve manual fields and unknown metadata.

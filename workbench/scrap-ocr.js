@@ -19,8 +19,12 @@
     if(!successful(card.ocr))return '';
     return card.ocr.status==='no_text'?'読み取れる文字はありません。':String(card.ocr.text||'');
   }
-  function previewText(card) {
-    return [card.memo,displayText(card)].filter(Boolean).join('\n');
+  function previewSections(card) {
+    const sections=[];
+    if(card.memo)sections.push({kind:'memo',label:'自分のメモ',text:card.memo});
+    const transcript=displayText(card);
+    if(transcript)sections.push({kind:'ocr',label:'画像の文字起こし',text:transcript});
+    return sections;
   }
   function transcriptMarkdown(card,ocr) {
     // Validate the pairing even when invoked independently by a scheduled worker.
@@ -31,5 +35,5 @@
     const fence='`'.repeat(Math.max(3,...runs.map(run=>run.length+1)));
     return `# ${title}\n\n![元画像](../assets/${basename})\n\n[元の画像メモ](../cards/${card.id}.json)\n\n## 画像の文字起こし\n\n${fence}text\n${displayText({ocr})}\n${fence}\n\n<!-- source_image_sha: ${ocr.source_image_sha}; processed_at: ${ocr.processed_at} -->\n`;
   }
-  return Object.freeze({needsTranscription,buildResult,displayText,previewText,transcriptMarkdown});
+  return Object.freeze({needsTranscription,buildResult,displayText,previewSections,transcriptMarkdown});
 });

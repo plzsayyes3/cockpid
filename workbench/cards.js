@@ -60,8 +60,16 @@
     const content=node('div','card-content'),meta=node('div','card-meta');
     meta.append(node('span','','画像メモ'),node('span','',card.handled?'チェック済み':OCR.displayText(card)?'文字起こし済み':'文字起こし待ち'));
     content.append(meta,button(card.title||'画像メモ',()=>openDetail(card),'card-title'));
-    const preview=OCR.previewText(card);
-    if(preview)content.append(node('p','card-text capture-preview',preview));
+    const sections=OCR.previewSections(card);
+    if(sections.length) {
+      const previews=node('div','capture-previews');
+      sections.forEach(part=>{
+        const section=node('section',`capture-text-section capture-${part.kind}`);
+        section.append(node('span','capture-text-label',part.label),node('p','card-text',part.text));
+        previews.append(section);
+      });
+      content.append(previews);
+    }
     const bottom=node('div','card-bottom'),label=node('label','handled-control');
     label.title='必要なことを済ませた／もう残さなくてよい';
     const input=document.createElement('input');input.type='checkbox';input.checked=card.handled;input.setAttribute('aria-label',`${card.title||'画像メモ'}を${card.handled?'未チェックに戻す':'チェック済みにする'}`);input.addEventListener('change',()=>toggleHandled(card,input));
@@ -104,7 +112,7 @@
     if(isIdea){body.append(node('p','match-label',item.reason),node('div','detail-prose',item.body_markdown||item.title));actions.append(button('閉じる',closeDetail));}
     else {
       body.append(imageElement(item,true));
-      const fields=node('div','detail-fields'),titleLabel=node('label','','タイトル'),memoLabel=node('label','','メモ');
+      const fields=node('div','detail-fields'),titleLabel=node('label','','タイトル'),memoLabel=node('label','','自分のメモ');
       titleLabel.htmlFor='detailTitle';memoLabel.htmlFor='detailMemo';
       const title=node('input');title.type='text';title.id='detailTitle';title.maxLength=300;title.value=item.title;
       const memo=node('textarea');memo.id='detailMemo';memo.value=item.memo;
