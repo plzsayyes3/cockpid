@@ -40,3 +40,10 @@ button{cursor:pointer}
 .status-mic span{position:relative;width:6px;height:11px;border:1.4px solid currentColor;border-radius:4px}.status-mic span::before{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:7px;border:1.4px solid currentColor;border-top:0;border-radius:0 0 6px 6px;transform:translateX(-50%)}.status-mic span::after{content:"";position:absolute;left:50%;bottom:-8px;width:1.4px;height:3px;background:currentColor;transform:translateX(-50%)}
 .status-keyboard span{position:relative;width:13px;height:9px;border:1.4px solid currentColor;border-radius:2px}.status-keyboard span::before{content:"";position:absolute;left:1.5px;top:1.5px;width:1.4px;height:1.4px;background:currentColor;box-shadow:3px 0 currentColor,6px 0 currentColor,0 3px currentColor,3px 3px currentColor,6px 3px currentColor}
 @media(max-width:520px){.brand-row{gap:4px!important}.system-status{gap:0}.system-status .status-icon,.system-status .status-board{width:28px!important;min-width:28px!important}.system-status .status-mail,.system-status .status-system{width:34px!important;min-width:34px!important}}
+
+/* Capture input mode toggle */
+.capture-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.capture-mode-btn{border:1px solid var(--line-2,#cfcac0);background:transparent;color:var(--ink);border-radius:7px;padding:9px 10px;font:700 10px/1.2 ui-monospace,monospace;cursor:pointer;white-space:nowrap}
+.capture-mode-btn[aria-pressed="true"]{border-color:#6d786e;background:rgba(109,120,110,.12)}
+.capture-mode-btn:focus-visible{outline:2px solid var(--green,#6d786e);outline-offset:2px}
+@media(max-width:480px){.capture-actions{flex-wrap:wrap}.capture-buttons{margin-left:auto}}
