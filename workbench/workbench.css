@@ -43,7 +43,7 @@ button{cursor:pointer}
 
 /* Capture input mode toggle */
 .capture-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
-.capture-mode-btn{border:1px solid var(--line-2,#cfcac0);background:transparent;color:var(--ink);border-radius:7px;padding:9px 10px;font:700 10px/1.2 ui-monospace,monospace;cursor:pointer;white-space:nowrap}
+.capture-mode-btn{border:2px solid var(--line-2,#cfcac0);background:transparent;color:var(--ink);border-radius:7px;padding:9px 10px;font:700 10px/1.2 ui-monospace,monospace;cursor:pointer;white-space:nowrap}
 .capture-mode-btn[aria-pressed="true"]{border-color:#6d786e;background:rgba(109,120,110,.12)}
 .capture-mode-btn:focus-visible{outline:2px solid var(--green,#6d786e);outline-offset:2px}
 @media(max-width:480px){.capture-actions{flex-wrap:wrap}.capture-buttons{margin-left:auto}}
