@@ -70,7 +70,7 @@
       let found='',width=0;
       for(let len=4;len>=1;len--){
         const seq=raw.slice(i,i+len);
-        if(CAPTURE_ROMA[seq]){found=ROMA[seq];width=len;break;}
+        if(CAPTURE_ROMA[seq]){found=CAPTURE_ROMA[seq];width=len;break;}
       }
       if(found){out+=found;i+=width;continue;}
       out+=raw.slice(i);break;
