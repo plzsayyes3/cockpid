@@ -5,6 +5,45 @@
   const todayList = $w('todayList');
   const captureText = $w('captureText');
   const captureBtn = $w('captureBtn');
+  const captureModeBtn = $w('captureModeBtn');
+  const CAPTURE_INPUT_MODE_KEY = 'cockpid.capture.input-mode.v1';
+  let captureRawMode = false;
+  let captureComposing = false;
+  try { captureRawMode = window.localStorage?.getItem(CAPTURE_INPUT_MODE_KEY) === 'raw'; } catch (_) {}
+  function syncCaptureMode() {
+    if (!captureModeBtn) return;
+    captureModeBtn.textContent = captureRawMode ? 'RAW / 通常' : '通常 / RAW';
+    captureModeBtn.setAttribute('aria-pressed', String(captureRawMode));
+    captureModeBtn.setAttribute('aria-label', captureRawMode ? '半角RAW入力中。通常入力に切り替え' : '通常入力中。半角RAW入力に切り替え');
+    captureText.setAttribute('lang', captureRawMode ? 'en' : 'ja');
+    captureText.setAttribute('autocorrect', 'off');
+    captureText.setAttribute('autocapitalize', 'off');
+    captureText.setAttribute('spellcheck', 'false');
+  }
+  function toggleCaptureMode() {
+    if (captureComposing) return;
+    captureRawMode = !captureRawMode;
+    try { window.localStorage?.setItem(CAPTURE_INPUT_MODE_KEY, captureRawMode ? 'raw' : 'normal'); } catch (_) {}
+    syncCaptureMode();
+    captureText.focus();
+  }
+  // Physical keyboard raw ASCII: insert characters from code rather than relying on IME conversion.
+  // OS / IME shortcuts may intercept a key before it reaches the browser.
+  function rawCaptureCharacter(event) {
+    const code = event.code || '';
+    const shift = event.shiftKey;
+    if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3) : code.slice(3).toLowerCase();
+    if (/^Digit[0-9]$/.test(code)) {
+      const digit = code.slice(5);
+      return shift ? ')!@#$%^&*('[Number(digit)] : digit;
+    }
+    const pairs = {
+      Space:[' ',' '],Minus:['-','_'],Equal:['=','+'],BracketLeft:['[','{'],
+      BracketRight:[']','}'],Backslash:['\\','|'],Semicolon:[';',':'],
+      Quote:["'",'"'],Backquote:['`','~'],Comma:[',','<'],Period:['.','>'],Slash:['/','?']
+    };
+    return pairs[code]?.[shift ? 1 : 0] ?? null;
+  }
   const captureHint = document.querySelector('.capture-actions .quiet');
   let selectedDate = null;
   let calendarLoadSeq = 0;
@@ -387,15 +426,34 @@
     }
   }
 
+  syncCaptureMode();
+  captureModeBtn?.addEventListener('click', toggleCaptureMode);
+  captureText.addEventListener('compositionstart', () => { captureComposing = true; });
+  captureText.addEventListener('compositionend', () => { captureComposing = false; });
   captureBtn.addEventListener('click', saveCaptureDirect);
   $w('prevDate')?.addEventListener('click', () => moveCalendar(-1));
   $w('nextDate')?.addEventListener('click', () => moveCalendar(1));
   $w('todayDateBtn')?.addEventListener('click', resetCalendarToday);
   captureText.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.code === 'Space' || event.key === ' ')) {
+      if (event.isComposing || captureComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      toggleCaptureMode();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       saveCaptureDirect();
+      return;
     }
+    if (!captureRawMode || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || captureComposing) return;
+    const character = rawCaptureCharacter(event);
+    if (character === null) return;
+    event.preventDefault();
+    const start = captureText.selectionStart;
+    const end = captureText.selectionEnd;
+    captureText.setRangeText(character, start, end, 'end');
+    captureText.dispatchEvent(new Event('input', { bubbles: true }));
   });
   window.addEventListener('cockpid:sources-changed', () => {
     syncSourceHints();
