@@ -504,9 +504,21 @@
     captureComposing = false;
     convertCaptureAtCaret();
   });
-  captureText.addEventListener('input', () => {
-    if (!captureComposing) convertCaptureAtCaret();
+  // Half-width IMEs may emit ordinary input without a matching compositionend.
+  // Use the event's current composition state instead of a potentially stale flag.
+  captureText.addEventListener('input', (event) => {
+    if (event.isComposing) return;
+    captureComposing = false;
+    convertCaptureAtCaret();
   });
+  // Fallback when an IME updates the textarea after keydown without an input event.
+  captureText.addEventListener('keyup', (event) => {
+    if (!event.isComposing && captureRawMode) {
+      captureComposing = false;
+      convertCaptureAtCaret();
+    }
+  });
+  captureText.addEventListener('blur', () => { captureComposing = false; });
   captureBtn.addEventListener('click', saveCaptureDirect);
   $w('prevDate')?.addEventListener('click', () => moveCalendar(-1));
   $w('nextDate')?.addEventListener('click', () => moveCalendar(1));
