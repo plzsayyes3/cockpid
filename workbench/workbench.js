@@ -115,6 +115,68 @@
     };
     return pairs[code]?.[shift ? 1 : 0] ?? null;
   }
+  // Bottom-anchored, typewriter-like capture editing.
+  // A hidden mirror tracks the true caret line, including wrapped Japanese text.
+  // This avoids moving the actual caret or modifying its text/selection.
+  const captureCaretMirror = typeof document.createElement === 'function'
+    ? document.createElement('div') : null;
+  let captureAnchorFrame = null;
+  if (captureCaretMirror && document.body?.appendChild) {
+    captureCaretMirror.setAttribute('aria-hidden', 'true');
+    Object.assign(captureCaretMirror.style, {
+      position: 'fixed', left: '-100000px', top: '0',
+      visibility: 'hidden', pointerEvents: 'none',
+      height: 'auto', padding: '0', margin: '0', border: '0',
+      boxSizing: 'content-box', whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word'
+    });
+    document.body.appendChild(captureCaretMirror);
+  }
+
+  function anchorCaptureCaret() {
+    if (!captureCaretMirror || !captureText.clientWidth || !captureText.clientHeight ||
+        typeof window.getComputedStyle !== 'function') return;
+    if (!captureText.value && document.activeElement !== captureText) {
+      captureText.style.paddingTop = '';
+      captureText.style.paddingBottom = '';
+      captureText.scrollTop = 0;
+      return;
+    }
+    const style = window.getComputedStyle(captureText);
+    const pixels = value => parseFloat(value) || 0;
+    const lineHeight = pixels(style.lineHeight) || pixels(style.fontSize) * 1.8 || 28;
+    const bottomGap = 12;
+    const mirrorWidth = Math.max(1, captureText.clientWidth -
+      pixels(style.paddingLeft) - pixels(style.paddingRight));
+    captureCaretMirror.style.width = mirrorWidth + 'px';
+    for (const prop of ['fontFamily','fontSize','fontWeight','fontStyle','fontVariant',
+      'fontStretch','lineHeight','letterSpacing','wordSpacing','textTransform',
+      'textIndent','tabSize','textAlign','wordBreak','overflowWrap','direction']) {
+      captureCaretMirror.style[prop] = style[prop];
+    }
+    // A zero-width marker measures the insertion point without adding a character.
+    const caret = document.createElement('span');
+    caret.textContent = '\u200b';
+    captureCaretMirror.replaceChildren(
+      document.createTextNode(captureText.value.slice(0, captureText.selectionStart)), caret);
+    const caretTop = caret.getBoundingClientRect().top -
+      captureCaretMirror.getBoundingClientRect().top;
+    const bottomLineTop = Math.max(0, captureText.clientHeight - lineHeight - bottomGap);
+    const topPadding = Math.max(0, bottomLineTop - caretTop);
+    captureText.style.paddingTop = topPadding + 'px';
+    captureText.style.paddingBottom = bottomGap + 'px';
+    captureText.scrollTop = Math.max(0, caretTop + topPadding - bottomLineTop);
+  }
+  function scheduleCaptureAnchor() {
+    if (!captureCaretMirror || captureAnchorFrame !== null) return;
+    const schedule = typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame : callback => setTimeout(callback, 0);
+    captureAnchorFrame = schedule(() => {
+      captureAnchorFrame = null;
+      anchorCaptureCaret();
+    });
+  }
+
   const captureHint = document.querySelector('.capture-actions .quiet');
   let selectedDate = null;
   let calendarLoadSeq = 0;
@@ -414,6 +476,7 @@
     // Keep any text edited while the save request was in progress.
     const editedDuringSave = captureText.value.trim() !== entry.text;
     if (!editedDuringSave) captureText.value = '';
+    scheduleCaptureAnchor();
     pendingCapture = null;
     try { window.COCKPID_MEMO_ROUTE?.recordMemo(entry.name); }
     catch (error) { console.warn('memo route metadata could not be recorded', error); }
@@ -503,13 +566,16 @@
   captureText.addEventListener('compositionend', () => {
     captureComposing = false;
     convertCaptureAtCaret();
+    scheduleCaptureAnchor();
   });
   // Half-width IMEs may emit ordinary input without a matching compositionend.
   // Use the event's current composition state instead of a potentially stale flag.
   captureText.addEventListener('input', (event) => {
-    if (event.isComposing) return;
-    captureComposing = false;
-    convertCaptureAtCaret();
+    if (!event.isComposing) {
+      captureComposing = false;
+      convertCaptureAtCaret();
+    }
+    scheduleCaptureAnchor();
   });
   // Fallback when an IME updates the textarea after keydown without an input event.
   captureText.addEventListener('keyup', (event) => {
@@ -517,8 +583,17 @@
       captureComposing = false;
       convertCaptureAtCaret();
     }
+    scheduleCaptureAnchor();
   });
   captureText.addEventListener('blur', () => { captureComposing = false; });
+  captureText.addEventListener('focus', scheduleCaptureAnchor);
+  captureText.addEventListener('click', scheduleCaptureAnchor);
+  captureText.addEventListener('select', scheduleCaptureAnchor);
+  window.addEventListener('resize', scheduleCaptureAnchor);
+  window.visualViewport?.addEventListener?.('resize', scheduleCaptureAnchor);
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(scheduleCaptureAnchor).observe(captureText);
+  }
   captureBtn.addEventListener('click', saveCaptureDirect);
   $w('prevDate')?.addEventListener('click', () => moveCalendar(-1));
   $w('nextDate')?.addEventListener('click', () => moveCalendar(1));
