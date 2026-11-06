@@ -446,3 +446,10 @@ Header ▦ opens `workbench/cards.html` as an independent app; existing numbered
 Default shows unhandled captures; checkbox means handled/no longer needed and never deletes the asset. Handled tab restores cards. Details allow editing titles/memos; Ideas remain read-only. Reads `my-storage-note/views/ideas.json`, ranks using Japanese word overlap with the latest 14 JST days of configured Daily notes and up to 30 recent Inbox notes, mixes 70% relevance / 30% random where enough matches exist; otherwise fills randomly. This is lexical ranking, not an LLM semantic judgment. Explicit Idea refresh only. Pinned Idea IDs and Inbox draft are local to the browser. Idea pins are not changes to canonical objects.
 
 Sidebar creates normal timestamped Inbox Markdown files, compatible with existing Inbox → Daily workflow, with stable retry identity. Captures use separate files and cannot be accidentally merged by that workflow. SHA-conflict retries preserve unrelated card fields. Network failures keep input for retry. Browser QA uses synthetic fixtures only.
+
+
+### Cards transcription and square previews (2026-11-06)
+
+Capture thumbnails use a centered square crop (`object-fit: cover`); the original image is unchanged and details keep its full aspect ratio. Title is one line and the combined manual memo/OCR preview is at most three lines. Details show read-only OCR below the editable manual memo.
+
+A daily ChatGPT automation reads pending private images and records `ocr` (status, source_image_sha, processed_at, engine, text, transcript_path) plus `03_scrap/text/<id>.md` in private mynotebook. Worker contract: `docs/cards-transcription-worker.md`. The card checkbox remains handled/no-longer-needed. Already handled captures and successful OCR for an unchanged image SHA are skipped. No-text success is distinct from download/reading failure. Latest-SHA atomic commits preserve manual fields and unknown metadata.

@@ -9,3 +9,14 @@ dialog{width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding
 @media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr)}#toggleInbox{display:block}.inbox-sidebar{display:none;border-left:0;border-bottom:1px solid var(--line);grid-row:1}body.inbox-open .inbox-sidebar{display:block}.sidebar-note{display:none}#inboxText{min-height:130px}#inboxForm{margin-top:14px}.inbox-sidebar{padding:18px 22px}.page-head{padding:18px 22px}.subtitle{display:none}main{padding:18px 20px 40px}}
 @media(max-width:480px){.page-head{padding:13px 14px;gap:10px}.head-title{gap:6px}.home-link{font-size:9px}h1{font-size:18px}.head-actions{gap:5px}.head-actions button{font-size:11px;padding:8px}.card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}main{padding:14px 12px 35px}.card-content{padding:11px}.card-title{font-size:12px}.card-text{font-size:11px;-webkit-line-clamp:4}.card-meta{font-size:8px;align-items:flex-start}.card-date{display:none}.card-bottom{flex-wrap:wrap}.handled-control{font-size:9px}.card-image img{max-height:230px}.card-image button{min-height:100px}.board-toolbar{gap:3px}.tabs{gap:0}.tabs button{font-size:11px;padding:7px}.board-toolbar>button{font-size:10px;padding:7px}dialog{padding:16px}.upload-item{grid-template-columns:65px minmax(0,1fr);gap:10px}.upload-item img{width:65px}textarea,input[type=text]{font-size:16px}.board-caption,.source-status{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* The preview crops around the center; the detail keeps the complete original. */
+.capture-card .card-image { aspect-ratio:1 / 1; min-height:0; display:block; overflow:hidden; }
+.capture-card .card-image > button { width:100%; height:100%; min-height:0; }
+.capture-card .card-image img { width:100%; height:100%; max-height:none; object-fit:cover; object-position:center center; }
+.capture-card .card-title { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+.capture-card .capture-preview { -webkit-line-clamp:3; }
+.ocr-section { margin-top:24px; border-top:1px solid var(--line); padding-top:18px; }
+.ocr-section h3 { font-size:12px; font-weight:600; margin-bottom:12px; }
+.ocr-transcript { font-size:13px; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ocr-date,.ocr-pending { font-size:11px; color:var(--muted); line-height:1.8; margin-top:12px; }

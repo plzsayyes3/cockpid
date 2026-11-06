@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const M=window.COCKPID_SCRAP_MODEL;
+  const OCR=window.COCKPID_SCRAP_OCR;
   const $=id=>document.getElementById(id);
   const store=window.COCKPID_SCRAP_STORE.createStore({token,fetch:window.fetch.bind(window),inboxSource:()=>window.COCKPID_SOURCES.get('inbox'),dailySource:()=>window.COCKPID_SOURCES.get('daily')});
   const PIN_KEY='cockpid.cards.pins.v1',DRAFT_KEY='cockpid.cards.inbox-draft.v1';
@@ -57,9 +58,10 @@
   function captureCard(card) {
     const article=node('article','card capture-card');article.append(imageElement(card));
     const content=node('div','card-content'),meta=node('div','card-meta');
-    meta.append(node('span','','画像メモ'),node('span','',card.handled?'チェック済み':'手元に'));
+    meta.append(node('span','','画像メモ'),node('span','',card.handled?'チェック済み':OCR.displayText(card)?'文字起こし済み':'文字起こし待ち'));
     content.append(meta,button(card.title||'画像メモ',()=>openDetail(card),'card-title'));
-    if(card.memo)content.append(node('p','card-text',card.memo));
+    const preview=OCR.previewText(card);
+    if(preview)content.append(node('p','card-text capture-preview',preview));
     const bottom=node('div','card-bottom'),label=node('label','handled-control');
     label.title='必要なことを済ませた／もう残さなくてよい';
     const input=document.createElement('input');input.type='checkbox';input.checked=card.handled;input.setAttribute('aria-label',`${card.title||'画像メモ'}を${card.handled?'未チェックに戻す':'チェック済みにする'}`);input.addEventListener('change',()=>toggleHandled(card,input));
@@ -107,6 +109,14 @@
       const title=node('input');title.type='text';title.id='detailTitle';title.maxLength=300;title.value=item.title;
       const memo=node('textarea');memo.id='detailMemo';memo.value=item.memo;
       fields.append(titleLabel,title,memoLabel,memo);body.append(fields);
+      const ocrSection=node('section','ocr-section');
+      ocrSection.append(node('h3','','画像の文字起こし'));
+      const transcript=OCR.displayText(item);
+      if(transcript) {
+        ocrSection.append(node('div','ocr-transcript',transcript));
+        if(item.ocr.processed_at)ocrSection.append(node('p','ocr-date',`処理日時: ${new Date(item.ocr.processed_at).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}`));
+      } else ocrSection.append(node('p','ocr-pending','未処理です。次の定期処理で画像内の文字を読み取ります。'));
+      body.append(ocrSection);
       actions.append(button('閉じる',closeDetail));
       const save=button('変更を保存',async()=>{
         if(state.detailBusy)return;state.detailBusy=true;save.disabled=true;$('closeDetail').disabled=true;

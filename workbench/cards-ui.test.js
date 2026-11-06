@@ -22,7 +22,7 @@ function harness() {
  let finish;const waiting=new Promise(r=>finish=r);
  const doc={getElementById:get,createElement:tag=>new Element(tag),createDocumentFragment:()=>new Element(),body:new Element(),addEventListener(){}};
  const store={createCapture:async card=>{await waiting;return {...card,path:`03_scrap/cards/${card.id}.json`};}};
- const win={COCKPID_SCRAP_MODEL:M,COCKPID_SCRAP_STORE:{createStore:()=>store},fetch(){},addEventListener(){},COCKPID_SOURCES:{get(){}}};
+ const win={COCKPID_SCRAP_MODEL:M,COCKPID_SCRAP_OCR:require('./scrap-ocr.js'),COCKPID_SCRAP_STORE:{createStore:()=>store},fetch(){},addEventListener(){},COCKPID_SOURCES:{get(){}}};
  const sandbox={window:win,document:doc,token:()=>'',localStorage:{getItem:()=>null,setItem(){}},URL:{createObjectURL:()=> 'blob:test',revokeObjectURL(){}},crypto:{randomUUID:()=> 'id'},FileReader:class {readAsDataURL(){this.result='data:image/png;base64,aQ==';queueMicrotask(()=>this.onload());}},setTimeout:()=>1,clearTimeout(){},console,Intl,Date};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'cards.js'),'utf8'),sandbox);
  return {get,finish};
