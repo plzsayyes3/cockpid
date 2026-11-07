@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./icons/workbench-favicon-16.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>作業台 — Workbench</title>
-<link rel="stylesheet" href="workbench.css?v=20261106-raw-kana">
+<link rel="stylesheet" href="workbench.css?v=20261107-capture-viewport">
 <link rel="stylesheet" href="hp-bar.css?v=20261001-mp1">
 <link rel="stylesheet" href="drawer.css?v=20260924-project-memo2">
 <link rel="stylesheet" href="home-final.css">
@@ -32,7 +32,7 @@
 .drawer-backdrop{background:rgba(42,40,35,.18)!important;z-index:110!important}.drawer{background:#f8f7f2!important;color:var(--ink)!important;border-left:0!important;box-shadow:-18px 0 45px rgba(30,28,24,.16)!important;z-index:111!important}.drawer-head{border-bottom:1px solid var(--line)!important}.drawer-head strong{color:var(--ink)!important}.drawer textarea,.token-box input{background:#fff!important;color:var(--ink)!important;border:1px solid #d7d3ca!important}.token-box{border-color:var(--line)!important}.btn{border:0;border-radius:6px;background:#e9e7e0;color:var(--ink);padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.btn.primary{background:var(--ink);color:#faf9f5}.small,.drawer-status,.zen-hint,.token-box label{color:var(--muted)!important}
 .memo-area-route{border:0;border-radius:6px;background:#dce8f4;color:#315d91;padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.memo-area-route-panel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding:7px;border:1px solid #c9d8e6;border-radius:6px;background:#f5f9fd;color:#315d91;font:700 8px ui-monospace,monospace}.memo-area-route-panel[hidden]{display:none}.memo-area-route-panel button{border:1px solid #b8cbe0;border-radius:999px;background:#fff;color:#315d91;padding:5px 8px;cursor:pointer;font:inherit}.memo-area-route-label{letter-spacing:.08em}
 </style>
-<link rel="stylesheet" href="adaptive-layout.css?v=20261024-duo2">
+<link rel="stylesheet" href="adaptive-layout.css?v=20261107-capture-viewport">
 </head>
 <body>
 <div class="shell">
@@ -41,7 +41,7 @@
     <div class="now"><div id="todayDate">----年--月--日</div><small id="todayTime">--:--</small></div>
   </header>
   <main class="desk">
-    <section class="object capture-object" aria-labelledby="captureHeading"><div class="object-label" id="captureHeading">PUT ANYTHING HERE</div><textarea id="captureText" aria-labelledby="captureHeading" placeholder="まだ分類しない。思いついたまま置く……"></textarea><div class="capture-actions"><div class="capture-help"><span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span><span class="capture-help-note">思いついたまま、まず置く</span></div><div class="capture-buttons"><button class="capture-mode-btn" id="captureModeBtn" type="button" aria-label="半角RAW入力に切り替え" aria-pressed="false" title="Ctrl + Space で切り替え">通常 / RAW</button><button class="action-btn" id="captureBtn" type="button" aria-label="メモを保存">机に置く</button></div></div></section>
+    <section class="object capture-object" aria-labelledby="captureHeading"><div class="object-label" id="captureHeading">PUT ANYTHING HERE</div><div class="capture-viewport"><textarea id="captureText" aria-labelledby="captureHeading" placeholder="まだ分類しない。思いついたまま置く……"></textarea></div><div class="capture-actions"><div class="capture-help"><span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span><span class="capture-help-note">思いついたまま、まず置く</span></div><div class="capture-buttons"><button class="capture-mode-btn" id="captureModeBtn" type="button" aria-label="半角RAW入力に切り替え" aria-pressed="false" title="Ctrl + Space で切り替え">通常 / RAW</button><button class="action-btn" id="captureBtn" type="button" aria-label="メモを保存">机に置く</button></div></div></section>
     <section class="object movement-object" aria-label="ON HAND"><div class="movement-head"><span class="movement-title">ON HAND</span><div class="movement-tools"><span class="movement-source" id="movementDate" role="status" aria-live="polite">7 DAYS · ANALYSIS …</span><button class="movement-random" id="movementRandom" type="button">↻ RANDOM</button></div></div><div class="movement-grid"><article class="movement-col"><div class="movement-col-head"><span>Task</span><b id="moveDoCount">—</b></div><div class="movement-items movement-loading" id="moveDoItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article><article class="movement-col"><div class="movement-col-head"><span>Check</span><b id="moveCheckCount">—</b></div><div class="movement-items movement-loading" id="moveCheckItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article><article class="movement-col"><div class="movement-col-head"><span>Keep</span><b id="moveThinkCount">—</b></div><div class="movement-items movement-loading" id="moveThinkItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article></div></section>
     <div class="calendar-news-grid"><section class="object today-object"><div class="object-head calendar-head"><div class="calendar-title"><span class="object-label">CALENDAR / TODAY</span><a class="calendar-external" href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" aria-label="Google カレンダーを開く" title="Google Calendar"><span aria-hidden="true">↗</span></a></div><div class="date-nav" aria-label="日付移動"><button class="date-btn" id="prevDate" title="前日">‹</button><button class="date-btn date-label" id="todayDateBtn" title="今日に戻る">--/--</button><button class="date-btn" id="nextDate" title="翌日">›</button></div></div><div class="list" id="todayList"><div class="empty">Techoを読んでいます…</div></div></section><section class="object news-object" data-app="news" aria-label="My Internet Placeを開く"><div class="object-head"><span class="object-label">NEWS</span><span class="object-no">04</span></div><div class="news-home-list" id="newsHomeList"><div class="news-home-empty">ニュースを読み込んでいます…</div></div><span class="state">OPEN NEWS</span></section></div>
   </main>
@@ -134,7 +134,7 @@
 <script src="../prototype-common.js?v=20260918-workbench-review"></script>
 <script src="memo-route-model.js?v=20260923-area-branches"></script>
 <script src="../zen-memo.js?v=20260925-pj-assign-memo2"></script>
-<script src="workbench.js?v=20261106-caret-bottom1"></script>
+<script src="workbench.js?v=20261107-ime-safe"></script>
 <script src="hp-bar.js?v=20261001-mp1"></script>
 <script src="news-home.js"></script>
 <script src="token-settings.js"></script>
