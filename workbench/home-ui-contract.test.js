@@ -26,3 +26,10 @@ test('top data state is announced and the dock leaves breathing room', () => {
   assert.match(refinementCss, /\.shell\{padding-bottom:132px\}/);
   assert.match(refinementCss, /\.dock\{[^}]*grid-template-rows:repeat\(2,40px\)/);
 });
+
+test('capture padding is isolated from the flex item that sizes the card', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'workbench.css'), 'utf8');
+  assert.match(index, /<div class="capture-viewport"><textarea id="captureText"[^>]*><\/textarea><\/div>/);
+  assert.match(css, /\.capture-viewport\{[^}]*position:relative[^}]*min-height:180px/);
+  assert.match(css, /\.capture-viewport textarea\{[^}]*position:absolute[^}]*height:100%/);
+});
