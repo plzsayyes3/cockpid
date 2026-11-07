@@ -158,3 +158,10 @@ test('compact Dock opens, closes, and stays out of the way during capture typing
   assert.equal(bodyClasses.has('wb-capture-writing'),false);
   assert.equal(bodyClasses.has('wb-text-entry'),false);
 });
+
+test('mobile capture height stays independent of the IME candidate bar', () => {
+  const css = read('adaptive-layout.css');
+  assert.doesNotMatch(css, /--wb-visible-height/);
+  assert.match(css, /\.wb-capture-writing \.capture-object:focus-within\s*\{[^}]*height:calc\(205px \+ var\(--wb-capture-adjust\)\)/);
+  assert.doesNotMatch(read('adaptive-layout.js'), /visualViewport/);
+});

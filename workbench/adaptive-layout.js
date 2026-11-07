@@ -77,15 +77,6 @@
     window.addEventListener('resize', () => setDock(false));
   }
 
-  // Use Safari's actually visible viewport when the keyboard is present.
-  function syncVisibleHeight() {
-    const measured = Number(window.visualViewport?.height) || Number(window.innerHeight) || 640;
-    root.style.setProperty('--wb-visible-height', `${Math.max(150, Math.round(measured))}px`);
-  }
-  window.visualViewport?.addEventListener('resize', syncVisibleHeight);
-  window.addEventListener('orientationchange', syncVisibleHeight);
-  window.addEventListener('resize', syncVisibleHeight);
-
   // Prevent fixed controls from sitting over the virtual keyboard.
   const isTextEntry = (node) => node instanceof HTMLElement &&
     (node.matches('textarea,select,[contenteditable="true"]') ||
@@ -95,13 +86,11 @@
     document.body.classList.add('wb-text-entry');
     document.body.classList.toggle('wb-capture-writing', event.target.id === 'captureText');
     setDock(false);
-    syncVisibleHeight();
   });
   document.addEventListener('focusout', () => {
     document.body.classList.remove('wb-text-entry');
     document.body.classList.remove('wb-capture-writing');
   });
-  syncVisibleHeight();
   setDock(false);
   load();
 })();
