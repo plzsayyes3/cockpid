@@ -9,6 +9,7 @@
   const CAPTURE_INPUT_MODE_KEY = 'cockpid.capture.input-mode.v1';
   let captureRawMode = false;
   let captureComposing = false;
+  let capturePendingRomaji = null;
   try { captureRawMode = window.localStorage?.getItem(CAPTURE_INPUT_MODE_KEY) === 'raw'; } catch (_) {}
   function syncCaptureMode() {
     if (!captureModeBtn) return;
@@ -22,6 +23,7 @@
   }
   function toggleCaptureMode() {
     if (captureComposing) return;
+    capturePendingRomaji = null;
     captureRawMode = !captureRawMode;
     try { window.localStorage?.setItem(CAPTURE_INPUT_MODE_KEY, captureRawMode ? 'raw' : 'normal'); } catch (_) {}
     syncCaptureMode();
@@ -78,42 +80,37 @@
     return out;
   }
 
-  function convertCaptureAtCaret() {
-    if(!captureRawMode || captureComposing || captureText.selectionStart!==captureText.selectionEnd) return;
-    const pos=captureText.selectionStart;
-    const prefix=captureText.value.slice(0,pos);
-    const boundary=/([a-z]+)([^A-Za-z])$/.exec(prefix);
-    let from,to,kana;
-    if(boundary){
-      from=pos-boundary[0].length;
-      to=from+boundary[1].length;
-      kana=captureToHiragana(boundary[1],true);
-    }else{
-      const found=/[a-z]+$/.exec(prefix);
-      if(!found)return;
-      from=pos-found[0].length;
-      to=pos;
-      kana=captureToHiragana(found[0],false);
+  function convertCaptureAtCaret(inserted) {
+    const pending = capturePendingRomaji;
+    capturePendingRomaji = null;
+    if (!captureRawMode || captureComposing || !inserted ||
+        captureText.selectionStart !== captureText.selectionEnd) return;
+
+    const end = captureText.selectionStart;
+    const start = end - inserted.length;
+    const value = captureText.value;
+    if (start < 0 || value.slice(start, end) !== inserted) return;
+
+    // Only join text typed in the same run. Existing or pasted Latin text is left alone.
+    const continuesRun = pending?.end === start &&
+      pending.value === value.slice(0, start) + value.slice(end);
+    const from = continuesRun ? pending.start : start;
+    const letters = /^[a-z]+$/.test(inserted);
+    const raw = value.slice(from, letters ? end : start);
+    if (!raw) return;
+    const kana = captureToHiragana(raw, !letters);
+    const replacement = letters ? kana : kana + inserted;
+    if (value.slice(from, end) !== replacement) {
+      captureText.setRangeText(replacement, from, end, 'end');
     }
-    if(captureText.value.slice(from,to)===kana)return;
-    captureText.setRangeText(kana,from,to,'end');
-  }
-  // Physical keyboard raw ASCII: insert characters from code rather than relying on IME conversion.
-  // OS / IME shortcuts may intercept a key before it reaches the browser.
-  function rawCaptureCharacter(event) {
-    const code = event.code || '';
-    const shift = event.shiftKey;
-    if (/^Key[A-Z]$/.test(code)) return shift ? code.slice(3) : code.slice(3).toLowerCase();
-    if (/^Digit[0-9]$/.test(code)) {
-      const digit = code.slice(5);
-      return shift ? ')!@#$%^&*('[Number(digit)] : digit;
+
+    const unfinished = letters && /[a-z]+$/.exec(kana);
+    if (unfinished) {
+      const caret = captureText.selectionStart;
+      capturePendingRomaji = {
+        start: caret - unfinished[0].length, end: caret, value: captureText.value
+      };
     }
-    const pairs = {
-      Space:[' ',' '],Minus:['-','_'],Equal:['=','+'],BracketLeft:['[','{'],
-      BracketRight:[']','}'],Backslash:['\\','|'],Semicolon:[';',':'],
-      Quote:["'",'"'],Backquote:['`','~'],Comma:[',','<'],Period:['.','>'],Slash:['/','?']
-    };
-    return pairs[code]?.[shift ? 1 : 0] ?? null;
   }
   // Bottom-anchored, typewriter-like capture editing.
   // A hidden mirror tracks the true caret line, including wrapped Japanese text.
@@ -134,7 +131,7 @@
   }
 
   function anchorCaptureCaret() {
-    if (!captureCaretMirror || !captureText.clientWidth || !captureText.clientHeight ||
+    if (captureComposing || !captureCaretMirror || !captureText.clientWidth || !captureText.clientHeight ||
         typeof window.getComputedStyle !== 'function') return;
     if (!captureText.value && document.activeElement !== captureText) {
       captureText.style.paddingTop = '';
@@ -474,8 +471,11 @@
 
   function captureSaved(entry) {
     // Keep any text edited while the save request was in progress.
-    const editedDuringSave = captureText.value.trim() !== entry.text;
-    if (!editedDuringSave) captureText.value = '';
+    const editedDuringSave = captureComposing || captureText.value.trim() !== entry.text;
+    if (!editedDuringSave) {
+      captureText.value = '';
+      capturePendingRomaji = null;
+    }
     scheduleCaptureAnchor();
     pendingCapture = null;
     try { window.COCKPID_MEMO_ROUTE?.recordMemo(entry.name); }
@@ -491,7 +491,17 @@
 
   async function saveCaptureDirect() {
     // The shortcut bypasses disabled button state, so guard concurrent calls in code.
-    if (captureSaving) return;
+    if (captureSaving || captureComposing) return;
+    const pending = capturePendingRomaji;
+    capturePendingRomaji = null;
+    if (pending?.value === captureText.value) {
+      const raw = pending.value.slice(pending.start, pending.end);
+      const kana = captureToHiragana(raw, true);
+      if (kana !== raw) {
+        captureText.setRangeText(kana, pending.start, pending.end, 'preserve');
+        scheduleCaptureAnchor();
+      }
+    }
     const text = captureText.value.trim();
     if (!text) return captureText.focus();
     const currentToken = token();
@@ -563,28 +573,22 @@
   syncCaptureMode();
   captureModeBtn?.addEventListener('click', toggleCaptureMode);
   captureText.addEventListener('compositionstart', () => { captureComposing = true; });
-  captureText.addEventListener('compositionend', () => {
+  captureText.addEventListener('compositionend', (event) => {
     captureComposing = false;
-    convertCaptureAtCaret();
+    convertCaptureAtCaret(event.data);
     scheduleCaptureAnchor();
   });
-  // Half-width IMEs may emit ordinary input without a matching compositionend.
-  // Use the event's current composition state instead of a potentially stale flag.
   captureText.addEventListener('input', (event) => {
-    if (!event.isComposing) {
-      captureComposing = false;
-      convertCaptureAtCaret();
+    if (captureComposing || event.isComposing) return;
+    if (event.inputType === 'insertText' || event.inputType === 'insertLineBreak' ||
+        event.inputType === 'insertParagraph') {
+      convertCaptureAtCaret(event.inputType === 'insertText' ? event.data : '\n');
+    } else {
+      capturePendingRomaji = null;
     }
     scheduleCaptureAnchor();
   });
-  // Fallback when an IME updates the textarea after keydown without an input event.
-  captureText.addEventListener('keyup', (event) => {
-    if (!event.isComposing && captureRawMode) {
-      captureComposing = false;
-      convertCaptureAtCaret();
-    }
-    scheduleCaptureAnchor();
-  });
+  captureText.addEventListener('keyup', scheduleCaptureAnchor);
   captureText.addEventListener('blur', () => { captureComposing = false; });
   captureText.addEventListener('focus', scheduleCaptureAnchor);
   captureText.addEventListener('click', scheduleCaptureAnchor);
@@ -599,8 +603,8 @@
   $w('nextDate')?.addEventListener('click', () => moveCalendar(1));
   $w('todayDateBtn')?.addEventListener('click', resetCalendarToday);
   captureText.addEventListener('keydown', (event) => {
+    if (event.isComposing || captureComposing || event.keyCode === 229) return;
     if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.code === 'Space' || event.key === ' ')) {
-      if (event.isComposing || captureComposing || event.keyCode === 229) return;
       event.preventDefault();
       toggleCaptureMode();
       return;
@@ -608,17 +612,7 @@
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       saveCaptureDirect();
-      return;
     }
-    if (!captureRawMode || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || captureComposing) return;
-    const character = rawCaptureCharacter(event);
-    if (character === null) return;
-    event.preventDefault();
-    const start = captureText.selectionStart;
-    const end = captureText.selectionEnd;
-    captureText.setRangeText(character, start, end, 'end');
-    convertCaptureAtCaret();
-    captureText.dispatchEvent(new Event('input', { bubbles: true }));
   });
   window.addEventListener('cockpid:sources-changed', () => {
     syncSourceHints();
