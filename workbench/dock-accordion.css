@@ -104,3 +104,10 @@ body.wb-dock-expanded .pet {visibility:hidden;pointer-events:none;}
 @media(pointer:coarse) {
  body.wb-text-entry .dock {visibility:hidden;pointer-events:none;}
 }
+
+/* Two-line app buttons: keyboard shortcut + icon, then the title. */
+.dock .app-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+.dock .app-btn .dock-top { display:flex; align-items:center; justify-content:center; gap:5px; width:100%; min-height:18px; }
+.dock .app-btn .dock-top .dock-key { display:block; margin:0; font:700 12px/1 ui-monospace,monospace; color:var(--ink,#292924); }
+.dock .app-btn .dock-top .dock-icon { display:block; width:18px; height:18px; margin:0; flex:none; }
+.dock .app-btn .dock-label { display:block; margin:0; line-height:1.15; }
