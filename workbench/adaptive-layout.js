@@ -35,47 +35,35 @@
   window.addEventListener('storage', (event) => {
     if (event.key === KEY) load();
   });
-  // Narrow layout: launcher starts collapsed, while desktop keeps the existing Dock.
+  // Five primary actions stay visible; the remaining ten expand above them.
   const dock = document.getElementById('appDock');
   const dockToggle = document.getElementById('dockToggle');
-  const dockScrim = document.getElementById('dockScrim');
-  const narrowMedia = typeof window.matchMedia === 'function'
-    ? window.matchMedia('(max-width:720px)') : null;
-  const isNarrow = () => narrowMedia ? narrowMedia.matches : (window.innerWidth <= 720);
+  const dockExtra = document.getElementById('dockExtra');
   function setDock(open) {
-    const expanded = Boolean(open) && isNarrow() &&
-      !document.body.classList.contains('wb-text-entry');
+    const expanded = Boolean(open) && !document.body.classList.contains('wb-text-entry');
     dock?.classList.toggle('wb-open', expanded);
     document.body.classList.toggle('wb-dock-expanded', expanded);
-    if (dockToggle) {
-      dockToggle.setAttribute('aria-expanded', String(expanded));
-      dockToggle.setAttribute('aria-label', expanded ? 'アプリメニューを閉じる' : 'アプリメニューを開く');
-    }
-    if (dockScrim) dockScrim.hidden = !expanded;
-    if (dock) {
-      // Keep keyboard users out of a collapsed launcher.
-      dock.inert = isNarrow() && !expanded;
-      dock.setAttribute('aria-hidden', String(isNarrow() && !expanded));
+    dockToggle?.setAttribute('aria-expanded', String(expanded));
+    dockToggle?.setAttribute('aria-label', expanded ? '追加メニューを閉じる' : '追加メニューを開く');
+    if (dockExtra) {
+      dockExtra.inert = !expanded;
+      dockExtra.setAttribute('aria-hidden', String(!expanded));
     }
   }
-  dockToggle?.addEventListener('click', () => {
-    setDock(!dock?.classList.contains('wb-open'));
+  dockToggle?.addEventListener('click', () => setDock(!dock?.classList.contains('wb-open')));
+  document.getElementById('dockSettingsOpen')?.addEventListener('click', () => {
+    document.getElementById('systemOpen')?.click();
+    setDock(false);
   });
-  dockScrim?.addEventListener('click', () => setDock(false));
   document.addEventListener('click', (event) => {
-    // Registered after app-routing.js; close only once the app has been launched.
     if (event.target.closest?.('.dock .app-btn')) setDock(false);
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && dock?.classList.contains('wb-open')) setDock(false);
   });
-  if (narrowMedia?.addEventListener) {
-    narrowMedia.addEventListener('change', () => setDock(false));
-  } else if (narrowMedia?.addListener) {
-    narrowMedia.addListener(() => setDock(false));
-  } else {
-    window.addEventListener('resize', () => setDock(false));
-  }
+  document.addEventListener('pointerdown', (event) => {
+    if (dock?.classList.contains('wb-open') && !event.target.closest?.('#appDock')) setDock(false);
+  });
 
   // Prevent fixed controls from sitting over the virtual keyboard.
   const isTextEntry = (node) => node instanceof HTMLElement &&
