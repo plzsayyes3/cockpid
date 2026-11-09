@@ -1,0 +1,106 @@
+/* Workbench dock: persistent primary row + two accordion rows. */
+.dock {
+  position:fixed;
+  z-index:76;
+  left:50%;
+  right:auto;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  width:min(540px,calc(100vw - 16px));
+  max-width:540px;
+  padding:0;
+  gap:5px;
+  overflow:visible;
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+}
+.dock-primary,.dock-extra {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:5px;
+  width:100%;
+  min-width:0;
+}
+.dock-extra { display:none; max-height:min(34vh,140px);overflow-y:auto; }
+.dock.wb-open .dock-extra { display:grid; }
+.dock .app-btn {
+  width:100%;
+  min-width:0;
+  height:52px;
+  min-height:44px;
+  aspect-ratio:auto;
+  padding:4px 2px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  border-radius:8px;
+  transform:none;
+  background:rgba(251,250,246,.97);
+}
+.dock .app-btn .dock-icon {display:block;width:17px;height:17px;flex:none;}
+.dock .app-btn .dock-key {display:block;font:700 10px/1 ui-monospace,monospace;margin:0;}
+.dock .app-btn .dock-label {display:block;font:600 9px/1.15 ui-monospace,monospace;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.dock .app-btn:hover {transform:none;}
+.dock-toggle {
+  position:static;
+  left:auto;
+  right:auto;
+  bottom:auto;
+  transform:none;
+  display:flex;
+  width:100%;
+  min-width:0;
+  min-height:27px;
+  padding:4px 10px;
+  gap:6px;
+  align-items:center;
+  justify-content:center;
+  border-radius:7px;
+  background:rgba(245,243,238,.97);
+  color:#292924;
+  box-shadow:0 3px 12px rgba(37,34,29,.08);
+  font:700 10px/1 ui-monospace,monospace;
+  letter-spacing:.08em;
+  cursor:pointer;
+}
+.dock-toggle-symbol {font-size:14px;line-height:1;}
+.dock-toggle[aria-expanded="true"] .dock-toggle-symbol {transform:rotate(180deg);}
+.dock.wb-open {visibility:visible;opacity:1;pointer-events:auto;transform:translateX(-50%);}
+.hp-dock {bottom:calc(104px + env(safe-area-inset-bottom));}
+.mp-dock {bottom:calc(128px + env(safe-area-inset-bottom));}
+.pet {bottom:calc(154px + env(safe-area-inset-bottom));}
+body.wb-dock-expanded .hp-dock,
+body.wb-dock-expanded .mp-dock,
+body.wb-dock-expanded .pet {visibility:hidden;pointer-events:none;}
+.shell {padding-bottom:max(132px,calc(120px + env(safe-area-inset-bottom)));}
+@media(max-width:720px) {
+ .dock {left:50%;right:auto;bottom:calc(8px + env(safe-area-inset-bottom));width:calc(100vw - 16px);max-width:540px;grid-template-columns:none;grid-template-rows:none;overflow:visible;}
+ .dock .app-btn {height:clamp(44px,calc(48px + var(--wb-dock-adjust,0px)),54px);min-height:44px;grid-template-columns:none;grid-template-rows:none;}
+ .dock .app-btn .dock-label {font-size:8px;}
+ .dock-toggle {position:static;min-height:27px;width:100%;border-radius:7px;transform:none;}
+ .dock.wb-open {transform:translateX(-50%);}
+ .shell {padding-bottom:calc(138px + env(safe-area-inset-bottom));}
+ .hp-dock {bottom:calc(106px + env(safe-area-inset-bottom));}
+ .mp-dock {bottom:calc(130px + env(safe-area-inset-bottom));}
+ .pet {bottom:calc(154px + env(safe-area-inset-bottom));}
+}
+@media(max-width:720px) and (max-height:520px) {
+ .dock {grid-template-columns:none;grid-template-rows:none;overflow:visible;}
+ .dock-extra {max-height:min(35vh,120px);}
+ .dock .app-btn {height:44px;}
+ .dock-primary,.dock-extra {grid-template-columns:repeat(5,minmax(0,1fr));}
+}
+@media(min-width:721px) and (max-height:700px) {
+ .dock {width:min(540px,calc(100vw - 24px));grid-template-columns:none;grid-template-rows:none;bottom:calc(8px + env(safe-area-inset-bottom));}
+ .dock .app-btn {height:44px;}
+ .shell {padding-bottom:134px;}
+}
+@media(pointer:coarse) {
+ body.wb-text-entry .dock {visibility:hidden;pointer-events:none;}
+}
