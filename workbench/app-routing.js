@@ -31,18 +31,18 @@
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
     tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html?v=20260918-main-branch2' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: ZEN_BASE },
-    news: { key: '4', title: '4 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
-    cards: { key: null, title: 'CARDS / カード', type: 'iframe', src: 'cards.html?v=20261105-1' },
+    news: { key: '6', title: '6 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
+    cards: { key: '4', title: '4 / CARDS', type: 'iframe', src: 'cards.html?v=20261105-1' },
     advice: { key: null, title: 'AI ADVICE', type: 'iframe', src: 'advice.html' },
-    onhand: { key: '8', title: '8 / ON HAND', type: 'iframe', src: 'onhand.html' },
-    thinking: { key: '9', title: '9 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
-    dictionary: { key: '5', title: '5 / DICTIONARY', type: 'dictionary' },
-    board: { key: null, title: 'BOARD', type: 'board' },
-    backstage: { key: '7', title: '7 / BACKSTAGE', type: 'iframe', src: 'backstage.html?v=20260925-pj-assign-final1' },
-    projecttown: { key: '6', title: '6 / AREA', type: 'iframe', src: 'project-town.html' },
-    keyboard: { key: null, title: 'KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
-    stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
-    formysons: { key: '0', title: '0 / FOR MY SONS', type: 'iframe', src: 'https://plzsayyes3.github.io/for_my_sons/' }
+    onhand: { key: '9', title: '9 / ONHAND', type: 'iframe', src: 'onhand.html' },
+    thinking: { key: '0', title: '0 / THINKING', type: 'iframe', src: 'thinking.html?v=20260918-thinking1' },
+    dictionary: { key: 'a', title: 'A / DICTIONARY', type: 'dictionary' },
+    board: { key: 'b', title: 'B / BOARD', type: 'board' },
+    backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html?v=20260925-pj-assign-final1' },
+    projecttown: { key: '7', title: '7 / AREA', type: 'iframe', src: 'project-town.html' },
+    keyboard: { key: 'c', title: 'C / KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
+    stan: { key: 'd', title: 'D / STAN', type: 'page', src: 'stan/' },
+    formysons: { key: '5', title: '5 / FOR MY SONS', type: 'iframe', src: 'https://plzsayyes3.github.io/for_my_sons/' }
   });
 
 
@@ -84,51 +84,36 @@
       .map(([name, app]) => [app.key, name])
   ));
 
-  function dockButton(key) {
-    return [...document.querySelectorAll('.dock .app-btn')]
-      .find((button) => button.querySelector('b')?.textContent?.trim() === String(key));
+  const DOCK_PRIMARY = [
+    ['1', 'calendar', 'Calendar'], ['2', 'tasks', 'Tasks'],
+    ['3', 'zen', 'Zen'], ['4', 'cards', 'Cards'],
+    ['5', 'formysons', 'For My Sons']
+  ];
+  const DOCK_EXTRA = [
+    ['6', 'news', 'News'], ['7', 'projecttown', 'Area'],
+    ['8', 'backstage', 'Backstage'], ['9', 'onhand', 'On Hand'],
+    ['0', 'thinking', 'Thinking'], ['a', 'dictionary', 'Dictionary'],
+    ['b', 'board', 'Board'], ['c', 'keyboard', 'Keyboard'],
+    ['d', 'stan', 'Stan'], ['e', 'settings', 'Settings']
+  ];
+  function buildDock() {
+    for (const [groupId, entries] of [['dockPrimary', DOCK_PRIMARY], ['dockExtra', DOCK_EXTRA]]) {
+      const root = document.getElementById(groupId);
+      if (!root) continue;
+      root.replaceChildren();
+      for (const [key, appName, label] of entries) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'app-btn';
+        if (appName === 'settings') button.id = 'dockSettingsOpen';
+        else button.dataset.app = appName;
+        button.setAttribute('aria-label', `${label} (${key.toUpperCase()})`);
+        button.innerHTML = `${dockIcons[appName] || ''}<b class="dock-key">${key.toUpperCase()}</b><span class="dock-label">${label}</span>`;
+        root.appendChild(button);
+      }
+    }
   }
-
-  function rebuildDockTail() {
-    const dock = document.querySelector('.dock');
-    if (!dock) return;
-
-    const tailKeys = new Set(['5', '6', '7', '8', '9']);
-    [...dock.querySelectorAll('.app-btn')].forEach((button) => {
-      const key = button.querySelector('b')?.textContent?.trim();
-      if (tailKeys.has(key)) button.remove();
-    });
-
-    const zero = dockButton('0');
-    const entries = [
-      ['5', 'dictionary', 'Dictionary'],
-      ['6', 'projecttown', 'Area'],
-      ['7', 'backstage', 'Backstage'],
-      ['8', 'onhand', 'On Hand'],
-      ['9', 'thinking', 'Thinking']
-    ];
-
-    entries.forEach(([key, appName, label]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'app-btn';
-      button.dataset.app = appName;
-      button.setAttribute('aria-label', label);
-      button.innerHTML = dockMarkup(appName, key, label);
-      if (zero) dock.insertBefore(button, zero);
-      else dock.appendChild(button);
-    });
-  }
-
-  rebuildDockTail();
-
-  document.querySelectorAll('.dock .app-btn').forEach((button) => {
-    const appName = button.dataset.app;
-    const key = button.querySelector('b')?.textContent?.trim() || apps[appName]?.key || '';
-    if (!appName || !dockIcons[appName]) return;
-    button.setAttribute('aria-label', dockLabels[appName] || appName);
-    button.innerHTML = dockMarkup(appName, key, button.querySelector('span')?.textContent?.trim());
-  });
+  buildDock();
 
   let boardLoader = null;
   let dictionaryLoader = null;
@@ -256,7 +241,13 @@
     if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName || '') || active?.isContentEditable) return;
     if (document.getElementById('tokenModal')?.classList.contains('open')) return;
     if (document.getElementById('drawer')?.classList.contains('open')) return;
-    const name = keyToApp[event.key];
+    const key = event.key?.toLowerCase();
+    if (key === 'e') {
+      event.preventDefault();
+      document.getElementById('systemOpen')?.click();
+      return;
+    }
+    const name = keyToApp[key];
     if (!name) return;
     event.preventDefault();
     event.stopImmediatePropagation();
