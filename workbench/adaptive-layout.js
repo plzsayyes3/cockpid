@@ -55,9 +55,10 @@
     document.getElementById('systemOpen')?.click();
     setDock(false);
   });
-  document.addEventListener('click', (event) => {
+  // Router intercepts app clicks during document capture; listen earlier on window.
+  window.addEventListener('click', (event) => {
     if (event.target.closest?.('.dock .app-btn')) setDock(false);
-  });
+  }, true);
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && dock?.classList.contains('wb-open')) setDock(false);
   });
