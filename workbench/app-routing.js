@@ -108,7 +108,7 @@
         if (appName === 'settings') button.id = 'dockSettingsOpen';
         else button.dataset.app = appName;
         button.setAttribute('aria-label', `${label} (${key.toUpperCase()})`);
-        button.innerHTML = `${dockIcons[appName] || ''}<b class="dock-key">${key.toUpperCase()}</b><span class="dock-label">${label}</span>`;
+        button.innerHTML = `<span class="dock-top"><b class="dock-key">${key.toUpperCase()}</b>${dockIcons[appName] || '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/></svg>'}</span><span class="dock-label">${label}</span>`;
         root.appendChild(button);
       }
     }
