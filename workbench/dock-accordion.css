@@ -101,9 +101,6 @@ body.wb-dock-expanded .pet {visibility:hidden;pointer-events:none;}
  .dock .app-btn {height:44px;}
  .shell {padding-bottom:134px;}
 }
-@media(pointer:coarse) {
- body.wb-text-entry .dock {visibility:hidden;pointer-events:none;}
-}
 
 /* Two-line app buttons: keyboard shortcut + icon, then the title. */
 .dock .app-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
@@ -111,3 +108,31 @@ body.wb-dock-expanded .pet {visibility:hidden;pointer-events:none;}
 .dock .app-btn .dock-top .dock-key { display:block; margin:0; font:700 12px/1 ui-monospace,monospace; color:var(--ink,#292924); }
 .dock .app-btn .dock-top .dock-icon { display:block; width:18px; height:18px; margin:0; flex:none; }
 .dock .app-btn .dock-label { display:block; margin:0; line-height:1.15; }
+
+/* Mobile: the five primary actions remain visible, including during text entry.
+   Override the old narrow-screen closed-dock and coarse-pointer hide rules. */
+@media (max-width:720px) {
+  body .dock,
+  body .dock:not(.wb-open),
+  body.wb-text-entry .dock {
+    display:flex;
+    visibility:visible;
+    opacity:1;
+    pointer-events:auto;
+    transform:translateX(-50%);
+    bottom:calc(8px + env(safe-area-inset-bottom) + var(--wb-keyboard-offset,0px));
+  }
+  body.wb-text-entry .dock-toggle {
+    visibility:visible !important;
+    pointer-events:auto !important;
+  }
+  body.wb-text-entry .dock-extra {display:none;}
+  body.wb-text-entry .dock.wb-open .dock-extra {display:none;}
+  body.wb-capture-writing .shell {padding-bottom:calc(114px + env(safe-area-inset-bottom));}
+}
+@media (pointer:coarse) {
+  body.wb-text-entry .dock {
+    visibility:visible;
+    pointer-events:auto;
+  }
+}
