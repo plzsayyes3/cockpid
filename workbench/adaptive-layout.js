@@ -66,6 +66,20 @@
     if (dock?.classList.contains('wb-open') && !event.target.closest?.('#appDock')) setDock(false);
   });
 
+  // The permanent mobile launcher follows the visible viewport when the
+  // virtual keyboard reduces it, without hiding the primary five buttons.
+  function updateKeyboardOffset() {
+    const viewport = window.visualViewport;
+    const offset = viewport
+      ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      : 0;
+    root.style.setProperty('--wb-keyboard-offset', `${Math.round(offset)}px`);
+  }
+  window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
+  window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
+  window.addEventListener('resize', updateKeyboardOffset);
+  updateKeyboardOffset();
+
   // Prevent fixed controls from sitting over the virtual keyboard.
   const isTextEntry = (node) => node instanceof HTMLElement &&
     (node.matches('textarea,select,[contenteditable="true"]') ||
@@ -75,6 +89,7 @@
     document.body.classList.add('wb-text-entry');
     document.body.classList.toggle('wb-capture-writing', event.target.id === 'captureText');
     setDock(false);
+    updateKeyboardOffset();
   });
   document.addEventListener('focusout', () => {
     document.body.classList.remove('wb-text-entry');
