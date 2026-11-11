@@ -460,7 +460,7 @@
 
   async function finalizeCaptureWithGemini(sourceText) {
     const apiKey = geminiSetting(CAPTURE_GEMINI_KEY);
-    const model = geminiSetting(CAPTURE_GEMINI_MODEL) || CAPTURE_DEFAULT_MODEL;
+    let model = geminiSetting(CAPTURE_GEMINI_MODEL) || CAPTURE_DEFAULT_MODEL;
     if (!apiKey) throw new Error('Gemini APIキーが未設定です。Settings → Appsで登録してください');
     const prompt = [
       'あなたは日本語ノートの最終表記変換器です。',
@@ -470,36 +470,53 @@
       '要約、補足、文意の変更、勝手な意訳、説明は禁止します。',
       '結果の本文だけを返してください。',
       'ノート全文:', sourceText
-    ].join('\\n');
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25000);
-    try {
-      const response = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/' +
-        encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
-          method: 'POST', signal: controller.signal,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0, maxOutputTokens: 4096 }
-          })
+    ].join('\n');
+    // Match Zen10's retry policy for temporary API errors and suggested model names.
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25000);
+      try {
+        const response = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/' +
+          encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
+            method: 'POST', signal: controller.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0, maxOutputTokens: 4096 }
+            })
+          }
+        );
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          const failure = new Error(error?.error?.message || `Gemini API error (${response.status})`);
+          failure.status = response.status;
+          throw failure;
         }
-      );
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error?.error?.message || `Gemini API error (${response.status})`);
+        const data = await response.json();
+        const converted = (data?.candidates?.[0]?.content?.parts || [])
+          .map(part => part.text || '').join('').trim();
+        if (!converted) throw new Error('Geminiが変換結果を返しませんでした');
+        return converted;
+      } catch (error) {
+        lastError = error?.name === 'AbortError'
+          ? new Error('Geminiの応答がタイムアウトしました') : error;
+        const replacement = /use\s+models\/([a-zA-Z0-9._-]+)/i.exec(lastError?.message || '');
+        if (replacement?.[1] && replacement[1] !== model && attempt < 2) {
+          model = replacement[1];
+          continue;
+        }
+        if ([429, 500, 503].includes(lastError?.status) && attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 650 * (attempt + 1)));
+          continue;
+        }
+        throw lastError;
+      } finally {
+        clearTimeout(timer);
       }
-      const data = await response.json();
-      const converted = (data?.candidates?.[0]?.content?.parts || [])
-        .map(part => part.text || '').join('').trim();
-      if (!converted) throw new Error('Geminiが変換結果を返しませんでした');
-      return converted;
-    } catch (error) {
-      if (error?.name === 'AbortError') throw new Error('Geminiの応答がタイムアウトしました');
-      throw error;
-    } finally {
-      clearTimeout(timer);
     }
+    throw lastError || new Error('Geminiの変換に失敗しました');
   }
 
   const CAPTURE_WRITE_TIMEOUT_MS = 20000;
