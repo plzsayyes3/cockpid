@@ -100,6 +100,9 @@
     for (const [groupId, entries] of [['dockPrimary', DOCK_PRIMARY], ['dockExtra', DOCK_EXTRA]]) {
       const root = document.getElementById(groupId);
       if (!root) continue;
+      // Primary launchers are present in HTML so they survive script/load failures.
+      // Only dynamically populate the extra accordion rows.
+      if (groupId === 'dockPrimary' && root.querySelectorAll('.app-btn').length === DOCK_PRIMARY.length) continue;
       root.replaceChildren();
       for (const [key, appName, label] of entries) {
         const button = document.createElement('button');
