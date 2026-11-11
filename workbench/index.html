@@ -33,7 +33,7 @@
 .memo-area-route{border:0;border-radius:6px;background:#dce8f4;color:#315d91;padding:7px 9px;cursor:pointer;font:700 8px ui-monospace,monospace}.memo-area-route-panel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding:7px;border:1px solid #c9d8e6;border-radius:6px;background:#f5f9fd;color:#315d91;font:700 8px ui-monospace,monospace}.memo-area-route-panel[hidden]{display:none}.memo-area-route-panel button{border:1px solid #b8cbe0;border-radius:999px;background:#fff;color:#315d91;padding:5px 8px;cursor:pointer;font:inherit}.memo-area-route-label{letter-spacing:.08em}
 </style>
 <link rel="stylesheet" href="adaptive-layout.css?v=20261107-stable-mobile-capture">
-<link rel="stylesheet" href="dock-accordion.css?v=20261110-mobile-visible">
+<link rel="stylesheet" href="dock-accordion.css?v=20261111-static-dock">
 </head>
 <body>
 <div class="shell">
@@ -60,7 +60,13 @@
 <nav class="dock" id="appDock" aria-label="Workbench apps">
   <div class="dock-extra" id="dockExtra" aria-label="追加アプリ" aria-hidden="true" inert></div>
   <button class="dock-toggle" id="dockToggle" type="button" aria-expanded="false" aria-controls="dockExtra" aria-label="追加メニューを開く"><span class="dock-toggle-symbol" aria-hidden="true">⌃</span><span class="dock-toggle-label">MORE</span></button>
-  <div class="dock-primary" id="dockPrimary" aria-label="常設アプリ"></div>
+  <div class="dock-primary" id="dockPrimary" aria-label="常設アプリ">
+    <button class="app-btn" data-app="calendar" type="button" aria-label="Calendar (1)"><span class="dock-top"><b class="dock-key">1</b><svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3.5v3M17 3.5v3M3.5 9h17M8 13h2M14 13h2M8 17h2"/></svg></span><span class="dock-label">Calendar</span></button>
+    <button class="app-btn" data-app="tasks" type="button" aria-label="Tasks (2)"><span class="dock-top"><b class="dock-key">2</b><svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l2.3 2.3L16 8.8"/></svg></span><span class="dock-label">Tasks</span></button>
+    <button class="app-btn" data-app="zen" type="button" aria-label="Zen (3)"><span class="dock-top"><b class="dock-key">3</b><svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5zM15 4.5V9h4"/><path d="M8 16l6.8-6.8 1.8 1.8L9.8 17.8 7 18.5z"/></svg></span><span class="dock-label">Zen</span></button>
+    <button class="app-btn" data-app="cards" type="button" aria-label="Cards (4)"><span class="dock-top"><b class="dock-key">4</b><svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h7"/></svg></span><span class="dock-label">Cards</span></button>
+    <button class="app-btn" data-app="formysons" type="button" aria-label="For My Sons (5)"><span class="dock-top"><b class="dock-key">5</b><svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5L12 4.5l8 7M6.5 9.5V19.5h11V9.5"/><path d="M12 17.2l-2.4-2.3a1.5 1.5 0 0 1 2.4-1.8 1.5 1.5 0 0 1 2.4 1.8z"/></svg></span><span class="dock-label">For My Sons</span></button>
+  </div>
 </nav>
 <section class="hp-sheet" id="hpSheet" aria-hidden="true">
   <button class="hp-sheet-backdrop" id="hpSheetBackdrop" type="button" aria-label="HP編集を閉じる"></button>
