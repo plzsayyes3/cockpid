@@ -133,16 +133,21 @@
   function anchorCaptureCaret() {
     if (captureComposing || !captureCaretMirror || !captureText.clientWidth || !captureText.clientHeight ||
         typeof window.getComputedStyle !== 'function') return;
-    if (!captureText.value && document.activeElement !== captureText) {
-      captureText.style.paddingTop = '';
-      captureText.style.paddingBottom = '';
+
+    // Never shift the writing origin. The previous bottom-anchoring routine
+    // changed paddingTop on focus, causing the first line to jump downward.
+    captureText.style.paddingTop = '';
+    captureText.style.paddingBottom = '';
+    if (!captureText.value) {
       captureText.scrollTop = 0;
       return;
     }
+
     const style = window.getComputedStyle(captureText);
     const pixels = value => parseFloat(value) || 0;
     const lineHeight = pixels(style.lineHeight) || pixels(style.fontSize) * 1.8 || 28;
-    const bottomGap = 12;
+    const paddingTop = pixels(style.paddingTop);
+    const paddingBottom = pixels(style.paddingBottom);
     const mirrorWidth = Math.max(1, captureText.clientWidth -
       pixels(style.paddingLeft) - pixels(style.paddingRight));
     captureCaretMirror.style.width = mirrorWidth + 'px';
@@ -151,18 +156,25 @@
       'textIndent','tabSize','textAlign','wordBreak','overflowWrap','direction']) {
       captureCaretMirror.style[prop] = style[prop];
     }
-    // A zero-width marker measures the insertion point without adding a character.
     const caret = document.createElement('span');
     caret.textContent = '\u200b';
     captureCaretMirror.replaceChildren(
       document.createTextNode(captureText.value.slice(0, captureText.selectionStart)), caret);
     const caretTop = caret.getBoundingClientRect().top -
-      captureCaretMirror.getBoundingClientRect().top;
-    const bottomLineTop = Math.max(0, captureText.clientHeight - lineHeight - bottomGap);
-    const topPadding = Math.max(0, bottomLineTop - caretTop);
-    captureText.style.paddingTop = topPadding + 'px';
-    captureText.style.paddingBottom = bottomGap + 'px';
-    captureText.scrollTop = Math.max(0, caretTop + topPadding - bottomLineTop);
+      captureCaretMirror.getBoundingClientRect().top + paddingTop;
+
+    // Keep the active line visible, but scroll only after it exceeds the
+    // visible area. In particular, never force short notes to the bottom.
+    const visibleTop = captureText.scrollTop;
+    const visibleBottom = visibleTop + captureText.clientHeight - paddingBottom;
+    const caretBottom = caretTop + lineHeight;
+    const margin = 8;
+    if (caretBottom > visibleBottom - margin) {
+      captureText.scrollTop = Math.max(0,
+        caretBottom + margin + paddingBottom - captureText.clientHeight);
+    } else if (caretTop < visibleTop + margin) {
+      captureText.scrollTop = Math.max(0, caretTop - margin);
+    }
   }
   function scheduleCaptureAnchor() {
     if (!captureCaretMirror || captureAnchorFrame !== null) return;
