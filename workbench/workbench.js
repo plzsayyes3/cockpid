@@ -418,6 +418,90 @@
   }
 
 
+  // Gemini finalization mirrors Zen v10 SEND: local kana while typing,
+  // AI conversion once at save time. Keys are kept only in this origin's localStorage.
+  const CAPTURE_GEMINI_KEY = 'cockpid.capture.gemini-key.v1';
+  const CAPTURE_GEMINI_MODEL = 'cockpid.capture.gemini-model.v1';
+  const CAPTURE_DEFAULT_MODEL = 'gemini-3.6-flash';
+  const captureGeminiKeyInput = $w('captureGeminiKey');
+  const captureGeminiModelInput = $w('captureGeminiModel');
+  const captureGeminiSaveButton = $w('captureGeminiSave');
+  const captureGeminiStatus = $w('captureGeminiStatus');
+
+  const geminiSetting = (key) => {
+    try { return (localStorage.getItem(key) || '').trim(); }
+    catch (_) { return ''; }
+  };
+  function updateGeminiSettingsUI(message) {
+    const key = geminiSetting(CAPTURE_GEMINI_KEY);
+    const model = geminiSetting(CAPTURE_GEMINI_MODEL) || CAPTURE_DEFAULT_MODEL;
+    if (captureGeminiKeyInput) captureGeminiKeyInput.value = key;
+    if (captureGeminiModelInput) captureGeminiModelInput.value = model;
+    if (captureGeminiStatus) captureGeminiStatus.textContent =
+      message || (key ? 'Gemini APIキー設定済み · RAW保存時にAI整形' : '未設定 · RAW保存にはGemini APIキーが必要です');
+  }
+  captureGeminiSaveButton?.addEventListener('click', () => {
+    const key = captureGeminiKeyInput?.value.trim() || '';
+    const model = (captureGeminiModelInput?.value.trim() || CAPTURE_DEFAULT_MODEL)
+      .replace(/^models\//, '');
+    if (!key) {
+      if (captureGeminiStatus) captureGeminiStatus.textContent = 'APIキーを入力してください（既存キーは保持しています）';
+      return;
+    }
+    try {
+      localStorage.setItem(CAPTURE_GEMINI_KEY, key);
+      localStorage.setItem(CAPTURE_GEMINI_MODEL, model);
+      updateGeminiSettingsUI('保存しました · RAW保存時にGeminiを使用します');
+    } catch (_) {
+      if (captureGeminiStatus) captureGeminiStatus.textContent = 'ブラウザへの設定保存に失敗しました';
+    }
+  });
+  updateGeminiSettingsUI();
+
+  async function finalizeCaptureWithGemini(sourceText) {
+    const apiKey = geminiSetting(CAPTURE_GEMINI_KEY);
+    const model = geminiSetting(CAPTURE_GEMINI_MODEL) || CAPTURE_DEFAULT_MODEL;
+    if (!apiKey) throw new Error('Gemini APIキーが未設定です。Settings → Appsで登録してください');
+    const prompt = [
+      'あなたは日本語ノートの最終表記変換器です。',
+      '以下はローマ字からひらがなへ単純変換したノートです。',
+      '自然な漢字かな交じり・外来語のカタカナに変換してください。',
+      '明白な打鍵ミスだけ修正し、意味、文体、改行、箇条書き、固有名詞、URL、英字の略語を保持してください。',
+      '要約、補足、文意の変更、勝手な意訳、説明は禁止します。',
+      '結果の本文だけを返してください。',
+      'ノート全文:', sourceText
+    ].join('\\n');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000);
+    try {
+      const response = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' +
+        encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey), {
+          method: 'POST', signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 4096 }
+          })
+        }
+      );
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error?.error?.message || `Gemini API error (${response.status})`);
+      }
+      const data = await response.json();
+      const converted = (data?.candidates?.[0]?.content?.parts || [])
+        .map(part => part.text || '').join('').trim();
+      if (!converted) throw new Error('Geminiが変換結果を返しませんでした');
+      return converted;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('Geminiの応答がタイムアウトしました');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   const CAPTURE_WRITE_TIMEOUT_MS = 20000;
   const CAPTURE_VERIFY_TIMEOUT_MS = 10000;
   const captureOriginalLabel = captureBtn.textContent;
@@ -483,7 +567,7 @@
 
   function captureSaved(entry) {
     // Keep any text edited while the save request was in progress.
-    const editedDuringSave = captureComposing || captureText.value.trim() !== entry.text;
+    const editedDuringSave = captureComposing || captureText.value.trim() !== (entry.originalText ?? entry.text);
     if (!editedDuringSave) {
       captureText.value = '';
       capturePendingRomaji = null;
@@ -514,27 +598,43 @@
         scheduleCaptureAnchor();
       }
     }
-    const text = captureText.value.trim();
-    if (!text) return captureText.focus();
+    const originalText = captureText.value.trim();
+    if (!originalText) return captureText.focus();
     const currentToken = token();
     if (!currentToken) return captureStatus('GitHub token が必要です');
 
     const source = sourceFor('inbox', 'mynotebook', '00_inbox');
-    const reusePending = pendingCapture && pendingCapture.text === text &&
+    const isAiSave = captureRawMode;
+    const reusePending = pendingCapture &&
+      (pendingCapture.originalText ?? pendingCapture.text) === originalText &&
+      pendingCapture.ai === isAiSave &&
       pendingCapture.repo === source.repo && pendingCapture.dir === source.dir;
     const entry = reusePending ? pendingCapture : {
-      text, repo: source.repo, dir: source.dir, name: `${inboxStamp()}.md`
+      text: originalText, originalText, ai: isAiSave,
+      repo: source.repo, dir: source.dir, name: `${inboxStamp()}.md`
     };
     if (!reusePending) entry.path = joinPath(source.dir, entry.name);
-    pendingCapture = entry;
     captureSaving = true;
     let writeAttempted = false;
     clearTimeout(captureLabelTimer);
     captureBtn.disabled = true;
-    captureBtn.textContent = reusePending ? '保存結果を確認中…' : '保存中…';
-    captureStatus(`${source.repo}/${source.dir} へ保存しています…`, false);
+    captureBtn.textContent = reusePending ? '保存結果を確認中…' : (isAiSave ? 'AI変換中…' : '保存中…');
+    captureStatus(isAiSave && !reusePending ? 'Geminiで表記を整えています…' :
+      `${source.repo}/${source.dir} へ保存しています…`, false);
     window.COCKPID_RESIDENT?.working?.('capture-save');
     try {
+      if (isAiSave && !reusePending) {
+        // Never save stale AI text if the user typed or switched mode during conversion.
+        entry.text = await finalizeCaptureWithGemini(originalText);
+        if (captureComposing || captureText.value.trim() !== originalText || captureRawMode !== isAiSave) {
+          captureStatus('AI変換中に入力が変更されたため保存を中止しました。原文は保持しています。', false);
+          captureBtn.textContent = captureOriginalLabel;
+          return;
+        }
+        captureBtn.textContent = '保存中…';
+      }
+      // Only now can the entry be treated as a pending GitHub write.
+      pendingCapture = entry;
       if (reusePending) {
         const prior = await captureStoredState(entry, currentToken);
         if (prior === 'saved') {
@@ -552,13 +652,21 @@
         headers: { ...captureHeaders(currentToken), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: `cockpid workbench: capture ${entry.name}`,
-          content: encodeUtf8(`${text}\n`)
+          content: encodeUtf8(`${entry.text}\n`)
         })
       }, CAPTURE_WRITE_TIMEOUT_MS);
       if (!response.ok) throw new Error(`${source.repo} write ${response.status}`);
       captureSaved(entry);
     } catch (error) {
       console.error('capture save', error);
+      if (!writeAttempted && !reusePending && isAiSave) {
+        // No GitHub request occurred: keep the original note and do not schedule a retry.
+        pendingCapture = null;
+        captureBtn.textContent = captureOriginalLabel;
+        captureStatus(`AI変換に失敗しました（${error.message}）。未保存・原文を保持しています。`, false);
+        window.COCKPID_RESIDENT?.error?.('capture-save');
+        return;
+      }
       let state = 'unknown';
       if (writeAttempted) {
         try { state = await captureStoredState(entry, currentToken); }
