@@ -136,3 +136,31 @@ body.wb-dock-expanded .pet {visibility:hidden;pointer-events:none;}
     pointer-events:auto;
   }
 }
+
+/* Keep the launcher anchored on every viewport; legacy HOME styles may
+   otherwise hide or re-layout .dock in narrower desktop windows. */
+html body #appDock {
+  position:fixed;
+  display:flex;
+  flex-direction:column;
+  left:50%;
+  right:auto;
+  bottom:calc(8px + env(safe-area-inset-bottom) + var(--wb-keyboard-offset,0px));
+  width:min(540px,calc(100vw - 16px));
+  height:auto;
+  min-height:0;
+  max-height:calc(100dvh - 16px);
+  transform:translateX(-50%);
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  z-index:200;
+  overflow:visible;
+}
+html body #appDock .dock-primary {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));}
+html body #appDock .dock-toggle {display:flex;}
+html body #appDock:not(.wb-open) .dock-extra {display:none;}
+html body #appDock.wb-open .dock-extra {display:grid;}
+@media (max-width:720px) {
+  html body #appDock {width:calc(100vw - 16px);}
+}
