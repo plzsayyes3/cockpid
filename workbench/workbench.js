@@ -99,7 +99,8 @@
     const raw = value.slice(from, letters ? end : start);
     if (!raw) return;
     const kana = captureToHiragana(raw, !letters);
-    const replacement = letters ? kana : kana + inserted;
+    const punctuation = inserted === ',' || inserted === '.' ? '。' : inserted;
+    const replacement = letters ? kana : kana + punctuation;
     if (value.slice(from, end) !== replacement) {
       captureText.setRangeText(replacement, from, end, 'end');
     }
@@ -595,8 +596,8 @@
     catch (error) { console.warn('memo route metadata could not be recorded', error); }
     captureBtn.textContent = '保存済み ✓';
     captureStatus(editedDuringSave
-      ? `保存しました · ${entry.name}（入力中の変更は未保存です）`
-      : `保存しました · ${entry.name}`);
+      ? `保存しました · ${entry.name}（入力中の変更は未保存です${entry.aiFallback ? '・AI変換失敗のため原文で保存' : ''}）`
+      : `保存しました · ${entry.name}${entry.aiFallback ? '（AI変換失敗のため原文で保存）' : ''}`);
     window.COCKPID_RESIDENT?.complete?.('capture-save');
     clearTimeout(captureLabelTimer);
     captureLabelTimer = setTimeout(() => { captureBtn.textContent = captureOriginalLabel; }, 1600);
@@ -642,7 +643,14 @@
     try {
       if (isAiSave && !reusePending) {
         // Never save stale AI text if the user typed or switched mode during conversion.
-        entry.text = await finalizeCaptureWithGemini(originalText);
+        try {
+          entry.text = await finalizeCaptureWithGemini(originalText);
+        } catch (conversionError) {
+          // Conversion is optional: preserve the original kana note on AI failure.
+          console.warn('capture Gemini conversion failed; saving original text', conversionError);
+          entry.text = originalText;
+          entry.aiFallback = true;
+        }
         if (captureComposing || captureText.value.trim() !== originalText || captureRawMode !== isAiSave) {
           captureStatus('AI変換中に入力が変更されたため保存を中止しました。原文は保持しています。', false);
           captureBtn.textContent = captureOriginalLabel;
