@@ -3,7 +3,6 @@
 
   const CLIENT_ID_KEY = 'cockpid.google-calendar.client-id.v1';
   const CACHE_KEY = 'cockpid.google-calendar.cache.v1';
-  const SESSION_TOKEN_KEY = 'cockpid.google-calendar.access-token.v1';
   const AUTHORIZED_KEY = 'cockpid.google-calendar.authorized.v1';
   const SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.calendarlist.readonly';
   const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
@@ -12,6 +11,8 @@
   const originalGh = typeof window.gh === 'function' ? window.gh : null;
   let tokenClient = null;
   let tokenClientId = '';
+  let accessTokenInMemory = '';
+  let tokenExpiresAt = 0;
 
   function pad(value) { return String(value).padStart(2, '0'); }
 
@@ -51,26 +52,27 @@
   }
 
   function readCache() {
-    const value = readJson(localStorage, CACHE_KEY);
+    const value = readJson(sessionStorage, CACHE_KEY);
     return value?.version === 1 && value.months && typeof value.months === 'object' ? value : null;
   }
 
   function writeCache(value) {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(value));
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(value));
   }
 
+  // Purge the former persistent events cache: calendar details must not survive a browser session.
+  try { localStorage.removeItem(CACHE_KEY); } catch { /* storage blocked */ }
+
+  // Keep bearer tokens in this script's memory, not origin-shared Web Storage.
+  try { sessionStorage.removeItem('cockpid.google-calendar.access-token.v1'); } catch { /* storage blocked */ }
+
   function getSessionToken() {
-    const value = readJson(sessionStorage, SESSION_TOKEN_KEY);
-    if (!value?.accessToken || !value?.expiresAt || value.expiresAt < Date.now() + 60000) return null;
-    return value.accessToken;
+    return accessTokenInMemory && tokenExpiresAt > Date.now() + 60000 ? accessTokenInMemory : null;
   }
 
   function saveSessionToken(response) {
-    const expiresIn = Number(response.expires_in || 3600);
-    sessionStorage.setItem(SESSION_TOKEN_KEY, JSON.stringify({
-      accessToken: response.access_token,
-      expiresAt: Date.now() + expiresIn * 1000
-    }));
+    accessTokenInMemory = response.access_token;
+    tokenExpiresAt = Date.now() + Number(response.expires_in || 3600) * 1000;
   }
 
   function getClientId(reset = false) {
@@ -305,7 +307,6 @@
   }
 
   async function syncThreeMonths({ resetClientId = false } = {}) {
-    if (typeof token === 'function' && !token()) throw new Error('先にCOCKPIDのGitHub tokenを設定してください。');
     const accessToken = await requestAccessToken(resetClientId);
     const range = threeMonthWindow();
     const sidecars = new Map();
@@ -510,7 +511,7 @@
     syncThreeMonths,
     readCache,
     calendarSlug,
-    clearCache() { localStorage.removeItem(CACHE_KEY); },
+    clearCache() { sessionStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_KEY); },
     resetClientId() { localStorage.removeItem(CLIENT_ID_KEY); }
   };
 
