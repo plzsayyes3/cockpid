@@ -97,8 +97,9 @@
     const from = continuesRun ? pending.start : start;
     const letters = /^[a-z]+$/.test(inserted);
     const raw = value.slice(from, letters ? end : start);
-    if (!raw) return;
-    const kana = captureToHiragana(raw, !letters);
+    // Punctuation must convert even when there is no pending romaji.
+    if (!raw && inserted !== ',' && inserted !== '.') return;
+    const kana = raw ? captureToHiragana(raw, !letters) : '';
     const punctuation = inserted === ',' || inserted === '.' ? '。' : inserted;
     const replacement = letters ? kana : kana + punctuation;
     if (value.slice(from, end) !== replacement) {
