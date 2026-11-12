@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  // An embedded home timeline must not overwrite the full calendar's saved view/date.
+  if (new URLSearchParams(location.search).get('embed') === 'timeline2') return;
   const KEY = 'cockpid.calendar.right-view.v1';
   const anchor = document.getElementById('anchorDate');
   const viewContent = document.getElementById('viewContent');
