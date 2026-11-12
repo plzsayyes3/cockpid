@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const PALETTE = ['#7e8fd7','#d47b55','#77a687','#b083c4','#c7a958','#78a7c7','#ce7070'];
+  const PALETTE = ['#7c89b1','#b8876e','#829b85','#a18aaa','#b09b62','#7e9dae','#b77f7a'];
   const DAY_MS = 86400000;
   let activeAbort = null;
   let savedScale = 62;
@@ -258,7 +258,7 @@
       const dayLeft = railW + dateW + 8;
       const dayMainW = w - dayLeft - 8;
       const dayHeader = 40;
-      const out = [`<rect width="${w}" height="${hv}" fill="#171819"/>`];
+      const out = [`<rect width="${w}" height="${hv}" fill="#faf9f5"/>`];
 
       for (let i = first; i <= last; i += 1) {
         const day = days[i];
@@ -272,17 +272,17 @@
         const monthStart = day.parts.day === 1;
         const rowAlpha = lerp(.11, .18, p) + .04 * sizeP;
 
-        out.push(`<line x1="${railW}" y1="${base}" x2="${w}" y2="${base}" stroke="rgba(255,255,255,${monthStart ? .24 : rowAlpha})" stroke-width="1"/>`);
+        out.push(`<line x1="${railW}" y1="${base}" x2="${w}" y2="${base}" stroke="rgba(52,50,45,${monthStart ? .24 : rowAlpha})" stroke-width="1"/>`);
 
         const dateFrom = { x:railW+7, y:base + Math.min(u*.55,16) };
         const dateTo = { x:railW+7, y:base+17 };
         const dp = pointLerp(dateFrom, dateTo, p);
-        const dateColor = day.key === dateKey(anchor) ? '#b8665d' : (dow === 0 ? '#c8736c' : dow === 6 ? '#759ac5' : '#e4e4df');
+        const dateColor = day.key === dateKey(anchor) ? '#b8665d' : (dow === 0 ? '#c8736c' : dow === 6 ? '#527aa1' : '#292924');
         const dateAlpha = clamp(lerp(smooth(.08,.25,z),1,p),0,1);
         out.push(`<text x="${dp.x}" y="${dp.y}" fill="${dateColor}" opacity="${dateAlpha}" font-size="${lerp(lerp(8,15,smooth(.18,.62,z)),17,p)}" font-family="-apple-system,sans-serif">${day.parts.day}</text>`);
 
         const weekdays = ['日','月','火','水','木','金','土'];
-        out.push(`<text x="${railW+30}" y="${lerp(base+15,base+16,p)}" fill="#91928f" opacity="${smooth(.55,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">(${weekdays[dow]})</text>`);
+        out.push(`<text x="${railW+30}" y="${lerp(base+15,base+16,p)}" fill="#77736b" opacity="${smooth(.55,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">(${weekdays[dow]})</text>`);
 
         // Unscheduled objects live under the date that owns their scope:
         // week items on Monday, month items on the 1st.
@@ -298,9 +298,9 @@
           const markerX = railW + 7;
           const markerY = base + Math.min(27, Math.max(12, u * .68));
           if (compact) {
-            out.push(`<circle cx="${markerX+3}" cy="${markerY}" r="2.6" fill="#c9c8c3" opacity=".82"/>`);
+            out.push(`<circle cx="${markerX+3}" cy="${markerY}" r="2.6" fill="#8c887f" opacity=".82"/>`);
             if (u > 17) {
-              out.push(`<text x="${markerX+9}" y="${markerY+2.7}" fill="#a9aaa6" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length}</text>`);
+              out.push(`<text x="${markerX+9}" y="${markerY+2.7}" fill="#77736b" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length}</text>`);
             }
           } else {
             const chipX = markerX;
@@ -309,12 +309,12 @@
               const chipY = base + 25 + idx * 17;
               const chipH = 14;
               const alpha = entry.item.checked ? .34 : .88;
-              out.push(`<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="4" fill="rgba(255,255,255,.075)" stroke="rgba(255,255,255,.08)" opacity="${alpha}"/>`);
-              out.push(`<text x="${chipX+5}" y="${chipY+9.8}" fill="#8f908c" opacity="${alpha}" font-size="6.5" font-family="ui-monospace,monospace">${entry.scope}</text>`);
-              out.push(`<text x="${chipX+17}" y="${chipY+9.8}" fill="#deded9" opacity="${alpha}" font-size="7.2" font-family="-apple-system,sans-serif">${esc(entry.item.title)}</text>`);
+              out.push(`<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${chipH}" rx="4" fill="rgba(52,50,45,.075)" stroke="rgba(52,50,45,.08)" opacity="${alpha}"/>`);
+              out.push(`<text x="${chipX+5}" y="${chipY+9.8}" fill="#77736b" opacity="${alpha}" font-size="6.5" font-family="ui-monospace,monospace">${entry.scope}</text>`);
+              out.push(`<text x="${chipX+17}" y="${chipY+9.8}" fill="#292924" opacity="${alpha}" font-size="7.2" font-family="-apple-system,sans-serif">${esc(entry.item.title)}</text>`);
             });
             if (scopedUndated.length > 3) {
-              out.push(`<text x="${chipX+5}" y="${base+25+3*17+8}" fill="#8f908c" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length-3}</text>`);
+              out.push(`<text x="${chipX+5}" y="${base+25+3*17+8}" fill="#77736b" font-size="6.5" font-family="ui-monospace,monospace">+${scopedUndated.length-3}</text>`);
             }
           }
         }
@@ -325,19 +325,19 @@
           const yD = base + dayHeader + (u-dayHeader) * (hour/24);
           const d1 = { x:dateW, y:yD }, d2 = { x:w, y:yD };
           const l1 = pointLerp(n1,d1,p), l2 = pointLerp(n2,d2,p);
-          out.push(`<line x1="${l1.x}" y1="${l1.y}" x2="${l2.x}" y2="${l2.y}" stroke="rgba(255,255,255,.11)" stroke-width="1"/>`);
+          out.push(`<line x1="${l1.x}" y1="${l1.y}" x2="${l2.x}" y2="${l2.y}" stroke="rgba(52,50,45,.11)" stroke-width="1"/>`);
           if (hour < 24) {
             const tlFrom = { x:xN+2, y:base+9 };
             const tlTo = { x:dayLeft-7, y:yD+8 };
             const tp = pointLerp(tlFrom,tlTo,p);
-            out.push(`<text x="${tp.x}" y="${tp.y}" fill="#9d9e9b" opacity="${lerp(smooth(.32,.58,z),1,p)}" font-size="7" text-anchor="${p>.55?'end':'start'}" font-family="ui-monospace,monospace">${pad(hour)}:00</text>`);
+            out.push(`<text x="${tp.x}" y="${tp.y}" fill="#77736b" opacity="${lerp(smooth(.32,.58,z),1,p)}" font-size="7" text-anchor="${p>.55?'end':'start'}" font-family="ui-monospace,monospace">${pad(hour)}:00</text>`);
           }
         }
 
         if (monthStart || p > .72) {
           const ma = monthStart ? lerp(.72,.35,p) : smooth(.72,.96,p)*.28;
           const my = base + Math.min(u*.5,34);
-          out.push(`<text x="${railW*.42}" y="${my}" fill="#8e8f8d" opacity="${ma}" font-size="${lerp(9,7,p)}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${railW*.42} ${my})" font-family="ui-monospace,monospace">${day.parts.year}.${pad(day.parts.month)}</text>`);
+          out.push(`<text x="${railW*.42}" y="${my}" fill="#77736b" opacity="${ma}" font-size="${lerp(9,7,p)}" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 ${railW*.42} ${my})" font-family="ui-monospace,monospace">${day.parts.year}.${pad(day.parts.month)}</text>`);
         }
 
         anytime.slice(0,2).forEach((item,j) => {
@@ -346,7 +346,7 @@
           const rr = rectLerp(from,to,p);
           const opacity = item.checked ? .35 : .92;
           out.push(`<rect x="${rr.x}" y="${rr.y}" width="${rr.w}" height="${rr.h}" rx="${rr.r}" fill="${item.color}" opacity="${opacity}"/>`);
-          if (rr.h > 9) out.push(`<text x="${rr.x+3}" y="${rr.y+rr.h-3}" fill="#efefeb" opacity="${smooth(.68,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">${esc(item.title)}</text>`);
+          if (rr.h > 9) out.push(`<text x="${rr.x+3}" y="${rr.y+rr.h-3}" fill="#292924" opacity="${smooth(.68,.90,z)}" font-size="7" font-family="-apple-system,sans-serif">${esc(item.title)}</text>`);
         });
 
         const eventH = Math.max(1.4, Math.min(12,u*.18));
@@ -373,7 +373,7 @@
           const labelFrom = { x:nonDay.x+3, y:nonDay.y+Math.min(nonDay.h-1,8) };
           const labelTo = { x:dayRect.x+7, y:dayRect.y+11 };
           const lp = pointLerp(labelFrom,labelTo,p);
-          if (rr.w > 25 && rr.h > 4) out.push(`<text x="${lp.x}" y="${lp.y}" fill="#efefeb" opacity="${clamp(lerp(smooth(.34,.58,z),1,p),0,1)}" font-size="${lerp(6.4,8,p)}" font-family="-apple-system,sans-serif">${esc(item.title)}</text>`);
+          if (rr.w > 25 && rr.h > 4) out.push(`<text x="${lp.x}" y="${lp.y}" fill="#292924" opacity="${clamp(lerp(smooth(.34,.58,z),1,p),0,1)}" font-size="${lerp(6.4,8,p)}" font-family="-apple-system,sans-serif">${esc(item.title)}</text>`);
         });
       }
 
