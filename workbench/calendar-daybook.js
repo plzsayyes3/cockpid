@@ -361,9 +361,10 @@
     viewContent.innerHTML = `<div class="month-scroll"><div class="month-grid"><div class="month-weekday">月</div><div class="month-weekday">火</div><div class="month-weekday">水</div><div class="month-weekday">木</div><div class="month-weekday">金</div><div class="month-weekday">土</div><div class="month-weekday">日</div>${cells.join('')}</div></div>`;
   }
 
+  const compactTimeline = new URLSearchParams(location.search).get('embed') === 'timeline2';
   const state = {
-    view: 'day',
-    anchor: addDays(jstParts(), 1)
+    view: compactTimeline ? 'timeline2' : 'day',
+    anchor: compactTimeline ? jstParts() : addDays(jstParts(), 1)
   };
 
   function syncControls() {
