@@ -100,7 +100,7 @@
     // Punctuation must convert even when there is no pending romaji.
     if (!raw && inserted !== ',' && inserted !== '.') return;
     const kana = raw ? captureToHiragana(raw, !letters) : '';
-    const punctuation = inserted === ',' || inserted === '.' ? '。' : inserted;
+    const punctuation = inserted === ',' ? '、' : inserted === '.' ? '。' : inserted;
     const replacement = letters ? kana : kana + punctuation;
     if (value.slice(from, end) !== replacement) {
       captureText.setRangeText(replacement, from, end, 'end');
