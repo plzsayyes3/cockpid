@@ -34,6 +34,17 @@
 </style>
 <link rel="stylesheet" href="adaptive-layout.css?v=20261107-stable-mobile-capture">
 <link rel="stylesheet" href="dock-accordion.css?v=20261112-quiet-more">
+<style>
+.timeline-home-object{min-height:0!important;min-width:0}
+.timeline-home-controls{display:flex;align-items:center;gap:7px;min-width:0}
+.timeline-home-height-label,.timeline-home-controls output{font:700 8px/1 ui-monospace,monospace;color:#89857d;white-space:nowrap}
+.timeline-home-height{width:clamp(65px,9vw,130px);height:18px;accent-color:#777d77;cursor:pointer}
+.timeline-home-open{font-size:15px;padding:0 6px}
+.timeline-home-frame-wrap{height:var(--timeline-home-height,260px);min-height:0;overflow:hidden;margin-top:12px;border-radius:8px;background:#171819}
+.timeline-home-frame-wrap iframe{display:block;width:100%;height:100%;border:0}
+.timeline-home-hint{margin-top:7px;color:#918d86;font:8px/1.4 ui-monospace,monospace}
+@media(max-width:720px){.timeline-home-height-label{display:none}.timeline-home-height{width:68px}.timeline-home-frame-wrap{height:var(--timeline-home-height,300px)}}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -44,7 +55,7 @@
   <main class="desk">
     <section class="object capture-object" aria-labelledby="captureHeading"><div class="object-label" id="captureHeading">PUT ANYTHING HERE</div><div class="capture-viewport"><textarea id="captureText" aria-labelledby="captureHeading" placeholder="まだ分類しない。思いついたまま置く……"></textarea></div><div class="capture-actions"><div class="capture-help"><span class="quiet">Ctrl / ⌘ + Enter で 00_inbox へ直接保存</span><span class="capture-help-note">思いついたまま、まず置く</span></div><div class="capture-buttons"><button class="capture-mode-btn" id="captureModeBtn" type="button" aria-label="半角RAW入力に切り替え" aria-pressed="false" title="Ctrl + Space で切り替え">通常 / RAW</button><button class="action-btn" id="captureBtn" type="button" aria-label="メモを保存">机に置く</button></div></div></section>
     <section class="object movement-object" aria-label="ON HAND"><div class="movement-head"><span class="movement-title">ON HAND</span><div class="movement-tools"><span class="movement-source" id="movementDate" role="status" aria-live="polite">7 DAYS · ANALYSIS …</span><button class="movement-random" id="movementRandom" type="button">↻ RANDOM</button></div></div><div class="movement-grid"><article class="movement-col"><div class="movement-col-head"><span>Task</span><b id="moveDoCount">—</b></div><div class="movement-items movement-loading" id="moveDoItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article><article class="movement-col"><div class="movement-col-head"><span>Check</span><b id="moveCheckCount">—</b></div><div class="movement-items movement-loading" id="moveCheckItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article><article class="movement-col"><div class="movement-col-head"><span>Keep</span><b id="moveThinkCount">—</b></div><div class="movement-items movement-loading" id="moveThinkItems"><div class="movement-item"><span></span><span class="movement-item-body"><span class="movement-item-title">読み込み中…</span></span></div></div></article></div></section>
-    <div class="calendar-news-grid"><section class="object today-object"><div class="object-head calendar-head"><div class="calendar-title"><span class="object-label">CALENDAR / TODAY</span><a class="calendar-external" href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" aria-label="Google カレンダーを開く" title="Google Calendar"><span aria-hidden="true">↗</span></a></div><div class="date-nav" aria-label="日付移動"><button class="date-btn" id="prevDate" title="前日">‹</button><button class="date-btn date-label" id="todayDateBtn" title="今日に戻る">--/--</button><button class="date-btn" id="nextDate" title="翌日">›</button></div></div><div class="list" id="todayList"><div class="empty">Techoを読んでいます…</div></div></section><section class="object news-object" data-app="news" aria-label="My Internet Placeを開く"><div class="object-head"><span class="object-label">NEWS</span><span class="object-no">04</span></div><div class="news-home-list" id="newsHomeList"><div class="news-home-empty">ニュースを読み込んでいます…</div></div><span class="state">OPEN NEWS</span></section></div>
+    <div class="calendar-news-grid"><section class="object today-object timeline-home-object"><div class="object-head calendar-head"><div class="calendar-title"><span class="object-label">CALENDAR / TIMELINE 2</span><a class="calendar-external" href="https://calendar.google.com/calendar/u/0/r/week" target="_blank" rel="noopener noreferrer" aria-label="Google カレンダーを開く" title="Google Calendar"><span aria-hidden="true">↗</span></a></div><div class="timeline-home-controls"><label for="timelineHomeHeight" class="timeline-home-height-label">HEIGHT</label><input id="timelineHomeHeight" class="timeline-home-height" type="range" min="180" max="480" step="10" value="260" aria-label="タイムラインの表示高さ"><output id="timelineHomeHeightValue" for="timelineHomeHeight">260px</output><button class="date-btn timeline-home-open" type="button" data-app="calendar" aria-label="カレンダー全画面を開く" title="全画面で開く">⤢</button></div></div><div class="timeline-home-frame-wrap"><iframe id="timelineHomeFrame" src="calendar.html?embed=timeline2" title="Timeline 2 / 今日の予定" loading="lazy"></iframe></div><div id="todayList" hidden aria-hidden="true"></div><div class="timeline-home-hint">スクロールで日付移動 · 2本指でズーム</div></section><section class="object news-object" data-app="news" aria-label="My Internet Placeを開く"><div class="object-head"><span class="object-label">NEWS</span><span class="object-no">04</span></div><div class="news-home-list" id="newsHomeList"><div class="news-home-empty">ニュースを読み込んでいます…</div></div><span class="state">OPEN NEWS</span></section></div>
   </main>
 </div>
 <div class="mp-dock" aria-label="現在のMP">
@@ -150,6 +161,27 @@
 <script src="memo-route-model.js?v=20260923-area-branches"></script>
 <script src="../zen-memo.js?v=20260925-pj-assign-memo2"></script>
 <script src="workbench.js?v=20261112-raw-japanese-comma3"></script>
+<script>
+(() => {
+  const slider = document.getElementById('timelineHomeHeight');
+  const panel = document.querySelector('.timeline-home-object');
+  const output = document.getElementById('timelineHomeHeightValue');
+  if (!slider || !panel || !output) return;
+  const key = 'cockpid.workbench.timeline2-height.v1';
+  let saved;
+  try { saved = Number(localStorage.getItem(key)); } catch (_) {}
+  const initial = Number.isFinite(saved) && saved >= 180 && saved <= 480 ? saved : (matchMedia('(max-width:720px)').matches ? 300 : 260);
+  const setHeight = value => {
+    const height = Math.max(180, Math.min(480, Math.round(Number(value) / 10) * 10));
+    slider.value = String(height);
+    panel.style.setProperty('--timeline-home-height', height + 'px');
+    output.value = height + 'px';
+  };
+  setHeight(initial);
+  slider.addEventListener('input', () => setHeight(slider.value));
+  slider.addEventListener('change', () => { try { localStorage.setItem(key, slider.value); } catch (_) {} });
+})();
+</script>
 <script src="hp-bar.js?v=20261001-mp1"></script>
 <script src="news-home.js"></script>
 <script src="token-settings.js"></script>
