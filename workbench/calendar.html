@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#f1f0eb">
 <title>COCKPID — Calendar / Workbench</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23f1f0eb'/%3E%3Cpath d='M42 21a16 16 0 1 0 0 22' fill='none' stroke='%23292924' stroke-width='6' stroke-linecap='square'/%3E%3C/svg%3E">
+<script>if(new URLSearchParams(location.search).get("embed")==="timeline2")document.documentElement.classList.add("timeline2-embed")</script>
 <link rel="stylesheet" href="calendar-daybook.css">
 <link rel="stylesheet" href="week-horizontal.css">
 <link rel="stylesheet" href="calendar-timeline.css?v=20260922-timeline-prod">
@@ -14,6 +15,13 @@
 <style>
 .month-grid{grid-template-rows:30px}
 @media(max-width:360px){.view-head{height:70px;flex-basis:70px;flex-direction:column;align-items:stretch;gap:2px}.view-nav{margin-left:0;justify-content:flex-end}}
+html.timeline2-embed,html.timeline2-embed body{height:100%;min-height:0;margin:0;overflow:hidden;background:#171819}
+html.timeline2-embed .calendar-app{height:100%;min-height:0}
+html.timeline2-embed .calendar-top,html.timeline2-embed .view-head,html.timeline2-embed .today-pane,html.timeline2-embed .drawer,html.timeline2-embed .drawer-backdrop{display:none!important}
+html.timeline2-embed .book,html.timeline2-embed body[data-calendar-view="timeline2"] .book{display:block;height:100%;min-height:0;padding:0;margin:0}
+html.timeline2-embed .view-pane,html.timeline2-embed body[data-calendar-view="timeline2"] .view-pane{display:flex;height:100%;min-height:0;padding:0;margin:0;border:0;border-radius:0}
+html.timeline2-embed #viewContent{flex:1;height:100%;min-height:0;overflow:hidden}
+html.timeline2-embed .timeline2-scale{right:7px;bottom:7px}
 </style>
 </head>
 <body>
