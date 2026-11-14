@@ -58,3 +58,14 @@ test('planner masks the layout-viewport remainder without expanding interactive 
  assert.match(css,/width:var\(--duo-visible-width,100vw\)!important/);
  assert.match(css,/height:var\(--duo-visible-height,100dvh\)!important/);
 });
+
+test('DUO has three independent persistent display calibration controls',()=>{
+ const js=read('notebook.mjs'),css=read('notebook.css'),shell=read('../planner-shell.css');
+ for(const id of ['shift','railTop','inset'])assert.match(js,new RegExp('id="'+id+'"'));
+ for(const key of ['horizontal-shift.v1','rail-top.v1','right-inset.v1'])assert.ok(js.includes(key));
+ assert.match(js,/layoutValues/);
+ assert.match(js,/resetLayout/);
+ assert.match(js,/addEventListener\('input',applyLayout\)/);
+ assert.match(css,/--planner-rail-top/);
+ assert.match(shell,/--planner-shift-x/);
+});
