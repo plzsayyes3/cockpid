@@ -1,6 +1,6 @@
 # Cockpid iOS native shell
 
-Status: **Signed iOS build passed; device installation blocked by disabled Developer Mode** (2026-11-14).
+Status: **Signed iOS build and physical-device installation succeeded; first launch requires resolving iOS trust/security rejection** (2026-11-14).
 
 ## Purpose
 
@@ -70,6 +70,13 @@ is disabled on the connected iPhone (CoreDevice error 12040, underlying cryptex
 error 20). Enable Settings → Privacy & Security → Developer Mode on the phone,
 restart when prompted, and confirm enabling after restart. Then retry installation
 and launch. App launch and DUO/private-data behavior remain unverified.
+
+After the device restart, `devicectl device install app` succeeded. The subsequent
+launch was rejected by iOS with FBSOpenApplicationErrorDomain error 3, identifying
+signature/entitlements or an explicitly untrusted profile as possible causes.
+Next, on the phone open Settings → General → VPN & Device Management and trust
+the development app's developer if offered, then retry launch. Installation is
+verified; successful launch and web content display are not yet verified.
 
 ## Daily development flow
 
