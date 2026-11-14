@@ -225,7 +225,7 @@
   async function renderTaskliner(version) {
     appContent.textContent = 'TaskLinerを読み込んでいます…';
     try {
-      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261114-fit');
+      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261115-recovery');
       const module = await tasklinerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       tasklinerInstance = module.mount(appContent);
