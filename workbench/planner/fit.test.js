@@ -41,13 +41,13 @@ test('Folded Duo retains side dock without a portrait aspect ratio gate',()=>{
  const css=read('../duo-side-dock.css');
  assert.match(css,/min-width:320px/);
  assert.doesNotMatch(css,/min-aspect-ratio/);
- assert.match(css,/body\\.wb-side-dock #appDock/);
+ assert.match(css,/body\.wb-side-dock #appDock/);
 });
 test('Side dock choice persists and is exposed through the More panel',()=>{
  const js=read('../duo-side-dock.js'),index=read('../index.html');
- assert.match(index,/duo-side-dock\\.js/);
- assert.match(js,/cockpid\\.workbench\\.side-dock\\.v1/);
- assert.match(js,/localStorage\\.setItem/);
- assert.match(js,/extra\\.append\\(button\\)/);
+ assert.match(index,/duo-side-dock\.js/);
+ assert.match(js,/cockpid\.workbench\.side-dock\.v1/);
+ assert.match(js,/localStorage\.setItem/);
+ assert.match(js,/extra\.append\(button\)/);
  assert.match(js,/aria-pressed/);
 });
