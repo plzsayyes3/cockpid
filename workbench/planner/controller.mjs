@@ -1,5 +1,5 @@
 import {mount as mountTaskliner} from '../taskliner/controller.mjs?v=20261114-fit';
-import {createNotebook} from './notebook.mjs?v=20261114-calibration2';
+import {createNotebook} from './notebook.mjs?v=20261114-menu400';
 import './layout.js';
 
 let instance;

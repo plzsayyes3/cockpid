@@ -212,7 +212,7 @@
   async function renderPlanner(version) {
     appContent.textContent = '手帳を開いています…';
     try {
-      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261114-calibration2');
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261114-menu400');
       const module = await plannerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       plannerInstance = module.mount(appContent);
