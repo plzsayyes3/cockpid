@@ -66,6 +66,14 @@ HOMEは「静かな作業台」とする。
 
 ## 4. Separation of responsibilities
 
+### TaskLiner integration exception (2026-11-14)
+
+ユーザー指定により、TaskLinerは作業台内の再利用可能な部品へ統合する。
+通常TasksとDUO手帳モードで共用し、外部アプリのiframeや実行時パッチに依存しない。
+移植元 `taskliner_taskchute-line` のコードは55d4487時点を展開して引き継ぐ。
+日別Markdownの正本は引き続きmynotebook、Master/Repeat管理画面は独立アプリを維持。
+この例外はTaskLinerに限定し、他アプリの無差別な複製を認めるものではない。
+
 作業台に原則として持たせないもの:
 
 - Daily Noteの正本

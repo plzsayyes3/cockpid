@@ -29,7 +29,7 @@
 
   const apps = Object.freeze({
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
-    tasks: { key: '2', title: '2 / TASKS', type: 'iframe', src: 'taskliner-bridge.html?v=20260918-main-branch2' },
+    tasks: { key: '2', title: '2 / TASKS', type: 'taskliner' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: ZEN_BASE },
     news: { key: '6', title: '6 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     cards: { key: '4', title: '4 / CARDS', type: 'iframe', src: 'cards.html?v=20261105-1' },
@@ -202,9 +202,31 @@
     }
   }
 
+  let tasklinerModule = null;
+  let tasklinerInstance = null;
+  let routeVersion = 0;
+  async function renderTaskliner(version) {
+    appContent.textContent = 'TaskLinerを読み込んでいます…';
+    try {
+      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs');
+      const module = await tasklinerModule;
+      if (version !== routeVersion) return;
+      tasklinerInstance = module.mount(appContent);
+    } catch (error) {
+      tasklinerModule = null;
+      console.error('TaskLiner load failed', error);
+      if (version === routeVersion) appContent.textContent = 'TaskLinerを読み込めませんでした。Tasksを開き直してください。';
+    }
+  }
+  new MutationObserver(() => {
+    if (!appWindow.classList.contains('open')) tasklinerInstance?.setVisible(false);
+  }).observe(appWindow, { attributes: true, attributeFilter: ['class'] });
+
   function openApp(name) {
     const app = apps[name];
     if (!app) return false;
+    const version = ++routeVersion;
+    tasklinerInstance?.setVisible(false);
     appWindow.classList.remove('project-memo-expanded');
 
     if (app.type === 'page') {
@@ -213,7 +235,9 @@
     }
 
     appTitle.textContent = app.title;
-    if (app.type === 'iframe') {
+    if (app.type === 'taskliner') {
+      renderTaskliner(version);
+    } else if (app.type === 'iframe') {
       const src = name === 'zen' ? mainZenUrl() : app.src;
       appContent.innerHTML = `<iframe src="${src}" title="${app.title}"></iframe>`;
     } else if (app.type === 'board') {
@@ -240,6 +264,8 @@
   }, true);
 
   document.addEventListener('keydown', (event) => {
+    // Shadow DOM retargets text inputs to their host at the document boundary.
+    if (event.composedPath?.().some(node => node?.dataset?.taskliner === 'native')) return;
     const active = document.activeElement;
     if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName || '') || active?.isContentEditable) return;
     if (document.getElementById('tokenModal')?.classList.contains('open')) return;

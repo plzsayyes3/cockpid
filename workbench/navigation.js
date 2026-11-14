@@ -27,6 +27,7 @@
   });
 
   document.addEventListener('keydown', (event) => {
+    if (event.composedPath?.().some(node => node?.dataset?.taskliner === 'native')) return;
     if (event.key !== 'Escape' || !isOpen()) return;
     event.preventDefault();
     event.stopImmediatePropagation();

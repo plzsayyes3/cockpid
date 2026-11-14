@@ -1,5 +1,23 @@
 # SURFACES.md — What's actually implemented (verified 2026-09-18)
 
+## TaskLiner internal integration (2026-11-14)
+
+Tasks (`2`) now lazy-loads `workbench/taskliner/controller.mjs` directly into the drawer.
+One reusable instance owns a Shadow DOM tree, task actions, timers and date navigation;
+closing/reopening preserves the same instance. TaskLiner contains no iframe or runtime HTML patching.
+`app.mjs`, `app.css`, and `app-markup.mjs` expand the previous runtime at upstream 55d4487.
+They are editable source from this migration onward. Canonical daily task data remains private
+`mynotebook/main/09_taskchute/YYYY-MM-DD.md`; existing localStorage keys and known SHAs are retained.
+The Workbench token is used in memory as a fallback if no TaskLiner-specific token exists.
+Save and Pull share one operation queue; version checks retain edits made during saving or pulling.
+Conflict recovery offers explicit confirmed local overwrite, Pull, or simply leaving the local data in place.
+Master/Repeat management links remain external; suggestions, repeat generation and Techo import run internally.
+This is the first stage: DUO split view and Daily Note editing are not implemented yet.
+
+Verification: 77 TaskLiner tests pass. Browser checks with synthetic, local-only tasks covered add/start/end,
+reopening, 390px/1000px component widths, and failed-save navigation retention. Authenticated live GitHub writes
+and actual DUO hardware were not exercised. The Workbench suite has 9 baseline failures unchanged by this work.
+
 > **Purpose**: `DIRECTION.md` is a policy document (what the workbench should be and why).
 > This document is the opposite: an exhaustive, code-verified inventory of what actually
 > exists today — every screen, its data source, its writes, its visual values, its auth.
