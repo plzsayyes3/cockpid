@@ -48,7 +48,7 @@ function createInstance(ownerDocument){
   // Same GitHub Pages origin: retain TaskLiner keys and use Workbench's token if needed.
   const storage={getItem(key){const value=localStorage.getItem(key);return key==='taskliner_github_sync_token_v1'&&!value?localStorage.getItem('zen-note-github-token'):value},setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)};
   const request=globalThis.TaskLinerGithubClient.createGithubFetch({storage,fetch:globalThis.fetch.bind(globalThis)});
-  const messages=new EventTarget();let visible=true,suppressDirty=false,app,timer=null,navigating=false,recoveryBusy=false,pullBusy=false,manualSyncDate=null;
+  const messages=new EventTarget();let visible=true,suppressDirty=false,app,timer=null,navigating=false,recoveryBusy=false,pullBusy=false;
   const callbacks={document,top:{location:globalThis.location},location:globalThis.location,
     TaskLinerMarkdown:globalThis.TaskLinerMarkdown,TaskLinerTaskUIActions:globalThis.TaskLinerTaskUIActions,TaskLinerDate:globalThis.TaskLinerDate,TaskLinerTemplates:globalThis.TaskLinerTemplates,
     TaskLinerHostBridge:{postToSyncShell(_window,message){queueMicrotask(()=>handleMessage(message));return true}},
@@ -72,9 +72,9 @@ function createInstance(ownerDocument){
   }catch(error){status('保存先設定を読み込めませんでした。設定を確認してください。')}
   const coreOptions={storage,setTimeout:globalThis.setTimeout.bind(globalThis),clearTimeout:globalThis.clearTimeout.bind(globalThis),setInterval(fn,delay){return globalThis.setInterval(()=>{if(visible&&element.isConnected)fn()},delay)},requestAnimationFrame:globalThis.requestAnimationFrame.bind(globalThis),MutationObserver:globalThis.MutationObserver,prompt:window.prompt,confirm:window.confirm};
   app=createTaskApp(document,window,coreOptions);
-  function scheduleSave(){clearTimeout(timer);if(recoveryBusy||pullBusy||manualSyncDate===app?.getDate()||!app||!sync.config().token)return;timer=setTimeout(()=>{if(!recoveryBusy&&!pullBusy&&manualSyncDate!==app.getDate()&&sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
+  function scheduleSave(){clearTimeout(timer);if(recoveryBusy||pullBusy||(app&&isManualSyncHold(app.getDate()))||!app||!sync.config().token)return;timer=setTimeout(()=>{if(!recoveryBusy&&!pullBusy&&!isManualSyncHold(app.getDate())&&sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
   function snapshot(){return{date:app.getDate(),text:app.exportMarkdown()}}
-  async function save(force=false,{explicit=false}={}){if(recoveryBusy||pullBusy)throw new Error('復旧中は保存できません。');const current=snapshot();if(manualSyncDate===current.date&&!explicit)throw new Error('バックアップ復元後は明示的なsync操作が必要です。');if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(manualSyncDate===current.date&&!sync.isDirty(current.date))manualSyncDate=null;if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
+  async function save(force=false,{explicit=false}={}){if(recoveryBusy||pullBusy)throw new Error('復旧中は保存できません。');const current=snapshot();if(isManualSyncHold(current.date)&&!explicit)throw new Error('バックアップ復元後は明示的なsync操作が必要です。');if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(isManualSyncHold(current.date)&&!sync.isDirty(current.date))clearManualSyncHold(current.date);if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
   function handleMessage(message){
     if(message.type==='tasks-updated'){if(!suppressDirty)sync.markDirty(message.date);return}
     if(message.type==='date-changed'){const date=app.getDate();$('tlSaveState').textContent=sync.isDirty(date)?'未保存':'保存済み';status('日付を切り替えました。GitHubから読み込む場合は pull を押してください。');scheduleSave();return}
@@ -85,10 +85,14 @@ function createInstance(ownerDocument){
     (async()=>{try{if(sync.isDirty(message.fromDate)){await save();if(sync.isDirty(message.fromDate))throw new Error('保存中に編集されたため、日付は変更しませんでした。')}reply('navigation-continue')}catch(error){status(error.message);reply('navigation-cancel')}finally{navigating=false}})();
   }
   const recovery=globalThis.TaskLinerRecovery;
+  const MANUAL_SYNC_HOLD='taskliner_recovery_manual_sync_v1';
   function recoverySource(date){
     const {repo,branch,folder}=sync.config();
     return{repo,branch,folder,date};
   }
+  function isManualSyncHold(date){return storage.getItem(MANUAL_SYNC_HOLD)===recovery.targetKey(recoverySource(date))}
+  function setManualSyncHold(date){storage.setItem(MANUAL_SYNC_HOLD,recovery.targetKey(recoverySource(date)))}
+  function clearManualSyncHold(date){if(isManualSyncHold(date))storage.removeItem(MANUAL_SYNC_HOLD)}
   function checkPullSnapshot(result,before){
     if(!sync.canAcceptPull(result)||app.getDate()!==before.date||app.exportMarkdown()!==before.text)
       throw new Error('取得中にタスクまたは日付が変更されました。ローカル内容を維持します。');
@@ -103,7 +107,7 @@ function createInstance(ownerDocument){
     try{
       app.importMarkdown(result.text);
       if(!sync.acceptPull(result))throw new Error('取得中に変更がありました。復旧前のバックアップから復元してください。');
-      if(manualSyncDate===before.date)manualSyncDate=null;
+      clearManualSyncHold(before.date);
       // Import's tasks-updated event is queued as a microtask.
       await Promise.resolve();
     }catch(error){
@@ -158,7 +162,7 @@ function createInstance(ownerDocument){
     try{
       const before=snapshot();
       recovery.createBackup(storage,{...source,markdown:before.text});
-      manualSyncDate=date;
+      setManualSyncHold(date);
       app.importMarkdown(backup.markdown);
       sync.markDirty(date);
       await Promise.resolve();
