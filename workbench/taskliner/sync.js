@@ -19,7 +19,7 @@
     function isDirty(date){return dirty.has(date)}
     function markDirty(date){dirty.add(date);versions.set(date,(versions.get(date)||0)+1);persist();emit(date,'dirty')}
     function markClean(date){dirty.delete(date);persist();emit(date,'saved')}
-    function pull(date){const c=target(date),version=versions.get(date)||0;const operation=queue.catch(()=>{}).then(async()=>{emit(date,'loading');try{const data=await read(c);if(!data){emit(date,isDirty(date)?'dirty':'saved');return null}const text=await readText(c,data);if(!text.trim())throw new Error('GitHub側の本文が空です。ローカルは変更していません。')return{date,text,sha:data.sha,key:c.key,version}}catch(error){emit(date,'error',error);throw error}});queue=operation;return operation}
+    function pull(date){const c=target(date),version=versions.get(date)||0;const operation=queue.catch(()=>{}).then(async()=>{emit(date,'loading');try{const data=await read(c);if(!data){emit(date,isDirty(date)?'dirty':'saved');return null}const text=await readText(c,data);if(!text.trim())throw new Error('GitHub側の本文が空です。ローカルは変更していません。');return{date,text,sha:data.sha,key:c.key,version}}catch(error){emit(date,'error',error);throw error}});queue=operation;return operation}
     // The caller must check the snapshot before replacing its local document.
     function canAcceptPull(result){return !!result&&result.version===(versions.get(result.date)||0)}
     function acceptPull(result){if(!canAcceptPull(result))return false;known[result.key]=result.sha;markClean(result.date);return true}
