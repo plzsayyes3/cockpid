@@ -1,6 +1,6 @@
 # Cockpid iOS native shell
 
-Status: **Xcode project scaffold added; Xcode build, signing, and real-device install remain pending** (2026-11-14).
+Status: **Unsigned iOS build passed; signing and real-device install remain pending** (2026-11-14).
 
 ## Purpose
 
@@ -44,6 +44,20 @@ Next verification command after Xcode is installed and selected:
 ```sh
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 xcodebuild -project ios/WorkbenchNative.xcodeproj -scheme WorkbenchNative -sdk iphoneos -configuration Debug -destination 'generic/platform=iOS' build
+```
+
+## Xcode build verification (2026-11-14)
+
+- Xcode 27.2 (27B52) is installed and selected at `/Applications/Xcode.app/Contents/Developer`.
+- The project was opened in Xcode. The generic iOS Debug build succeeded with `CODE_SIGNING_ALLOWED=NO`, using the iOS 27.2 SDK. No Swift changes were needed.
+- A physical iPhone was detected as connected, with developer disk image preparation still pending (`connected (no DDI)`).
+- The signed build failed because no development team is selected. In Xcode, select target WorkbenchNative → Signing & Capabilities → Team. Add the user's Apple Account in Xcode Settings → Accounts if necessary.
+- Installation, launch, DUO layout, keyboard, and private GitHub data flows remain unverified. An unsigned build cannot be installed as the normal development app.
+
+Reproduce the unsigned build without changing signing settings:
+
+```sh
+xcodebuild -project ios/WorkbenchNative.xcodeproj -scheme WorkbenchNative -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath /private/tmp/cockpid-ios-build CODE_SIGNING_ALLOWED=NO build
 ```
 
 ## Daily development flow
