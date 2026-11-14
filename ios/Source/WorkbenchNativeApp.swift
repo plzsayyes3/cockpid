@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Native host for the existing Cockpid web workbench.
-/// This source is added to an Xcode iOS App target; no .xcodeproj is generated here.
+/// This source is included in the tracked WorkbenchNative Xcode project.
 @main
 struct WorkbenchNativeApp: App {
     var body: some Scene {
