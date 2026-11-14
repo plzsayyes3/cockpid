@@ -1,4 +1,4 @@
-import {mount as mountTaskliner} from '../taskliner/controller.mjs?v=20261114-fit';
+import {mount as mountTaskliner} from '../taskliner/controller.mjs?v=20261115-recovery';
 import {createNotebook} from './notebook.mjs?v=20261114-slimrails';
 import './layout.js?v=20261114-slimrails';
 
