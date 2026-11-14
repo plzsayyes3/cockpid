@@ -51,3 +51,10 @@ test('Side dock choice persists and is exposed through the More panel',()=>{
  assert.match(js,/extra\.append\(button\)/);
  assert.match(js,/aria-pressed/);
 });
+
+test('planner masks the layout-viewport remainder without expanding interactive bounds',()=>{
+ const css=read('../planner-shell.css');
+ assert.match(css,/\.app-window\.planner-mode\.open\s*\{\s*box-shadow:0 0 0 100vmax #f8f6ef;/);
+ assert.match(css,/width:var\(--duo-visible-width,100vw\)!important/);
+ assert.match(css,/height:var\(--duo-visible-height,100dvh\)!important/);
+});
