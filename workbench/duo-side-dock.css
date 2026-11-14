@@ -1,11 +1,11 @@
 /* iPhone Duo-inspired vertical navigation for touch viewports with room for a side rail.
    This is a WEB rail inside the safe area, not a native iOS toolbar.
-   Narrow/tall conventional phones retain the existing bottom dock. */
-@media (pointer:coarse) and (min-width:360px) and (min-aspect-ratio:3/5) {
+   Users can select the bottom dock; narrow folded viewports retain the side rail when selected. */
+@media (pointer:coarse) and (min-width:320px) {
   :root { --wb-side-rail-width:56px; --wb-side-rail-gap:12px; }
-  html body #appDock,
-  html body #appDock.wb-open,
-  html body.wb-text-entry #appDock {
+  html body.wb-side-dock #appDock,
+  html body.wb-side-dock #appDock.wb-open,
+  html body.wb-side-dock.wb-text-entry #appDock {
     left:auto;
     right:max(8px, env(safe-area-inset-right));
     top:max(72px, env(safe-area-inset-top));
@@ -20,14 +20,14 @@
     gap:5px;
     z-index:76;
   }
-  html body #appDock .dock-primary {
+  html body.wb-side-dock #appDock .dock-primary {
     display:grid;
     grid-template-columns:minmax(0,1fr);
     grid-auto-flow:row;
     gap:5px;
     width:100%;
   }
-  html body #appDock .app-btn {
+  html body.wb-side-dock #appDock .app-btn {
     min-width:0;
     width:100%;
     height:50px;
@@ -36,11 +36,11 @@
     gap:2px;
     border-radius:8px;
   }
-  html body #appDock .app-btn .dock-top {gap:3px;min-height:18px;}
-  html body #appDock .app-btn .dock-top .dock-icon {width:17px;height:17px;}
-  html body #appDock .app-btn .dock-top .dock-key {font-size:9px;}
-  html body #appDock .app-btn .dock-label {font-size:8px;}
-  html body #appDock .dock-toggle {
+  html body.wb-side-dock #appDock .app-btn .dock-top {gap:3px;min-height:18px;}
+  html body.wb-side-dock #appDock .app-btn .dock-top .dock-icon {width:17px;height:17px;}
+  html body.wb-side-dock #appDock .app-btn .dock-top .dock-key {font-size:9px;}
+  html body.wb-side-dock #appDock .app-btn .dock-label {font-size:8px;}
+  html body.wb-side-dock #appDock .dock-toggle {
     min-height:44px;
     width:100%;
     padding:4px 1px;
@@ -49,8 +49,8 @@
     background:rgba(251,250,246,.97);
     border-radius:8px;
   }
-  html body #appDock .dock-extra,
-  html body #appDock.wb-open .dock-extra {
+  html body.wb-side-dock #appDock .dock-extra,
+  html body.wb-side-dock #appDock.wb-open .dock-extra {
     position:absolute;
     right:calc(100% + 8px);
     left:auto;
@@ -66,25 +66,32 @@
     box-shadow:0 12px 36px #0002;
     overflow-y:auto;
   }
-  html body #appDock:not(.wb-open) .dock-extra {display:none;}
-  html body #appDock.wb-open .dock-extra {display:grid;}
-  html body .shell {
+  html body.wb-side-dock #appDock:not(.wb-open) .dock-extra {display:none;}
+  html body.wb-side-dock #appDock.wb-open .dock-extra {display:grid;}
+  html body.wb-side-dock .shell {
     padding-right:calc(max(12px, env(safe-area-inset-right)) + var(--wb-side-rail-width) + var(--wb-side-rail-gap));
     padding-bottom:max(20px, env(safe-area-inset-bottom));
   }
-  html body .hp-dock,html body .mp-dock,html body .pet {
+  html body.wb-side-dock .hp-dock,html body.wb-side-dock .mp-dock,html body.wb-side-dock .pet {
     right:calc(max(8px, env(safe-area-inset-right)) + var(--wb-side-rail-width) + 12px);
   }
-  html body #appDock .app-btn:focus-visible,
-  html body #appDock .dock-toggle:focus-visible {
+  html body.wb-side-dock #appDock .app-btn:focus-visible,
+  html body.wb-side-dock #appDock .dock-toggle:focus-visible {
     outline:2px solid #59786c;
     outline-offset:1px;
   }
   /* The planner owns a separate right-page control rail. Do not stack two rails. */
-  html body.duo-planner-open #appDock {display:none!important;}
+  html body.wb-side-dock.duo-planner-open #appDock {display:none!important;}
   @media (max-height:430px) {
-    html body #appDock,
-    html body #appDock.wb-open {top:max(4px,env(safe-area-inset-top));max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;}
-    html body #appDock .app-btn {height:44px;}
+    html body.wb-side-dock #appDock,
+    html body.wb-side-dock #appDock.wb-open {top:max(4px,env(safe-area-inset-top));max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;}
+    html body.wb-side-dock #appDock .app-btn {height:44px;}
   }
+}
+
+/* A smaller folded view keeps content readable and allows the rail to scroll. */
+@media (pointer:coarse) and (min-width:320px) and (max-width:430px) {
+ html body.wb-side-dock #appDock,html body.wb-side-dock #appDock.wb-open {--wb-side-rail-width:50px;--wb-side-rail-gap:8px;}
+ html body.wb-side-dock #appDock .app-btn .dock-label {font-size:7px}
+ html body.wb-side-dock #appDock .dock-extra,html body.wb-side-dock #appDock.wb-open .dock-extra {width:min(210px,calc(100vw - 80px));}
 }
