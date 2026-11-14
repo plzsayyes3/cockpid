@@ -1,6 +1,6 @@
 # Cockpid iOS native shell
 
-Status: **Signed iOS build, physical-device installation, and app launch succeeded; visual and private-data smoke tests remain pending** (2026-11-14).
+Status: **Signed build, wireless install and app launch succeeded; Duo's right system rail remains outside the app window** (2026-11-15).
 
 ## Purpose
 
@@ -19,16 +19,11 @@ The project uses `com.plzsayyes3.WorkbenchNative` as a placeholder bundle identi
 automatic signing, iOS 17.0 as the deployment target, and no committed development
 team. Select the user's Apple Team in Xcode before installing on a device.
 
-## First Mac setup (Xcode; not done yet)
+## Daily setup after the initial Xcode setup
 
-1. Install the current stable Xcode compatible with your Mac/iPhone; open Xcode once to install its components.
-2. Clone `plzsayyes3/cockpid` to the Mac, or in an existing clone run `git pull --ff-only origin main`.
-3. Open `ios/WorkbenchNative.xcodeproj` directly. The project already contains `ios/Source/WorkbenchNativeApp.swift` and `ios/Source/WorkbenchWebView.swift`; there must be exactly one `@main`.
-4. In General / Signing & Capabilities, set a unique Bundle Identifier owned by your Apple Account if the placeholder is unavailable. Leave source files tracked in Git.
-5. Signing & Capabilities → Automatically manage signing → choose your Personal Team or Developer Program team. Never commit signing credentials, provisioning profiles, Apple Account information, or GitHub PAT.
-6. Connect and trust the iPhone; enable Developer Mode when prompted by the phone; choose the physical device as the build target, then Run (⌘R).
-7. Verify the exact URL opens and both the Tasks and Duo planner open. Authenticate GitHub **inside the native app** only after confirming the private-repo access flow, then safely test reading and saving non-destructive content.
-8. Once the generated Xcode project is verified, commit project settings and required non-secret assets so subsequent Mac sessions only need `git pull` → build → Run.
+1. Run `git pull --ff-only origin main` and open `ios/WorkbenchNative.xcodeproj`.
+2. Select the `shun-duo` run destination and Run. Keep the Mac and iPhone on the same local network for wireless install.
+3. The app uses a locally selected Personal Team; do not commit the Xcode-managed Team setting, provisioning files, Apple Account information, or GitHub PAT.
 
 ## Verification record (2026-11-14)
 
@@ -98,6 +93,17 @@ visual placement is pending confirmation. See `ios/DEVELOPMENT_LOG.md` for the
 setup history, verification and limitations.
 
 Web-only changes: edit/commit/push `cockpid` → reopen/reload the app (subject to HTTP cache and service worker). Native shell changes: edit/commit/push → Mac `git pull --ff-only origin main` → Xcode build & Run. Web updates do **not** automatically refresh an already open WKWebView, and native updates need reinstallation.
+
+### Duo right-side system region
+
+On the connected Duo in portrait mode, the display capture is 1398 px wide. The
+Workbench app window ends at x=1075 px; the remaining 323 px show the OS clock
+and connectivity indicators. Applying SwiftUI `ignoresSafeArea` at the trailing
+edge and widening the WebView's reported planner viewport did not move this
+boundary. The right strip is outside the app's rendered window, so web layout
+changes cannot place reliable interactive controls there. The memo rail's
+144 CSS-pixel downward preference only adjusts its position inside the app's
+available area. See `ios/DEVELOPMENT_LOG.md` for the device observations.
 
 ## Important separations
 
