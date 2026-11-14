@@ -1,0 +1,23 @@
+import SwiftUI
+
+/// Native host for the existing Cockpid web workbench.
+/// This source is added to an Xcode iOS App target; no .xcodeproj is generated here.
+@main
+struct WorkbenchNativeApp: App {
+    var body: some Scene {
+        WindowGroup {
+            WorkbenchRootView()
+        }
+    }
+}
+
+struct WorkbenchRootView: View {
+    @StateObject private var webStore = WorkbenchWebStore()
+
+    var body: some View {
+        WorkbenchWebView(webView: webStore.webView)
+            .background(Color(red: 241.0 / 255.0, green: 240.0 / 255.0, blue: 235.0 / 255.0))
+        // Do not ignore safe areas until physical Duo comparison establishes
+        // how the native window and web CSS insets interact.
+    }
+}
