@@ -21,3 +21,18 @@ test('DUO right rail has labeled choices and a visible active state',()=>{
  assert.match(css,/nav button\[aria-pressed="true"\]/);assert.match(css,/min-height:52px/);
  assert.match(css,/grid-template-columns:minmax\(0,1fr\) 44px/);
 });
+
+test('Duo-sized touch viewports use a safe-area-aware side dock with the existing launchers',()=>{
+ const index=read('../index.html'),css=read('../duo-side-dock.css');
+ assert.match(index,/duo-side-dock\.css/);
+ assert.match(css,/min-aspect-ratio:3\/5/);
+ assert.match(css,/pointer:coarse/);
+ assert.match(css,/#appDock \.dock-primary/);
+ assert.match(css,/env\(safe-area-inset-right\)/);
+ assert.match(css,/duo-planner-open #appDock/);
+});
+test('planner right adjustment is applied to container padding, not the frame width',()=>{
+ const css=read('../planner-shell.css');
+ assert.match(css,/padding:0 calc\(env\(safe-area-inset-right\) \+ var\(--planner-extra-right,0px\)\)/);
+ assert.doesNotMatch(css,/width:calc\(100% - var\(--planner-extra-right/);
+});
