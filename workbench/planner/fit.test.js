@@ -13,3 +13,11 @@ test('visual viewport geometry includes offsets without adding them to its size'
  const {geometry}=require('./viewport.js');assert.deepEqual(geometry({width:866,height:586,offsetTop:82,offsetLeft:0},950,668),{width:866,height:586,top:82,left:0});
  assert.deepEqual(geometry(null,390,800),{width:390,height:800,top:0,left:0});
 });
+
+test('DUO right rail has labeled choices and a visible active state',()=>{
+ const source=read('notebook.mjs'),css=read('notebook.css');
+ for(const mode of ['write','inbox','daily','display'])assert.match(source,new RegExp('data-mode="'+mode+'"'));
+ assert.match(source,/class="rail-icon"/);assert.match(source,/class="rail-text"/);
+ assert.match(css,/nav button\[aria-pressed="true"\]/);assert.match(css,/min-height:52px/);
+ assert.match(css,/grid-template-columns:minmax\(0,1fr\) 44px/);
+});
