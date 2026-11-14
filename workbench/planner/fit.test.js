@@ -19,7 +19,7 @@ test('DUO right rail has labeled choices and a visible active state',()=>{
  for(const mode of ['write','inbox','daily','display'])assert.match(source,new RegExp('data-mode="'+mode+'"'));
  assert.match(source,/class="rail-icon"/);assert.match(source,/class="rail-text"/);
  assert.match(css,/nav button\[aria-pressed="true"\]/);assert.match(css,/min-height:52px/);
- assert.match(css,/grid-template-columns:minmax\(0,1fr\) 44px/);
+ assert.match(css,/grid-template-columns:minmax\(0,1fr\) 40px/);
 });
 
 test('Duo-sized touch viewports use a safe-area-aware side dock with the existing launchers',()=>{
@@ -72,12 +72,12 @@ test('DUO has three independent persistent display calibration controls',()=>{
 
 test('DUO calibration assets are independently versioned through the import chain',()=>{
  const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
- const version='20261114-tapfix';
+ const version='20261114-slimrails';
  assert.ok(route.includes("planner/controller.mjs?v="+version));
  assert.ok(controller.includes("notebook.mjs?v="+version));
  assert.ok(notebook.includes("notebook.css?v="+version));
- assert.ok(index.includes("planner-shell.css?v="+version));
- assert.match(notebook,/表示調整 · v4/);
+ assert.ok(index.includes("planner-shell.css?v=20261114-tapfix"));
+ assert.match(notebook,/表示調整 · v5/);
 });
 
 test('Right rail can be lowered to 400px without changing stored preference key',()=>{
@@ -107,4 +107,17 @@ test('right page menu is clamped to usable height and settings stays anchored',(
  assert.match(css,/nav>button\[data-mode="display"\]/);
  assert.match(css,/bottom:6px/);
  assert.match(js,/max:400/);
+});
+
+test('compact planner rails use 40px visual columns with 44px inward hit targets',()=>{
+ const layout=read('layout.js'),pages=read('planner.css'),rail=read('notebook.css'),controller=read('controller.mjs');
+ assert.match(layout,/minmax\(0,1fr\) 40px/);
+ assert.match(layout,/40px minmax\(0,1fr\)/);
+ assert.match(pages,/\.planner-panel\.collapsed \.page-band\s*\{[\s\S]*?width:44px/);
+ assert.match(pages,/\.planner-panel\[data-side=memo\]\.collapsed \.page-band\{left:-4px\}/);
+ assert.match(rail,/\.notebook\{grid-template-columns:minmax\(0,1fr\) 40px\}/);
+ assert.match(rail,/\.notebook nav\{[\s\S]*?width:44px;margin-left:-4px/);
+ assert.match(rail,/\.notebook nav \.rail-actions button\{width:44px;min-width:44px\}/);
+ assert.match(controller,/planner\.css\?v=20261114-slimrails/);
+ assert.match(controller,/layout\.js\?v=20261114-slimrails/);
 });

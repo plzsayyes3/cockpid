@@ -1,2 +1,17 @@
 :host{display:block;height:100%;min-height:0;color:#35332e;font:14px/1.5 system-ui,sans-serif;background:#f8f6ef}
 *{box-sizing:border-box}.planner{height:100%;min-height:0;display:grid;gap:0;overflow:hidden;background:#e6e1d5}.planner-panel{position:relative;min-width:0;min-height:0;overflow:hidden;background:#f8f6ef}.planner-panel[data-side=tasks]{border-right:1px solid #d2cbbd}.page-content{height:100%;min-height:0;min-width:0}.planner-panel.collapsed .page-content{visibility:hidden;pointer-events:none}.page-band{display:flex;position:absolute;inset:0;align-items:center;justify-content:center;gap:16px;flex-direction:column;width:100%;height:100%;padding:14px 0;border:0;background:#e9e3d6;color:#655e50;font:500 13px/1.4 system-ui,sans-serif;cursor:pointer;touch-action:manipulation}.page-band span:first-child{writing-mode:vertical-rl;letter-spacing:.25em}.page-band span:last-child{font-size:24px}.page-band:focus-visible{outline:2px solid #8c7a5d;outline-offset:-4px}.page-band:hover{background:#e0d7c6}[hidden]{display:none!important}.planner[data-mode=spread]{gap:10px;padding:0 0 0;background:linear-gradient(90deg,#e6e0d4,#f0ece2 49%,#ddd6c8 50%,#f0ece2 51%,#e6e0d4)}.planner[data-mode=spread] .planner-panel[data-side=tasks]{border:0}.planner[data-mode=spread] .planner-panel[data-side=memo]{border-left:1px solid #ddd6c8}
+
+/* Compact page edges use 40px of layout space, but each page switch remains
+   a 44px touch target. The extra 4px of transparent hit area faces inward. */
+.planner[data-mode=compact] .planner-panel.collapsed{overflow:visible;z-index:2}
+.planner[data-mode=compact] .planner-panel.collapsed .page-band{
+  width:44px;right:auto;background:transparent;isolation:isolate;
+}
+.planner[data-mode=compact] .planner-panel[data-side=tasks].collapsed .page-band{left:0}
+.planner[data-mode=compact] .planner-panel[data-side=memo].collapsed .page-band{left:-4px}
+.planner[data-mode=compact] .planner-panel.collapsed .page-band::before{
+  content:"";position:absolute;top:0;bottom:0;left:0;right:4px;
+  background:#e9e3d6;z-index:-1;
+}
+.planner[data-mode=compact] .planner-panel[data-side=memo].collapsed .page-band::before{left:4px;right:0}
+.planner[data-mode=compact] .planner-panel.collapsed .page-band:hover::before{background:#e0d7c6}
