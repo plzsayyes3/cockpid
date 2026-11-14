@@ -45,3 +45,21 @@ nav button:focus-visible{outline:2px solid #59786c;outline-offset:-2px}
  .notebook nav .rail-actions{top:clamp(3px,calc(3px + var(--planner-rail-top,0px)),max(3px,calc(100% - 193px)));gap:2px;max-height:calc(100% - 48px)}
  .notebook nav>button[data-mode="display"]{bottom:3px}
 }
+
+/* Slim the visible edge to 40px while preserving a full 44px clickable rail.
+   Four transparent pixels overlay the inward content edge, never the OS side. */
+.notebook{grid-template-columns:minmax(0,1fr) 40px}
+.notebook nav{
+ width:44px;margin-left:-4px;border-left:0;
+ background:linear-gradient(90deg,transparent 4px,#ece8dd 4px);
+}
+.notebook nav .rail-actions{left:0;right:0}
+.notebook nav .rail-actions button{width:44px;min-width:44px}
+.notebook nav>button[data-mode="display"]{left:0;right:0;width:44px}
+.notebook nav button[aria-pressed="true"]{
+ background:linear-gradient(90deg,transparent 4px,#fffdf8 4px);
+ box-shadow:inset -1px 0 #0001;
+}
+.notebook nav button[aria-pressed="true"]::before{
+ content:"";position:absolute;left:4px;top:0;bottom:0;width:3px;background:#587363;
+}
