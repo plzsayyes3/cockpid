@@ -12,3 +12,12 @@ nav .rail-text{font-size:9px;line-height:1.25;max-width:100%;white-space:nowrap}
 nav button[aria-pressed="true"]{background:#fffdf8;color:#385d49;font-weight:650;box-shadow:inset 3px 0 #587363,0 1px 3px #0001}
 nav button:focus-visible{outline:2px solid #59786c;outline-offset:-2px}
 @media(max-height:350px){nav{gap:2px;padding:3px}nav button{min-height:38px;gap:0;padding:2px 0}nav .rail-icon{font-size:15px}nav .rail-text{font-size:8px}}
+
+/* Offset only the page control buttons; the bottom settings button remains reachable. */
+.notebook nav {padding-top:calc(6px + var(--planner-rail-top,0px));}
+#display .tune-help{margin:16px;font-size:12px;line-height:1.6;color:#6f6b60}
+#display label{padding-bottom:4px;border-bottom:1px solid #e7e1d5}
+#display output{font-variant-numeric:tabular-nums;font-weight:700;color:#385d49}
+#display #layoutValues{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#resetLayout{font-size:11px;min-height:36px;padding:5px 8px}
+@media(max-height:350px){.notebook nav{padding-top:calc(3px + var(--planner-rail-top,0px));}}
