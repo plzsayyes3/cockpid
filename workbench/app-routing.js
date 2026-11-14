@@ -212,7 +212,7 @@
   async function renderPlanner(version) {
     appContent.textContent = '手帳を開いています…';
     try {
-      if (!plannerModule) plannerModule = import('./planner/controller.mjs');
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261114-fit');
       const module = await plannerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       plannerInstance = module.mount(appContent);
@@ -225,7 +225,7 @@
   async function renderTaskliner(version) {
     appContent.textContent = 'TaskLinerを読み込んでいます…';
     try {
-      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs');
+      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261114-fit');
       const module = await tasklinerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       tasklinerInstance = module.mount(appContent);
@@ -250,10 +250,11 @@
 
   document.getElementById('plannerClose')?.addEventListener('click', () => document.getElementById('appClose')?.click());
   function updatePlannerHeight() {
-    const height = window.visualViewport?.height || window.innerHeight;
-    appWindow.style.setProperty('--duo-visible-height', `${Math.round(height)}px`);
+    const geometry=globalThis.DuoViewport.geometry(window.visualViewport,innerWidth,innerHeight);
+    for(const [name,value] of Object.entries(geometry))appWindow.style.setProperty('--duo-visible-'+name, `${value}px`);
   }
   window.visualViewport?.addEventListener('resize', updatePlannerHeight);
+  window.visualViewport?.addEventListener('scroll', updatePlannerHeight);
   window.addEventListener('resize', updatePlannerHeight);
   updatePlannerHeight();
 
