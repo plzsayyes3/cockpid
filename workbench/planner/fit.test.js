@@ -33,7 +33,7 @@ test('Duo-sized touch viewports use a safe-area-aware side dock with the existin
 });
 test('planner right adjustment is applied to container padding, not the frame width',()=>{
  const css=read('../planner-shell.css');
- assert.match(css,/padding:0 calc\(env\(safe-area-inset-right\) \+ var\(--planner-extra-right,0px\)\)/);
+ assert.match(css,/padding:0 calc\(env\(safe-area-inset-right\) \+ var\(--planner-extra-right,0px\) \+ var\(--planner-shift-x,0px\)\)/);
  assert.doesNotMatch(css,/width:calc\(100% - var\(--planner-extra-right/);
 });
 
@@ -72,12 +72,12 @@ test('DUO has three independent persistent display calibration controls',()=>{
 
 test('DUO calibration assets are independently versioned through the import chain',()=>{
  const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
- const version='20261114-menu400';
+ const version='20261114-tapfix';
  assert.ok(route.includes("planner/controller.mjs?v="+version));
  assert.ok(controller.includes("notebook.mjs?v="+version));
  assert.ok(notebook.includes("notebook.css?v="+version));
- assert.ok(index.includes("planner-shell.css?v=20261114-calibration2"));
- assert.match(notebook,/表示調整 · v3/);
+ assert.ok(index.includes("planner-shell.css?v="+version));
+ assert.match(notebook,/表示調整 · v4/);
 });
 
 test('Right rail can be lowered to 400px without changing stored preference key',()=>{
@@ -85,4 +85,26 @@ test('Right rail can be lowered to 400px without changing stored preference key'
  assert.match(js,/id="railTop"[^>]*max="400"/);
  assert.match(js,/css:'--planner-rail-top',max:400/);
  assert.match(js,/cockpid\.planner\.rail-top\.v1/);
+});
+
+test('shifted planner reduces layout width so its right-hand controls stay in visual viewport',()=>{
+ const shell=read('../planner-shell.css');
+ assert.match(shell,/var\(--planner-extra-right,0px\) \+ var\(--planner-shift-x,0px\)/);
+ assert.match(shell,/transform:translateX\(var\(--planner-shift-x,0px\)\)/);
+ for(const shift of [0,56,120]){
+  const viewportWidth=390,inset=8;
+  const frameWidth=viewportWidth-inset-shift;
+  assert.equal(shift+frameWidth,viewportWidth-inset);
+ }
+});
+test('right page menu is clamped to usable height and settings stays anchored',()=>{
+ const js=read('notebook.mjs'),css=read('notebook.css');
+ assert.match(js,/<nav aria-label="右ページの切替"><div class="rail-actions">/);
+ assert.match(js,/<\/div><button type="button" data-mode="display"/);
+ assert.match(css,/\.notebook nav \.rail-actions/);
+ assert.match(css,/top:clamp\(/);
+ assert.match(css,/max-height:calc\(100% - 70px\)/);
+ assert.match(css,/nav>button\[data-mode="display"\]/);
+ assert.match(css,/bottom:6px/);
+ assert.match(js,/max:400/);
 });
