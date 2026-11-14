@@ -72,9 +72,9 @@ function createInstance(ownerDocument){
   }catch(error){status('保存先設定を読み込めませんでした。設定を確認してください。')}
   const coreOptions={storage,setTimeout:globalThis.setTimeout.bind(globalThis),clearTimeout:globalThis.clearTimeout.bind(globalThis),setInterval(fn,delay){return globalThis.setInterval(()=>{if(visible&&element.isConnected)fn()},delay)},requestAnimationFrame:globalThis.requestAnimationFrame.bind(globalThis),MutationObserver:globalThis.MutationObserver,prompt:window.prompt,confirm:window.confirm};
   app=createTaskApp(document,window,coreOptions);
-  function scheduleSave(){clearTimeout(timer);if(recoveryBusy||manualSyncDate===app?.getDate()||!app||!sync.config().token)return;timer=setTimeout(()=>{if(!recoveryBusy&&manualSyncDate!==app.getDate()&&sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
+  function scheduleSave(){clearTimeout(timer);if(recoveryBusy||pullBusy||manualSyncDate===app?.getDate()||!app||!sync.config().token)return;timer=setTimeout(()=>{if(!recoveryBusy&&!pullBusy&&manualSyncDate!==app.getDate()&&sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
   function snapshot(){return{date:app.getDate(),text:app.exportMarkdown()}}
-  async function save(force=false,{explicit=false}={}){if(recoveryBusy)throw new Error('復旧中は保存できません。');const current=snapshot();if(manualSyncDate===current.date&&!explicit)throw new Error('バックアップ復元後は明示的なsync操作が必要です。');if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(manualSyncDate===current.date&&!sync.isDirty(current.date))manualSyncDate=null;if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
+  async function save(force=false,{explicit=false}={}){if(recoveryBusy||pullBusy)throw new Error('復旧中は保存できません。');const current=snapshot();if(manualSyncDate===current.date&&!explicit)throw new Error('バックアップ復元後は明示的なsync操作が必要です。');if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(manualSyncDate===current.date&&!sync.isDirty(current.date))manualSyncDate=null;if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
   function handleMessage(message){
     if(message.type==='tasks-updated'){if(!suppressDirty)sync.markDirty(message.date);return}
     if(message.type==='date-changed'){const date=app.getDate();$('tlSaveState').textContent=sync.isDirty(date)?'未保存':'保存済み';status('日付を切り替えました。GitHubから読み込む場合は pull を押してください。');scheduleSave();return}
@@ -126,7 +126,7 @@ function createInstance(ownerDocument){
       if(!result){status(`${before.date} のGitHubファイルはまだありません。`);return}
       await importPulled(result,before,{backup:dirty});
       status(`${before.date} を読み込みました${dirty?'（復旧前バックアップあり）':''}。`);
-    }finally{pullBusy=false;}
+    }finally{pullBusy=false;if(sync.isDirty(app.getDate()))scheduleSave();}
   }
   async function recoverFromGithub(){
     if(pullBusy||recoveryBusy){status('読込または復旧の処理中です。');return}
