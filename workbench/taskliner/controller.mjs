@@ -6,6 +6,7 @@ import './daily-integration.js';
 import './task-note-pull.js';
 import './techo-import.js';
 import './sync.js';
+import './recovery.js';
 import './github-client.js';
 import {createTaskApp} from './app.mjs';
 import {createTemplateStore} from './template-store.mjs';
@@ -47,7 +48,7 @@ function createInstance(ownerDocument){
   // Same GitHub Pages origin: retain TaskLiner keys and use Workbench's token if needed.
   const storage={getItem(key){const value=localStorage.getItem(key);return key==='taskliner_github_sync_token_v1'&&!value?localStorage.getItem('zen-note-github-token'):value},setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)};
   const request=globalThis.TaskLinerGithubClient.createGithubFetch({storage,fetch:globalThis.fetch.bind(globalThis)});
-  const messages=new EventTarget();let visible=true,suppressDirty=false,app,timer=null,navigating=false;
+  const messages=new EventTarget();let visible=true,suppressDirty=false,app,timer=null,navigating=false,recoveryBusy=false,pullBusy=false;
   const callbacks={document,top:{location:globalThis.location},location:globalThis.location,
     TaskLinerMarkdown:globalThis.TaskLinerMarkdown,TaskLinerTaskUIActions:globalThis.TaskLinerTaskUIActions,TaskLinerDate:globalThis.TaskLinerDate,TaskLinerTemplates:globalThis.TaskLinerTemplates,
     TaskLinerHostBridge:{postToSyncShell(_window,message){queueMicrotask(()=>handleMessage(message));return true}},
@@ -71,32 +72,109 @@ function createInstance(ownerDocument){
   }catch(error){status('保存先設定を読み込めませんでした。設定を確認してください。')}
   const coreOptions={storage,setTimeout:globalThis.setTimeout.bind(globalThis),clearTimeout:globalThis.clearTimeout.bind(globalThis),setInterval(fn,delay){return globalThis.setInterval(()=>{if(visible&&element.isConnected)fn()},delay)},requestAnimationFrame:globalThis.requestAnimationFrame.bind(globalThis),MutationObserver:globalThis.MutationObserver,prompt:window.prompt,confirm:window.confirm};
   app=createTaskApp(document,window,coreOptions);
-  function scheduleSave(){clearTimeout(timer);if(!app||!sync.config().token)return;timer=setTimeout(()=>{if(sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
+  function scheduleSave(){clearTimeout(timer);if(recoveryBusy||pullBusy||(app&&isManualSyncHold(app.getDate()))||!app||!sync.config().token)return;timer=setTimeout(()=>{if(!recoveryBusy&&!pullBusy&&!isManualSyncHold(app.getDate())&&sync.isDirty(app.getDate()))save().catch(()=>{})},60000)}
   function snapshot(){return{date:app.getDate(),text:app.exportMarkdown()}}
-  async function save(force=false){const current=snapshot();if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
+  async function save(force=false,{explicit=false}={}){if(recoveryBusy||pullBusy)throw new Error('復旧中は保存できません。');const current=snapshot();if(isManualSyncHold(current.date)&&!explicit)throw new Error('バックアップ復元後は明示的なsync操作が必要です。');if(!sync.isDirty(current.date)&&!force)return true;const result=await sync.save(current.date,current.text,{force});if(isManualSyncHold(current.date)&&!sync.isDirty(current.date))clearManualSyncHold(current.date);if(!sync.isDirty(current.date))status(`${current.date} を保存しました`);return result}
   function handleMessage(message){
     if(message.type==='tasks-updated'){if(!suppressDirty)sync.markDirty(message.date);return}
     if(message.type==='date-changed'){const date=app.getDate();$('tlSaveState').textContent=sync.isDirty(date)?'未保存':'保存済み';status('日付を切り替えました。GitHubから読み込む場合は pull を押してください。');scheduleSave();return}
     if(message.type!=='navigation-request')return;
     const reply=type=>window.postMessage({source:'taskliner-host',type,targetDate:message.targetDate});
-    if(navigating){reply('navigation-cancel');return}
+    if(navigating||recoveryBusy){reply('navigation-cancel');if(recoveryBusy)status('復旧中は日付を移動できません。');return}
     navigating=true;
     (async()=>{try{if(sync.isDirty(message.fromDate)){await save();if(sync.isDirty(message.fromDate))throw new Error('保存中に編集されたため、日付は変更しませんでした。')}reply('navigation-continue')}catch(error){status(error.message);reply('navigation-cancel')}finally{navigating=false}})();
   }
-  async function pull(){
-    const date=app.getDate();
-    if(sync.isDirty(date)&&!window.confirm('未保存の変更があります。破棄してGitHubからpullしますか？'))return;
-    const before=app.exportMarkdown(),result=await sync.pull(date);
-    if(!result){status(`${date} のGitHubファイルはまだありません。`);return}
-    if(app.getDate()!==date||app.exportMarkdown()!==before){status('日付または内容が変わったため、Pull結果を反映しませんでした。');return}
-    // Import emits asynchronously; the suppression is attached to that queued notification.
+  const recovery=globalThis.TaskLinerRecovery;
+  const MANUAL_SYNC_HOLD='taskliner_recovery_manual_sync_v1';
+  function recoverySource(date){
+    const {repo,branch,folder}=sync.config();
+    return{repo,branch,folder,date};
+  }
+  function isManualSyncHold(date){return storage.getItem(MANUAL_SYNC_HOLD)===recovery.targetKey(recoverySource(date))}
+  function setManualSyncHold(date){storage.setItem(MANUAL_SYNC_HOLD,recovery.targetKey(recoverySource(date)))}
+  function clearManualSyncHold(date){if(isManualSyncHold(date))storage.removeItem(MANUAL_SYNC_HOLD)}
+  function checkPullSnapshot(result,before){
+    if(!sync.canAcceptPull(result)||app.getDate()!==before.date||app.exportMarkdown()!==before.text)
+      throw new Error('取得中にタスクまたは日付が変更されました。ローカル内容を維持します。');
+    if(recovery.targetKey(recoverySource(before.date))!==recovery.targetKey(before.source))
+      throw new Error('取得中に同期先の設定が変わりました。ローカル内容を維持します。');
+  }
+  async function importPulled(result,before,{backup=false}={}){
+    checkPullSnapshot(result,before);
+    let savedBackup=null;
+    if(backup)savedBackup=recovery.createBackup(storage,{...before.source,markdown:before.text});
     suppressDirty=true;
-    try{app.importMarkdown(result.text);await Promise.resolve();sync.acceptPull(result);status(`${date} を読み込みました。`)}finally{suppressDirty=false}
+    try{
+      app.importMarkdown(result.text);
+      if(!sync.acceptPull(result))throw new Error('取得中に変更がありました。復旧前のバックアップから復元してください。');
+      clearManualSyncHold(before.date);
+      // Import's tasks-updated event is queued as a microtask.
+      await Promise.resolve();
+    }catch(error){
+      if(savedBackup){
+        try{app.importMarkdown(savedBackup.markdown);await Promise.resolve();sync.markDirty(before.date)}
+        catch(restoreError){status('復旧失敗。直前のバックアップは「復旧前に戻す」から確認できます。');}
+      }
+      throw error;
+    }finally{suppressDirty=false;}
+    return savedBackup;
+  }
+  async function pull(){
+    if(pullBusy||recoveryBusy){status('読込または復旧の処理中です。');return}
+    pullBusy=true;
+    try{
+      const before={...snapshot(),source:recoverySource(app.getDate())};
+      const dirty=sync.isDirty(before.date);
+      if(dirty&&!window.confirm('未保存の変更があります。ローカルをバックアップしてGitHubからpullしますか？'))return;
+      const result=await sync.pull(before.date);
+      if(!result){status(`${before.date} のGitHubファイルはまだありません。`);return}
+      await importPulled(result,before,{backup:dirty});
+      status(`${before.date} を読み込みました${dirty?'（復旧前バックアップあり）':''}。`);
+    }finally{pullBusy=false;if(sync.isDirty(app.getDate()))scheduleSave();}
+  }
+  async function recoverFromGithub(){
+    if(pullBusy||recoveryBusy){status('読込または復旧の処理中です。');return}
+    const before={...snapshot(),source:recoverySource(app.getDate())};
+    const message=`${before.date} のローカルタスクをGitHub最新版で置き換えます。\n未保存の変更も破棄します。復旧前の内容は端末内にバックアップされます。\n続行しますか？`;
+    if(!window.confirm(message))return;
+    recoveryBusy=true;
+    clearTimeout(timer);
+    $('tlRecover').disabled=true;
+    try{
+      const result=await sync.pull(before.date);
+      if(!result)throw new Error('GitHub側にこの日付のファイルがありません。ローカル内容を維持しました。');
+      await importPulled(result,before,{backup:true});
+      status(`${before.date} をGitHub最新版に復旧しました。復旧前の内容は端末内に保存されています。`);
+    }finally{
+      recoveryBusy=false;
+      $('tlRecover').disabled=false;
+      if(sync.isDirty(app.getDate()))scheduleSave();
+    }
+  }
+  async function restoreRecoveryBackup(){
+    if(recoveryBusy||pullBusy){status('読込または復旧の処理中です。');return}
+    const date=app.getDate(),source=recoverySource(date);
+    const backup=recovery.latest(storage,source);
+    if(!backup){status('この日付の復旧前バックアップはありません。');return}
+    if(!window.confirm(`${date} のバックアップ（${backup.createdAt}）へローカル表示を戻しますか？\nGitHubへは自動で上書きしません。`))return;
+    recoveryBusy=true;
+    clearTimeout(timer);
+    try{
+      const before=snapshot();
+      recovery.createBackup(storage,{...source,markdown:before.text});
+      setManualSyncHold(date);
+      app.importMarkdown(backup.markdown);
+      sync.markDirty(date);
+      await Promise.resolve();
+      status('バックアップをローカルに復元しました。GitHub側は変更していません。必要な場合だけsyncを押してください。');
+    }finally{recoveryBusy=false;}
   }
   const perform=fn=>async()=>{try{await fn()}catch(error){status(error.message)}};
-  $('tlPull').onclick=perform(pull);$('tlSave').onclick=perform(()=>save());
+  $('tlPull').onclick=perform(pull);$('tlSave').onclick=perform(()=>save(false,{explicit:true}));
+  $('tlRecover').onclick=perform(recoverFromGithub);
+  $('tlRestoreBackup').onclick=perform(restoreRecoveryBackup);
   $('tlForceSave').onclick=perform(async()=>{
-    if(window.confirm('GitHub側の内容を、現在のローカルの内容で上書きしますか？'))await save(true);
+    if(window.confirm('GitHub側の内容を、現在のローカルの内容で上書きしますか？'))await save(true,{explicit:true});
   });
   const menu=$('tlMenu'),toggle=$('tlMenuToggle');
   toggle.onclick=()=>{menu.hidden=!menu.hidden;toggle.setAttribute('aria-expanded',String(!menu.hidden))};

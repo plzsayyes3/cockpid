@@ -72,3 +72,37 @@ test('explicit force save can resolve a remote conflict while preserving normal 
   const {sync,requests}=setup();sync.markDirty('2026-11-14');await sync.save('2026-11-14','- [ ] local',{force:true});
   assert.equal(requests.filter(x=>x.opts.method==='PUT').length,1);assert.equal(sync.isDirty('2026-11-14'),false);
 });
+
+test('preflight refuses a stale pull and preserves current dirty state',async()=>{
+  const {sync}=setup();
+  sync.markDirty('2026-11-14');
+  const result=await sync.pull('2026-11-14');
+  assert.equal(sync.canAcceptPull(result),true);
+  sync.markDirty('2026-11-14');
+  assert.equal(sync.canAcceptPull(result),false);
+  assert.equal(sync.acceptPull(result),false);
+  assert.equal(sync.isDirty('2026-11-14'),true);
+});
+test('recovering from GitHub clears a stale dirty marker without overwriting the server',async()=>{
+  const remote={sha:'from-server',text:'- [x] server canonical'};
+  const {sync,requests,storage}=setup(remote);
+  sync.markDirty('2026-11-14');
+  const result=await sync.pull('2026-11-14');
+  assert.equal(result.text,remote.text);
+  assert.equal(sync.canAcceptPull(result),true);
+  assert.equal(sync.acceptPull(result),true);
+  assert.equal(sync.isDirty('2026-11-14'),false);
+  assert.equal(requests.some(x=>x.opts.method==='PUT'),false);
+  assert.match(storage.getItem('taskliner_github_known_sha_v1'),/from-server/);
+  assert.ok(requests.some(x=>x.opts.cache==='no-store'));
+});
+test('empty remote data does not erase the known SHA or local dirty state',async()=>{
+  const remote={sha:'old',text:'- [ ] existing'};
+  const {sync,storage}=setup(remote);
+  sync.acceptPull(await sync.pull('2026-11-14'));
+  sync.markDirty('2026-11-14');
+  remote.sha='empty';remote.text='';
+  await assert.rejects(sync.pull('2026-11-14'),/空/);
+  assert.equal(sync.isDirty('2026-11-14'),true);
+  assert.match(storage.getItem('taskliner_github_known_sha_v1'),/old/);
+});

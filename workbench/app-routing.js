@@ -212,7 +212,7 @@
   async function renderPlanner(version) {
     appContent.textContent = '手帳を開いています…';
     try {
-      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261114-slimrails');
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261115-recovery');
       const module = await plannerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       plannerInstance = module.mount(appContent);
@@ -225,7 +225,7 @@
   async function renderTaskliner(version) {
     appContent.textContent = 'TaskLinerを読み込んでいます…';
     try {
-      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261114-fit');
+      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261115-recovery');
       const module = await tasklinerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       tasklinerInstance = module.mount(appContent);

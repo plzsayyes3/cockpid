@@ -8,6 +8,8 @@ export default `
 <section id="tlMenu" class="tl-menu" hidden>
   <nav><a href="https://plzsayyes3.github.io/taskliner_taskchute-line/master.html" target="_blank" rel="noopener">Master ↗</a><a href="https://plzsayyes3.github.io/taskliner_taskchute-line/repeat.html" target="_blank" rel="noopener">Repeat ↗</a></nav>
   <div class="tl-menu-actions"><button id="tlMasterPull" type="button">Master Pull</button><button id="tlGenerate" type="button">Repeatから生成</button><button id="tlTecho" type="button">手帳からインポート</button></div>
+  <div class="tl-menu-actions tl-recovery-actions"><button id="tlRecover" type="button">GitHub版で復旧</button><button id="tlRestoreBackup" type="button">復旧前に戻す</button></div>
+  <p class="tl-recovery-help">現在の日付だけをGitHub最新版で置き換えます。復旧前のローカル内容を端末内に保存します。GitHub Token・他の日付は削除しません。</p>
   <label>タスクの文字サイズ <output id="tlFontValue">100%</output><input id="tlFont" type="range" min="50" max="140" step="5" value="100"></label>
   <label>操作ボタン <output id="tlButtonValue">100%</output><input id="tlButton" type="range" min="50" max="150" step="5" value="100"></label>
   <label>メニュー・ヘッダー <output id="tlHeaderValue">100%</output><input id="tlHeader" type="range" min="50" max="150" step="5" value="100"></label>
