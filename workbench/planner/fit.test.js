@@ -69,3 +69,13 @@ test('DUO has three independent persistent display calibration controls',()=>{
  assert.match(css,/--planner-rail-top/);
  assert.match(shell,/--planner-shift-x/);
 });
+
+test('DUO calibration assets are independently versioned through the import chain',()=>{
+ const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
+ const version='20261114-calibration2';
+ assert.ok(route.includes("planner/controller.mjs?v="+version));
+ assert.ok(controller.includes("notebook.mjs?v="+version));
+ assert.ok(notebook.includes("notebook.css?v="+version));
+ assert.ok(index.includes("planner-shell.css?v="+version));
+ assert.match(notebook,/表示調整 · v2/);
+});
