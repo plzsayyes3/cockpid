@@ -32,6 +32,7 @@ function createInstance(ownerDocument){
   // Running controls occupy their own row, so they cannot cover text or the keyboard.
   body.append($('mobileRunningDock'));
   const scroll=root.querySelector('.tl-scroll');
+  let rememberedScrollTop=0;
   const document=new Proxy(ownerDocument,{get(target,key){
     if(key==='body'||key==='documentElement'||key==='head')return body;
     if(key==='activeElement')return root.activeElement;
@@ -140,7 +141,8 @@ function createInstance(ownerDocument){
   let startY=null;scroll.addEventListener('touchstart',event=>{startY=event.touches.length===1&&scroll.scrollTop<=0?event.touches[0].clientY:null},{passive:true});scroll.addEventListener('touchend',event=>{const end=event.changedTouches[0]?.clientY;if(startY!==null&&end-startY>=120)pull().catch(error=>status(error.message));startY=null},{passive:true});
   ownerDocument.addEventListener('visibilitychange',()=>{if(ownerDocument.visibilityState==='hidden'&&sync.isDirty(app.getDate()))save().catch(()=>{});else if(visible)scheduleSave()});
   new ResizeObserver(()=>{if(visible)app.refresh()}).observe(element);
-  const api={element,root,getDate:app.getDate,navigate:app.navigate,exportMarkdown:app.exportMarkdown,setVisible(value){visible=value;if(value){app.refresh();scheduleSave()}},save,pull};
+  scroll.addEventListener('scroll',()=>{if(visible)rememberedScrollTop=scroll.scrollTop},{passive:true});
+  const api={element,root,getDate:app.getDate,navigate:app.navigate,exportMarkdown:app.exportMarkdown,setVisible(value){if(!value&&visible&&element.isConnected)rememberedScrollTop=scroll.scrollTop;visible=value;if(value){scroll.scrollTop=rememberedScrollTop;requestAnimationFrame(()=>{if(visible){scroll.scrollTop=rememberedScrollTop;app.refresh()}});scheduleSave()}},save,pull};
   if(sync.isDirty(app.getDate())){$('tlSaveState').textContent='未保存';scheduleSave()}
   return api;
 }

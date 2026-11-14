@@ -1,5 +1,27 @@
 # SURFACES.md — What's actually implemented (verified 2026-09-18)
 
+## DUO planner mode (2026-11-14)
+
+The open-book button in the HOME header opens a full-width planner. Its left page reparents the same
+native TaskLiner instance used by Tasks; its right page edits existing Daily Markdown from the configured
+`daily` source (default `mynotebook/main/01_Daily/YYYY-MM-DD.md`). Dates, positions and input remain independent.
+At widths >=700px both pages are shown; below that, one is prominent and the other becomes a switch band
+at least 44px wide. Tasks remain left and Daily right. The collapsed content is inert. Resizing uses width
+only; the outer shell follows visual viewport height for software keyboards. The book button in the app
+header returns to HOME. No fullscreen permission/API is required.
+
+Daily drafts are stored immediately in a separate, source/date-specific local namespace. Remote saving
+runs after 5 seconds idle or from Save/Ctrl/Cmd+S. Reads and writes are serialized per note; SHA checks
+protect external updates (including Inbox merges), edit versions retain input made during requests, and
+accepted reloads invalidate previously queued save snapshots. Missing dates are created only after input
+is saved. Existing Markdown, front matter and whitespace are preserved. Emptying a nonempty note requires
+explicit confirmation. Copy and confirmed reload provide recovery from conflict.
+
+Verification: 97 TaskLiner/planner tests pass. Browser checks used synthetic local drafts and covered
+wide/narrow layout, 44px switch bands, independent memo dates, text restoration and Tasks/planner round trips.
+Authenticated real Daily writes, physical DUO folding, and Japanese IME on physical iOS hardware were not tested.
+The 700px breakpoint is an initial implementation choice to tune against actual device behavior.
+
 ## TaskLiner internal integration (2026-11-14)
 
 Tasks (`2`) now lazy-loads `workbench/taskliner/controller.mjs` directly into the drawer.

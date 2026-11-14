@@ -30,6 +30,7 @@
   const apps = Object.freeze({
     calendar: { key: '1', title: '1 / CALENDAR', type: 'iframe', src: 'calendar.html' },
     tasks: { key: '2', title: '2 / TASKS', type: 'taskliner' },
+    planner: { key: null, title: 'システム手帳', type: 'planner' },
     zen: { key: '3', title: '3 / ZEN', type: 'iframe', src: ZEN_BASE },
     news: { key: '6', title: '6 / NEWS', type: 'iframe', src: 'https://plzsayyes3.github.io/My_Internet_place/' },
     cards: { key: '4', title: '4 / CARDS', type: 'iframe', src: 'cards.html?v=20261105-1' },
@@ -204,13 +205,29 @@
 
   let tasklinerModule = null;
   let tasklinerInstance = null;
+  let plannerModule = null;
+  let plannerInstance = null;
+  let activeApp = null;
   let routeVersion = 0;
+  async function renderPlanner(version) {
+    appContent.textContent = '手帳を開いています…';
+    try {
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs');
+      const module = await plannerModule;
+      if (version !== routeVersion || !appWindow.classList.contains('open')) return;
+      plannerInstance = module.mount(appContent);
+    } catch (error) {
+      plannerModule = null;
+      console.error('Planner load failed', error);
+      if (version === routeVersion) appContent.textContent = '手帳を開けませんでした。閉じてから、もう一度開いてください。';
+    }
+  }
   async function renderTaskliner(version) {
     appContent.textContent = 'TaskLinerを読み込んでいます…';
     try {
       if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs');
       const module = await tasklinerModule;
-      if (version !== routeVersion) return;
+      if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       tasklinerInstance = module.mount(appContent);
     } catch (error) {
       tasklinerModule = null;
@@ -219,14 +236,42 @@
     }
   }
   new MutationObserver(() => {
-    if (!appWindow.classList.contains('open')) tasklinerInstance?.setVisible(false);
+    if (!appWindow.classList.contains('open')) {
+      routeVersion++;
+      activeApp = null;
+      tasklinerInstance?.setVisible(false);
+      plannerInstance?.setVisible(false);
+      if (appWindow.classList.contains('planner-mode')) appWindow.classList.remove('planner-mode');
+      document.body.classList.remove('duo-planner-open');
+      const close = document.getElementById('plannerClose');
+      if (close) close.hidden = true;
+    }
   }).observe(appWindow, { attributes: true, attributeFilter: ['class'] });
+
+  document.getElementById('plannerClose')?.addEventListener('click', () => document.getElementById('appClose')?.click());
+  function updatePlannerHeight() {
+    const height = window.visualViewport?.height || window.innerHeight;
+    appWindow.style.setProperty('--duo-visible-height', `${Math.round(height)}px`);
+  }
+  window.visualViewport?.addEventListener('resize', updatePlannerHeight);
+  window.addEventListener('resize', updatePlannerHeight);
+  updatePlannerHeight();
 
   function openApp(name) {
     const app = apps[name];
     if (!app) return false;
+    if (name === 'planner' && activeApp === 'planner' && appWindow.classList.contains('open')) {
+      document.getElementById('appClose')?.click();
+      return true;
+    }
     const version = ++routeVersion;
     tasklinerInstance?.setVisible(false);
+    plannerInstance?.setVisible(false);
+    activeApp = name;
+    appWindow.classList.toggle('planner-mode', name === 'planner');
+    document.body.classList.toggle('duo-planner-open', name === 'planner');
+    const plannerClose = document.getElementById('plannerClose');
+    if (plannerClose) plannerClose.hidden = name !== 'planner';
     appWindow.classList.remove('project-memo-expanded');
 
     if (app.type === 'page') {
@@ -235,7 +280,9 @@
     }
 
     appTitle.textContent = app.title;
-    if (app.type === 'taskliner') {
+    if (app.type === 'planner') {
+      renderPlanner(version);
+    } else if (app.type === 'taskliner') {
       renderTaskliner(version);
     } else if (app.type === 'iframe') {
       const src = name === 'zen' ? mainZenUrl() : app.src;
@@ -265,7 +312,7 @@
 
   document.addEventListener('keydown', (event) => {
     // Shadow DOM retargets text inputs to their host at the document boundary.
-    if (event.composedPath?.().some(node => node?.dataset?.taskliner === 'native')) return;
+    if (event.composedPath?.().some(node => node?.dataset?.taskliner === 'native' || node?.dataset?.planner === 'native')) return;
     const active = document.activeElement;
     if (/INPUT|TEXTAREA|SELECT/.test(active?.tagName || '') || active?.isContentEditable) return;
     if (document.getElementById('tokenModal')?.classList.contains('open')) return;
