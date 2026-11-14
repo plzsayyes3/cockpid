@@ -1,5 +1,45 @@
 # SURFACES.md — What's actually implemented (verified 2026-09-18)
 
+## DUO planner mode (2026-11-14)
+
+The open-book button in the HOME header opens a full-width planner. Its left page reparents the same
+native TaskLiner instance used by Tasks; its right page edits existing Daily Markdown from the configured
+`daily` source (default `mynotebook/main/01_Daily/YYYY-MM-DD.md`). Dates, positions and input remain independent.
+At widths >=700px both pages are shown; below that, one is prominent and the other becomes a switch band
+at least 44px wide. Tasks remain left and Daily right. The collapsed content is inert. Resizing uses width
+only; the outer shell follows visual viewport height for software keyboards. The book button in the app
+header returns to HOME. No fullscreen permission/API is required.
+
+Daily drafts are stored immediately in a separate, source/date-specific local namespace. Remote saving
+runs after 5 seconds idle or from Save/Ctrl/Cmd+S. Reads and writes are serialized per note; SHA checks
+protect external updates (including Inbox merges), edit versions retain input made during requests, and
+accepted reloads invalidate previously queued save snapshots. Missing dates are created only after input
+is saved. Existing Markdown, front matter and whitespace are preserved. Emptying a nonempty note requires
+explicit confirmation. Copy and confirmed reload provide recovery from conflict.
+
+Verification: 97 TaskLiner/planner tests pass. Browser checks used synthetic local drafts and covered
+wide/narrow layout, 44px switch bands, independent memo dates, text restoration and Tasks/planner round trips.
+Authenticated real Daily writes, physical DUO folding, and Japanese IME on physical iOS hardware were not tested.
+The 700px breakpoint is an initial implementation choice to tune against actual device behavior.
+
+## TaskLiner internal integration (2026-11-14)
+
+Tasks (`2`) now lazy-loads `workbench/taskliner/controller.mjs` directly into the drawer.
+One reusable instance owns a Shadow DOM tree, task actions, timers and date navigation;
+closing/reopening preserves the same instance. TaskLiner contains no iframe or runtime HTML patching.
+`app.mjs`, `app.css`, and `app-markup.mjs` expand the previous runtime at upstream 55d4487.
+They are editable source from this migration onward. Canonical daily task data remains private
+`mynotebook/main/09_taskchute/YYYY-MM-DD.md`; existing localStorage keys and known SHAs are retained.
+The Workbench token is used in memory as a fallback if no TaskLiner-specific token exists.
+Save and Pull share one operation queue; version checks retain edits made during saving or pulling.
+Conflict recovery offers explicit confirmed local overwrite, Pull, or simply leaving the local data in place.
+Master/Repeat management links remain external; suggestions, repeat generation and Techo import run internally.
+This is the first stage: DUO split view and Daily Note editing are not implemented yet.
+
+Verification: 77 TaskLiner tests pass. Browser checks with synthetic, local-only tasks covered add/start/end,
+reopening, 390px/1000px component widths, and failed-save navigation retention. Authenticated live GitHub writes
+and actual DUO hardware were not exercised. The Workbench suite has 9 baseline failures unchanged by this work.
+
 > **Purpose**: `DIRECTION.md` is a policy document (what the workbench should be and why).
 > This document is the opposite: an exhaustive, code-verified inventory of what actually
 > exists today — every screen, its data source, its writes, its visual values, its auth.

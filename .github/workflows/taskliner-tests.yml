@@ -1,0 +1,15 @@
+name: TaskLiner and DUO planner tests
+on:
+  push:
+    paths: ['workbench/taskliner/**', 'workbench/planner/**', 'workbench/planner-shell.css', 'workbench/index.html', 'workbench/app-routing.js', 'workbench/navigation.js', '.github/workflows/taskliner-tests.yml']
+  pull_request:
+    paths: ['workbench/taskliner/**', 'workbench/planner/**', 'workbench/planner-shell.css', 'workbench/index.html', 'workbench/app-routing.js', 'workbench/navigation.js', '.github/workflows/taskliner-tests.yml']
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test workbench/taskliner/*.test.js workbench/planner/*.test.js
