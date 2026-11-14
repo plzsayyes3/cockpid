@@ -87,6 +87,16 @@ keyboard/IME, and deliberate non-destructive GitHub read/save tests.
 
 ## Daily development flow
 
+### Duo memo action placement
+
+The native app applies a one-time 144 CSS-pixel downward preference for the
+memo actions, requested to align them below the Duo connectivity indicator.
+Later changes in the planner's display settings remain persistent. The previous
+value is retained in app-local storage for recovery; web source and Safari
+settings are unchanged. Signed build, wireless update and launch passed; final
+visual placement is pending confirmation. See `ios/DEVELOPMENT_LOG.md` for the
+setup history, verification and limitations.
+
 Web-only changes: edit/commit/push `cockpid` → reopen/reload the app (subject to HTTP cache and service worker). Native shell changes: edit/commit/push → Mac `git pull --ff-only origin main` → Xcode build & Run. Web updates do **not** automatically refresh an already open WKWebView, and native updates need reinstallation.
 
 ## Important separations

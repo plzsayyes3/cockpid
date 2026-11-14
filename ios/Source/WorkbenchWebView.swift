@@ -11,6 +11,29 @@ final class WorkbenchWebStore: ObservableObject {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
 
+        // One-time, app-local placement requested for Duo: put the memo
+        // actions below the system connectivity indicator. The existing web
+        // layout clamps this preference when the keyboard reduces the height.
+        // Keep the previous preference for recovery and allow subsequent
+        // changes from the web's display settings to persist across launches.
+        let duoRailPlacement = WKUserScript(source: """
+        (() => {
+            if (location.origin !== 'https://plzsayyes3.github.io' ||
+                !location.pathname.startsWith('/cockpid/workbench/')) return;
+            const marker = 'cockpid.native.duo-rail-placement.v1';
+            const setting = 'cockpid.planner.rail-top.v1';
+            try {
+                if (localStorage.getItem(marker) !== null) return;
+                const previous = localStorage.getItem(setting);
+                localStorage.setItem(marker, JSON.stringify({previous}));
+                localStorage.setItem(setting, '144');
+            } catch (_) {
+                // Storage unavailable: keep the existing web layout usable.
+            }
+        })();
+        """, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        configuration.userContentController.addUserScript(duoRailPlacement)
+
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.scrollView.contentInsetAdjustmentBehavior = .never
         view.allowsBackForwardNavigationGestures = false
