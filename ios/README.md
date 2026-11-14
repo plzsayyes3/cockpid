@@ -1,6 +1,6 @@
 # Cockpid iOS native shell
 
-Status: **Unsigned iOS build passed; signing and real-device install remain pending** (2026-11-14).
+Status: **Signed iOS build passed; device installation blocked by disabled Developer Mode** (2026-11-14).
 
 ## Purpose
 
@@ -59,6 +59,17 @@ Reproduce the unsigned build without changing signing settings:
 ```sh
 xcodebuild -project ios/WorkbenchNative.xcodeproj -scheme WorkbenchNative -configuration Debug -destination 'generic/platform=iOS' -derivedDataPath /private/tmp/cockpid-ios-build CODE_SIGNING_ALLOWED=NO build
 ```
+
+### Signed build and installation attempt
+
+After the user selected a Personal Team in Xcode, the Debug iOS build with
+`-allowProvisioningUpdates` succeeded (exit 0). Team selection is kept local;
+account and signing material are not included in this documentation commit.
+Installation via `devicectl device install app` failed because Developer Mode
+is disabled on the connected iPhone (CoreDevice error 12040, underlying cryptex
+error 20). Enable Settings → Privacy & Security → Developer Mode on the phone,
+restart when prompted, and confirm enabling after restart. Then retry installation
+and launch. App launch and DUO/private-data behavior remain unverified.
 
 ## Daily development flow
 
