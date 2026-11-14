@@ -25,7 +25,7 @@ test('DUO right rail has labeled choices and a visible active state',()=>{
 test('Duo-sized touch viewports use a safe-area-aware side dock with the existing launchers',()=>{
  const index=read('../index.html'),css=read('../duo-side-dock.css');
  assert.match(index,/duo-side-dock\.css/);
- assert.match(css,/min-aspect-ratio:3\/5/);
+ assert.match(css,/min-width:320px/);
  assert.match(css,/pointer:coarse/);
  assert.match(css,/#appDock \.dock-primary/);
  assert.match(css,/env\(safe-area-inset-right\)/);
@@ -35,4 +35,19 @@ test('planner right adjustment is applied to container padding, not the frame wi
  const css=read('../planner-shell.css');
  assert.match(css,/padding:0 calc\(env\(safe-area-inset-right\) \+ var\(--planner-extra-right,0px\)\)/);
  assert.doesNotMatch(css,/width:calc\(100% - var\(--planner-extra-right/);
+});
+
+test('Folded Duo retains side dock without a portrait aspect ratio gate',()=>{
+ const css=read('../duo-side-dock.css');
+ assert.match(css,/min-width:320px/);
+ assert.doesNotMatch(css,/min-aspect-ratio/);
+ assert.match(css,/body\.wb-side-dock #appDock/);
+});
+test('Side dock choice persists and is exposed through the More panel',()=>{
+ const js=read('../duo-side-dock.js'),index=read('../index.html');
+ assert.match(index,/duo-side-dock\.js/);
+ assert.match(js,/cockpid\.workbench\.side-dock\.v1/);
+ assert.match(js,/localStorage\.setItem/);
+ assert.match(js,/extra\.append\(button\)/);
+ assert.match(js,/aria-pressed/);
 });
