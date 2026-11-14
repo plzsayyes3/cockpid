@@ -1,6 +1,6 @@
 # Cockpid iOS native shell
 
-Status: **Signed iOS build and physical-device installation succeeded; first launch requires resolving iOS trust/security rejection** (2026-11-14).
+Status: **Signed iOS build, physical-device installation, and app launch succeeded; visual and private-data smoke tests remain pending** (2026-11-14).
 
 ## Purpose
 
@@ -77,6 +77,13 @@ signature/entitlements or an explicitly untrusted profile as possible causes.
 Next, on the phone open Settings → General → VPN & Device Management and trust
 the development app's developer if offered, then retry launch. Installation is
 verified; successful launch and web content display are not yet verified.
+
+After the user trusted the developer on the iPhone, retrying
+`devicectl device process launch` for `com.plzsayyes3.WorkbenchNative` succeeded
+(exit 0, “Launched application”). The trust blocker is resolved. This verifies
+OS-level launch, not successful page loading or continued runtime stability.
+Remaining checks: visible Workbench and DUO planner, navigation, safe areas,
+keyboard/IME, and deliberate non-destructive GitHub read/save tests.
 
 ## Daily development flow
 
