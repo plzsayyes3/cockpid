@@ -9,3 +9,7 @@
 .app-window.planner-mode.open {
   box-shadow:0 0 0 100vmax #f8f6ef;
 }
+
+/* User-adjustable lateral offset of the planner surface. The viewport rect and
+   safe-area calculations remain unchanged; only the visible layer moves. */
+.app-window.planner-mode .app-frame {transform:translateX(var(--planner-shift-x,0px))!important;}
