@@ -1,0 +1,1 @@
+(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.DuoViewport=api})(globalThis,()=>({geometry(view,width,height){return{width:view?.width||width,height:view?.height||height,top:view?.offsetTop||0,left:view?.offsetLeft||0}}}));

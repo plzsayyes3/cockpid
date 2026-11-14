@@ -13,9 +13,10 @@ import appMarkup from './app-markup.mjs';
 import viewMarkup from './view-markup.mjs';
 
 let instance;
-export function mount(container){
+export function mount(container,{mode='normal'}={}){
   if(!instance)instance=createInstance(container.ownerDocument);
   container.replaceChildren(instance.element);
+  instance.setLayoutMode(mode);
   instance.setVisible(true);
   return instance;
 }
@@ -25,7 +26,7 @@ function createInstance(ownerDocument){
   element.style.cssText='height:100%;min-height:0;display:block';
   element.dataset.taskliner='native';
   const root=element.attachShadow({mode:'open'});
-  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file,import.meta.url)}">`).join('');
+  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file+'?v=20261114-fit',import.meta.url)}">`).join('');
   root.innerHTML=styles+`<div class="tl-body">${viewMarkup}</div>`;
   const body=root.querySelector('.tl-body'),$=id=>root.getElementById(id);
   $('tlAppContent').innerHTML=appMarkup;
@@ -142,7 +143,7 @@ function createInstance(ownerDocument){
   ownerDocument.addEventListener('visibilitychange',()=>{if(ownerDocument.visibilityState==='hidden'&&sync.isDirty(app.getDate()))save().catch(()=>{});else if(visible)scheduleSave()});
   new ResizeObserver(()=>{if(visible)app.refresh()}).observe(element);
   scroll.addEventListener('scroll',()=>{if(visible)rememberedScrollTop=scroll.scrollTop},{passive:true});
-  const api={element,root,getDate:app.getDate,navigate:app.navigate,exportMarkdown:app.exportMarkdown,setVisible(value){if(!value&&visible&&element.isConnected)rememberedScrollTop=scroll.scrollTop;visible=value;if(value){scroll.scrollTop=rememberedScrollTop;requestAnimationFrame(()=>{if(visible){scroll.scrollTop=rememberedScrollTop;app.refresh()}});scheduleSave()}},save,pull};
+  const api={element,root,setLayoutMode(mode){body.dataset.layout=mode;},getDate:app.getDate,navigate:app.navigate,exportMarkdown:app.exportMarkdown,setVisible(value){if(!value&&visible&&element.isConnected)rememberedScrollTop=scroll.scrollTop;visible=value;if(value){scroll.scrollTop=rememberedScrollTop;requestAnimationFrame(()=>{if(visible){scroll.scrollTop=rememberedScrollTop;app.refresh()}});scheduleSave()}},save,pull};
   if(sync.isDirty(app.getDate())){$('tlSaveState').textContent='未保存';scheduleSave()}
   return api;
 }

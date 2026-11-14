@@ -1,5 +1,5 @@
-import {mount as mountTaskliner} from '../taskliner/controller.mjs';
-import {createDailyView} from './daily-view.mjs';
+import {mount as mountTaskliner} from '../taskliner/controller.mjs?v=20261114-fit';
+import {createNotebook} from './notebook.mjs';
 import './layout.js';
 
 let instance;
@@ -13,7 +13,7 @@ function createPlanner(ownerDocument){
   const root=element.attachShadow({mode:'open'});
   root.innerHTML=`<link rel="stylesheet" href="${new URL('./planner.css',import.meta.url)}"><div class="planner" aria-label="システム手帳"><section class="planner-panel" data-side="tasks" aria-label="タスクのページ"><div class="page-content" id="tasks"></div><button class="page-band" id="taskBand" type="button" aria-label="タスクを大きく開く" aria-expanded="false"><span>タスク</span><span aria-hidden="true">‹</span></button></section><section class="planner-panel" data-side="memo" aria-label="メモのページ"><div class="page-content" id="memo"></div><button class="page-band" id="memoBand" type="button" aria-label="メモを大きく開く" aria-expanded="false"><span>メモ</span><span aria-hidden="true">›</span></button></section></div>`;
   const $=id=>root.getElementById(id),book=root.querySelector('.planner'),panels=[...root.querySelectorAll('.planner-panel')];
-  const daily=createDailyView($('memo'));let taskliner=null,visible=false,focus='tasks',composing=false,pendingFocus=null;
+  const daily=createNotebook($('memo'));let taskliner=null,visible=false,focus='tasks',composing=false,pendingFocus=null;
   try{focus=localStorage.getItem('cockpid.planner.focus.v1')==='memo'?'memo':'tasks'}catch{}
   function draw(){
     const width=element.getBoundingClientRect().width;
@@ -52,5 +52,5 @@ function createPlanner(ownerDocument){
   });
   // Only width participates in layout. Viewport height is handled by the outer app shell.
   new ResizeObserver(draw).observe(element);
-  return{element,attachTaskliner(){taskliner=mountTaskliner($('tasks'));draw()},setVisible(value){visible=value;draw()},getDailyDate:daily.getDate};
+  return{element,attachTaskliner(){taskliner=mountTaskliner($('tasks'),{mode:'planner'});draw()},setVisible(value){visible=value;draw()},getDailyDate:daily.getDate};
 }
