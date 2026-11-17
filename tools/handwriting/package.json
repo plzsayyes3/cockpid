@@ -1,0 +1,16 @@
+{
+  "name": "@cockpid/handwriting-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "decode": "node decode-pkdrawing.mjs",
+    "render": "node render-pkdrawing-svg.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "libfreeform": "1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
