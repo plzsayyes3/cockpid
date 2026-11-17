@@ -2,6 +2,7 @@
   'use strict';
 
   const READ_KEY = 'cockpid.advice.read.v1';
+  const HPMP_VISIBLE_KEY = 'cockpid.workbench.hpmp.visible.v1';
   const REMOTE_PATH = 'app-state/cockpid/message-state.json';
   const ZEN_MAIN_KEY = 'cockpid.zen.main.v2';
   const ZEN_LEGACY_KEY = 'cockpid.zen.main.v1';
@@ -36,6 +37,25 @@
   }
 
   navButtons.forEach((button) => button.addEventListener('click', () => activate(button.dataset.settingsSection)));
+
+  const hpmpVisible = document.getElementById('hpmpVisible');
+  function applyHpmpVisibility(visible) {
+    document.documentElement.classList.toggle('wb-hide-hpmp', !visible);
+    document.body.classList.toggle('wb-hide-hpmp', !visible);
+    if (hpmpVisible) hpmpVisible.checked = visible;
+  }
+  function loadHpmpVisibility() {
+    try { return localStorage.getItem(HPMP_VISIBLE_KEY) !== 'false'; }
+    catch (_) { return true; }
+  }
+  applyHpmpVisibility(loadHpmpVisibility());
+  hpmpVisible?.addEventListener('change', () => {
+    applyHpmpVisibility(hpmpVisible.checked);
+    try { localStorage.setItem(HPMP_VISIBLE_KEY, String(hpmpVisible.checked)); } catch (_) {}
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key === HPMP_VISIBLE_KEY) applyHpmpVisibility(loadHpmpVisibility());
+  });
 
   if (systemOpen) {
     const syncLabel = () => {
