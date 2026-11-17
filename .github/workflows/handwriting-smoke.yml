@@ -1,0 +1,37 @@
+name: Handwriting decoder smoke test
+on:
+  push:
+    paths:
+      - 'tools/handwriting/**'
+      - '.github/workflows/handwriting-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tools/handwriting
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install decoder and dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test SVG renderer
+        run: npm test
+      - name: Check decoder imports and signature guards
+        run: |
+          node --input-type=module -e "
+            import {isPkDrawing,decodePkDrawing} from 'libfreeform';
+            import {Buffer} from 'node:buffer';
+            if (!isPkDrawing(Buffer.from([0x77,0x72,0x64,0x00]))) process.exit(1);
+            if (isPkDrawing(Buffer.from('not-a-pencilkit-file'))) process.exit(1);
+            if (typeof decodePkDrawing !== 'function') process.exit(1);
+            console.log('PencilKit signature and decoder exports OK');
+          "
