@@ -15,6 +15,9 @@
 <title>作業台 — Workbench</title>
 <link rel="stylesheet" href="workbench.css?v=20261107-capture-viewport">
 <link rel="stylesheet" href="hp-bar.css?v=20261001-mp1">
+<style>body.wb-hide-hpmp .hp-dock,body.wb-hide-hpmp .mp-dock{display:none!important}</style>
+<script>try{if(localStorage.getItem("cockpid.workbench.hpmp.visible.v1")==="false")document.documentElement.classList.add("wb-hide-hpmp")}catch(_){}</script>
+<style>html.wb-hide-hpmp .hp-dock,html.wb-hide-hpmp .mp-dock{display:none!important}</style>
 <link rel="stylesheet" href="drawer.css?v=20260924-project-memo2">
 <link rel="stylesheet" href="home-final.css">
 <script>document.write(`<link rel="stylesheet" href="home-refinement.css?cb=${Date.now()}">`);</script>
@@ -143,6 +146,9 @@
             <small>配置は自動のまま、パネルの余白・高さ・Dockのサイズを調整します。この端末だけに保存されます。</small>
             <button id="uiSizeReset" type="button">標準の100%に戻す</button>
           </div>
+          <div class="app-settings-list" style="margin-top:16px">
+            <label class="app-setting-row" for="hpmpVisible"><span class="app-setting-copy"><b>HP / MP 表示</b><small>作業台のHP・MPバーを表示する（この端末だけに保存）</small></span><input id="hpmpVisible" type="checkbox" checked aria-label="HP・MPバーを表示"></label>
+          </div>
         </section>
         <section class="settings-section" data-settings-panel="paths"><div class="settings-section-kicker">PATHS / DATA</div><h3>保存先</h3><p>今回は構造のみです。未接続の項目は既存ロジックを変更していません。</p><div class="path-list"><div class="path-row"><span>Daily Note folder</span><b>NOT CONNECTED</b></div><div class="path-row"><span>Inbox folder</span><b>mynotebook / 00_inbox</b></div><div class="path-row"><span>Short Memo destination</span><b>mynotebook / 00_inbox · CURRENT</b></div><div class="path-row"><span>Project root</span><b>AUTO · CANONICAL VIEW</b></div><div class="path-row"><span>TaskLiner data folder</span><b>NOT CONNECTED</b></div><div class="path-row"><span>HP log</span><b>my-storage-note / app-state/cockpid/hp</b></div><div class="path-row"><span>MP log</span><b>my-storage-note / app-state/cockpid/mp</b></div></div></section>
         <section class="settings-section" data-settings-panel="github"><div class="settings-section-kicker">GITHUB</div><h3>Connection</h3><p class="token-copy">Workbenchが <b>my-storage-note</b> と <b>mynotebook</b> を読む・書くためのFine-grained tokenです。この端末のlocalStorageだけに保存します。</p><div class="token-field"><label for="workbenchTokenInput">GITHUB FINE-GRAINED TOKEN</label><div class="token-input-wrap"><input id="workbenchTokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button class="token-eye" id="tokenReveal" type="button">SHOW</button></div></div><div class="token-status" id="tokenStatus">TOKEN REQUIRED</div><div class="token-actions"><button class="token-btn danger" id="tokenClearWorkbench" type="button">REMOVE</button><button class="token-btn" id="tokenTest" type="button">TEST</button><button class="token-btn primary" id="tokenSaveWorkbench" type="button">SAVE &amp; RELOAD</button></div></section>
@@ -192,7 +198,7 @@
 <script src="planner/viewport.js?v=20261114-fit"></script>
 <script>document.write(`<script src="app-routing.js?cb=${Date.now()}"><\/script>`);</script>
 <script src="duo-side-dock.js?v=20261114-folded-stable"></script>
-<script src="system-settings.js?v=20260918-workbench-review2"></script>
+<script src="system-settings.js?v=20261117-hpmp-visibility1"></script>
 <script src="adaptive-layout.js?v=20261110-mobile-visible"></script>
 <script src="area-source-adapter.js?v=20260923-private-area-read1"></script>
 <script src="area-model.js"></script>
