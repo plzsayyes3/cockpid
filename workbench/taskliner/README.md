@@ -27,3 +27,9 @@ The in-Workbench TaskLiner menu offers **GitHub版で復旧** and **復旧前に
 Before applying a successful recovery, a full Markdown copy is stored under app-local `localStorage` recovery keys. Recovery records are keyed by repo/branch/folder/date and never include GitHub credentials. This is device-local backup, **not an upload to GitHub**; Safari/PWA and native WKWebView have separate storage. Backups accumulate without automatic deletion to avoid silently discarding recovery data, so storage quota failure aborts the replacement. The Restore control brings back the most recent backup locally and deliberately blocks background sync until the user explicitly presses Sync; GitHub SHA conflict protection remains active.
 
 The normal Pull retains its prior behavior but now backs up a dirty local snapshot before replacing it. A server-side concurrent edit can still cause a later save conflict; recovery is not a way to disable optimistic concurrency for future edits. Test with `node --test workbench/taskliner/*.test.js`. The native shell only needs to reload the updated GitHub Pages site; no Swift recompilation is required.
+
+## Repeat作成（2026-11-22）
+
+Workbench内のTaskLinerで ☰ → **新規Repeat** を開き、タスク名（既存Masterまたは新規名）、繰り返しルール、必要ならセクション・時刻・見積もりを指定して保存します。保存先は従来の `09_taskchute/templates/repeats/*.md` で、独立したRepeat管理画面からも編集可能です。新規Masterも同時作成できます。ルールの検証と重複active Repeatの防止を行い、保存失敗時は原因をフォーム内に表示します。日次タスクは従来どおり「Repeatから生成」で追加します。新規Masterのインデックス更新がGitHub Actionsで反映される前は、端末内Masterキャッシュを当日の生成時に補います。
+
+Test: `node --test workbench/taskliner/*.test.js`（repeat-creator.test.jsを含む）。
