@@ -10,6 +10,7 @@ import './recovery.js';
 import './github-client.js';
 import {createTaskApp} from './app.mjs';
 import {createTemplateStore} from './template-store.mjs';
+import {setupRepeatCreator} from './repeat-creator.mjs';
 import appMarkup from './app-markup.mjs';
 import viewMarkup from './view-markup.mjs';
 
@@ -193,6 +194,7 @@ function createInstance(ownerDocument){
   const templates=createTemplateStore(window,storage,request);
   const TL=globalThis.TaskLinerTemplates,DI=globalThis.TaskLinerDailyIntegration;
   let masters=templates.readMasterCache(),selectedMaster='';
+  setupRepeatCreator({root,$,templates,TL,app,getMasters:()=>masters,setMasters:next=>{masters=next}});
   const suggestions=ownerDocument.createElement('div');suggestions.className='tl-suggestions';$('newTitle').parentElement.append(suggestions);
   const prepareMaster=()=>{
     const title=$('newTitle').value.trim();if(!title)return;
