@@ -19,3 +19,15 @@
 .tl-menu .tl-recovery-actions button:first-child{border-color:#9c745a;font-weight:600}
 .tl-menu .tl-recovery-actions button:disabled{opacity:.5;cursor:wait}
 .tl-menu .tl-recovery-help{font-size:11px;line-height:1.5;color:var(--muted);margin:0 0 12px}
+
+/* Native repeat creation in the existing TaskLiner settings drawer. */
+.tl-menu .tl-repeat-form{padding:12px;border:1px solid var(--line);border-radius:10px;margin-bottom:12px;background:var(--bg)}
+.tl-menu .tl-repeat-form[hidden],.tl-menu .tl-repeat-form [hidden]{display:none!important}
+.tl-menu .tl-repeat-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+.tl-menu .tl-repeat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tl-menu .tl-repeat-suggestions{border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.tl-menu .tl-repeat-suggestions:empty{display:none}
+.tl-menu .tl-repeat-suggestions button{display:block;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;text-align:left;background:var(--panel)}
+.tl-menu #tlRepeatSave{margin-top:12px;font-weight:700}
+.tl-menu #tlRepeatSave:disabled{opacity:.5}
+.tl-menu #tlRepeatFeedback{font-size:11px;overflow-wrap:anywhere;color:var(--muted)}
