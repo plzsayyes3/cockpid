@@ -75,7 +75,14 @@ export function setupRepeatCreator({root, $, templates, TL, app, getMasters, set
     suggestions.replaceChildren();
     const query = title.value.trim();
     if (!query) return;
-    for (const master of TL.suggestMasters(query, availableMasters, 5)) {
+    const matches = [...TL.suggestMasters(query, availableMasters, 5)];
+    const normalized = TL.norm(query);
+    for (const master of availableMasters) {
+      if (master.status === 'archived' || matches.some(item => item.id === master.id)) continue;
+      if (TL.norm(TL.displayTitle(master.title)).includes(normalized)) matches.push(master);
+      if (matches.length >= 5) break;
+    }
+    for (const master of matches.slice(0, 5)) {
       const button = root.ownerDocument.createElement('button');
       button.type = 'button';
       button.textContent = `${TL.displayTitle(master.title)} · ${master.estimate || 0}m`;
@@ -122,6 +129,7 @@ export function setupRepeatCreator({root, $, templates, TL, app, getMasters, set
       availableMasters = freshMasters;
       let master = freshMasters.find(item => item.id === chosenId && TL.norm(TL.displayTitle(item.title)) === TL.norm(name));
       master ||= TL.findExactMaster(name, freshMasters);
+      master ||= freshMasters.find(item => item.status !== 'archived' && TL.norm(TL.displayTitle(item.title)) === TL.norm(name));
       let newMaster = false;
       if (!master) {
         master = {id: TL.id('task'), title: name, aliases: [], status: 'active', estimate: Math.max(0, Math.round(Number($('tlRepeatEstimate').value) || 0))};
