@@ -1,14 +1,15 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const get=()=>import('./repeat-creator.mjs');
-const make = (input = {}) => makeRepeat({rule:'daily',...input}, 'task_a', 'repeat_new');
 test('calendar weekdays are UTC stable and invalid dates fail', async () => {
   const {calendarWeekday,makeRepeat,findDuplicateRepeat}=await get();
+  const make=(input={})=>makeRepeat({rule:'daily',...input},'task_a','repeat_new');
   assert.equal(calendarWeekday('2026-11-22'), 0);
   assert.equal(calendarWeekday('2026-02-30'), null);
 });
 test('valid daily, weekdays, weekly, nth, biweekly and month-end schedules', async () => {
   const {calendarWeekday,makeRepeat,findDuplicateRepeat}=await get();
+  const make=(input={})=>makeRepeat({rule:'daily',...input},'task_a','repeat_new');
   assert.equal(make().rule, 'daily');
   assert.deepEqual(make({rule:'weekdays', weekdays:'5,1,3,1'}).weekdays, [1,3,5]);
   assert.equal(make({rule:'weekly', weekday:'0'}).weekday, 0);
@@ -18,6 +19,7 @@ test('valid daily, weekdays, weekly, nth, biweekly and month-end schedules', asy
 });
 test('invalid schedules cannot be saved', async () => {
   const {calendarWeekday,makeRepeat,findDuplicateRepeat}=await get();
+  const make=(input={})=>makeRepeat({rule:'daily',...input},'task_a','repeat_new');
   assert.throws(()=>make({rule:'weekdays',weekdays:'1,,5'}), /曜日/);
   assert.throws(()=>make({rule:'weekly',weekday:'9'}), /曜日/);
   assert.throws(()=>make({rule:'biweekly',anchorDate:'2026-02-30'}), /基準日/);
@@ -26,6 +28,7 @@ test('invalid schedules cannot be saved', async () => {
 });
 test('duplicate active schedules are rejected, inactive are ignored', async () => {
   const {calendarWeekday,makeRepeat,findDuplicateRepeat}=await get();
+  const make=(input={})=>makeRepeat({rule:'daily',...input},'task_a','repeat_new');
   const candidate=make();
   const key=x=>JSON.stringify([x.master_id,x.rule,x.section,x.planned_at]);
   assert.equal(findDuplicateRepeat(candidate,[{...candidate,id:'old'}],key)?.id,'old');
