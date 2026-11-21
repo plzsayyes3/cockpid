@@ -42,3 +42,10 @@ test('moving a task to tomorrow marks the target date for synchronization',()=>{
   const move=new Function(...Object.keys(deps),'return ('+line+')')(...Object.values(deps));move('one');
   assert.equal(target.tasks[0].title,'移動');assert.deepEqual(notifications.sort(),['2026-11-14','2026-11-15']);
 });
+
+test('native TaskLiner can create repeat rules without leaving the Workbench',()=>{
+  assert.match(read('view-markup.mjs'),/id="tlRepeatNew"/);
+  assert.match(read('view-markup.mjs'),/id="tlRepeatForm"/);
+  assert.match(read('controller.mjs'),/setupRepeatCreator/);
+  assert.match(read('repeat-creator.mjs'),/templates\.saveRepeat\(repeat\)/);
+});
