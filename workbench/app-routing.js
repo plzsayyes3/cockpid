@@ -212,7 +212,7 @@
   async function renderPlanner(version) {
     appContent.textContent = '手帳を開いています…';
     try {
-      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261122-duo-overlay1');
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261123-repeat-create1');
       const module = await plannerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       plannerInstance = module.mount(appContent);
@@ -225,7 +225,7 @@
   async function renderTaskliner(version) {
     appContent.textContent = 'TaskLinerを読み込んでいます…';
     try {
-      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261115-recovery');
+      if (!tasklinerModule) tasklinerModule = import('./taskliner/controller.mjs?v=20261123-repeat-create1');
       const module = await tasklinerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       tasklinerInstance = module.mount(appContent);
