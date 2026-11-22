@@ -73,7 +73,10 @@ test('DUO has three independent persistent display calibration controls',()=>{
 test('DUO calibration assets are independently versioned through the import chain',()=>{
  const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
  const version='20261114-slimrails';
- assert.ok(route.includes("planner/controller.mjs?v="+version));
+ const repeatVersion='20261123-repeat-create1';
+ assert.ok(route.includes("planner/controller.mjs?v="+repeatVersion));
+ assert.ok(route.includes("taskliner/controller.mjs?v="+repeatVersion));
+ assert.ok(controller.includes("taskliner/controller.mjs?v="+repeatVersion));
  assert.ok(controller.includes("notebook.mjs?v="+version));
  assert.ok(notebook.includes("notebook.css?v="+version));
  assert.ok(index.includes("planner-shell.css?v=20261114-tapfix"));
