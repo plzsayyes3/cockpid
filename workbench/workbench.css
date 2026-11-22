@@ -47,3 +47,13 @@ button{cursor:pointer}
 .capture-mode-btn[aria-pressed="true"]{border-color:#6d786e;background:rgba(109,120,110,.12)}
 .capture-mode-btn:focus-visible{outline:2px solid var(--green,#6d786e);outline-offset:2px}
 @media(max-width:480px){.capture-actions{flex-wrap:wrap}.capture-buttons{margin-left:auto}}
+
+
+/* iPhone Duo-like portrait UI: leave the OS right-side status surface clear
+   while TaskLiner is open. Only the upper command header needs this gutter. */
+@media (pointer:coarse) and (min-width:430px) and (max-width:540px) and (orientation:portrait) {
+  .app-window.taskliner-mode .app-frame-head {
+    padding-right:calc(14px + max(env(safe-area-inset-right, 0px), 84px));
+  }
+  .app-window.taskliner-mode .app-frame-head .app-frame-actions { flex-shrink:0; }
+}
