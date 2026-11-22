@@ -74,6 +74,10 @@ test('DUO calibration assets are independently versioned through the import chai
  const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
  const version='20261114-slimrails';
  const repeatVersion='20261123-repeat-create1';
+ const taskController=read('../taskliner/controller.mjs');
+ for (const asset of ['view-markup.mjs','repeat-creator.mjs','template-store.mjs']) {
+   assert.ok(taskController.includes(asset+'?v='+repeatVersion));
+ }
  assert.ok(route.includes("planner/controller.mjs?v="+repeatVersion));
  assert.ok(route.includes("taskliner/controller.mjs?v="+repeatVersion));
  assert.ok(controller.includes("taskliner/controller.mjs?v="+repeatVersion));
