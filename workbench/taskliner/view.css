@@ -31,3 +31,33 @@
 .tl-menu #tlRepeatSave{margin-top:12px;font-weight:700}
 .tl-menu #tlRepeatSave:disabled{opacity:.5}
 .tl-menu #tlRepeatFeedback{font-size:11px;overflow-wrap:anywhere;color:var(--muted)}
+
+
+/* The Duo status/connection strip occupies the upper right of the unfolded
+   touch viewport. Keep controls and the Repeat editor left of that strip.
+   The task list itself still uses the full width below the strip. */
+@media (pointer:coarse) and (min-width:430px) and (max-width:540px) and (orientation:portrait) {
+  :host { --tl-duo-upper-right: max(env(safe-area-inset-right, 0px), 84px); }
+  .tl-body:not([data-layout="planner"]) .tl-tools {
+    padding-right:calc(14px + var(--tl-duo-upper-right));
+    gap:6px;
+  }
+  .tl-body:not([data-layout="planner"]) .tl-tools #tlSaveState {
+    margin-right:auto;
+  }
+  .tl-body:not([data-layout="planner"]) .tl-menu {
+    right:calc(10px + var(--tl-duo-upper-right));
+    width:min(360px, calc(100% - 20px - var(--tl-duo-upper-right)));
+  }
+  .tl-body:not([data-layout="planner"]) .app .header-row {
+    padding-right:var(--tl-duo-upper-right);
+  }
+  .tl-body:not([data-layout="planner"]) .app .datebar {
+    width:100%;
+    min-width:0;
+  }
+  .tl-body:not([data-layout="planner"]) .app .date-btn {
+    flex:1 1 auto;
+    min-width:0;
+  }
+}
