@@ -212,7 +212,7 @@
   async function renderPlanner(version) {
     appContent.textContent = '手帳を開いています…';
     try {
-      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261115-recovery');
+      if (!plannerModule) plannerModule = import('./planner/controller.mjs?v=20261122-duo-overlay1');
       const module = await plannerModule;
       if (version !== routeVersion || !appWindow.classList.contains('open')) return;
       plannerInstance = module.mount(appContent);
@@ -270,6 +270,7 @@
     plannerInstance?.setVisible(false);
     activeApp = name;
     appWindow.classList.toggle('planner-mode', name === 'planner');
+    appWindow.classList.toggle('taskliner-mode', app.type === 'taskliner');
     document.body.classList.toggle('duo-planner-open', name === 'planner');
     const plannerClose = document.getElementById('plannerClose');
     if (plannerClose) plannerClose.hidden = name !== 'planner';
