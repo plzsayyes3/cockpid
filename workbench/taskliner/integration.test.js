@@ -49,3 +49,13 @@ test('native TaskLiner can create repeat rules without leaving the Workbench',()
   assert.match(read('controller.mjs'),/setupRepeatCreator/);
   assert.match(read('repeat-creator.mjs'),/templates\.saveRepeat\(repeat\)/);
 });
+
+test('Duo right-side OS overlay leaves TaskLiner controls reachable',()=>{
+  const rootCss=read('../workbench.css'),taskCss=read('view.css'),routing=read('../app-routing.js');
+  assert.match(routing,/classList\.toggle\('taskliner-mode', app\.type === 'taskliner'\)/);
+  assert.match(rootCss,/\.app-window\.taskliner-mode \.app-frame-head/);
+  assert.match(taskCss,/\.tl-tools \{/);
+  assert.match(taskCss,/\.tl-menu \{/);
+  assert.match(taskCss,/\.app \.header-row \{/);
+  assert.match(taskCss,/--tl-duo-upper-right/);
+});
