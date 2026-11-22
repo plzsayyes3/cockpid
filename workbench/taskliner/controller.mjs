@@ -28,7 +28,7 @@ function createInstance(ownerDocument){
   element.style.cssText='height:100%;min-height:0;display:block';
   element.dataset.taskliner='native';
   const root=element.attachShadow({mode:'open'});
-  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file+'?v=20261114-fit',import.meta.url)}">`).join('');
+  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file+'?v=20261122-duo-overlay1',import.meta.url)}">`).join('');
   root.innerHTML=styles+`<div class="tl-body">${viewMarkup}</div>`;
   const body=root.querySelector('.tl-body'),$=id=>root.getElementById(id);
   $('tlAppContent').innerHTML=appMarkup;
