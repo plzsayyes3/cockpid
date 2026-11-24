@@ -23,7 +23,40 @@ function writeMasterCache(masters,meta={}){const clean=(Array.isArray(masters)?m
 function getMasterCacheMeta(){try{return JSON.parse(localStorage.getItem(MASTER_CACHE_META_KEY)||'{}')}catch{return{}}}
 async function pullMasters(){const f=await readFile(`${base()}/master-index.json`);if(!f?.text)throw new Error('master-index.json がありません');let payload;try{payload=JSON.parse(f.text)}catch{throw new Error('master-index.json を解析できません')};const masters=Array.isArray(payload)?payload:Array.isArray(payload?.masters)?payload.masters:[];return writeMasterCache(masters,{generated_at:payload?.generated_at||'',version:payload?.version||1,source:'github-index'})}
 async function loadMasters(){const cached=readMasterCache();if(cached.length)return cached;try{return await pullMasters()}catch(e){console.warn('Master index pull failed; fallback to individual Markdown',e);const fallback=await loadCollection('masters',TL.parseMasterMarkdown);return writeMasterCache(fallback,{source:'github-fallback'})}}
-async function loadRepeats(){return loadCollection('repeats',TL.parseRepeatMarkdown,{strict:true,label:'Repeat'})}
+// The directory is always fetched fresh. Its blob SHAs are the authority, not the cache.
+// Cache only successfully parsed files, scoped to the configured repository and folder.
+const REPEAT_CACHE_KEY='taskliner_repeat_blob_cache_v1';
+function repeatScope(c){return JSON.stringify([c.repo,c.branch,c.folder])}
+function readRepeatCache(scope){
+  try{const value=JSON.parse(localStorage.getItem(REPEAT_CACHE_KEY)||'null');return value?.scope===scope&&Array.isArray(value.files)?new Map(value.files.filter(x=>x&&typeof x.path==='string'&&typeof x.sha==='string'&&typeof x.text==='string').map(x=>[x.path,x])):new Map()}catch{return new Map()}
+}
+function writeRepeatCache(scope,files){try{localStorage.setItem(REPEAT_CACHE_KEY,JSON.stringify({scope,files}))}catch{/* Cache is optional, including when storage is full. */}}
+async function loadRepeats(){
+  const config=cfg(),scope=repeatScope(config);
+  const assertConfig=()=>{const current=cfg();if(repeatScope(current)!==scope||current.token!==config.token)throw new Error('同期設定が変更されました。再読込してください。')};
+  const list=await listDir(`${base()}/repeats`);assertConfig();
+  if(!Array.isArray(list))throw new Error('Repeat一覧を取得できませんでした');
+  const files=list.filter(x=>x.type==='file'&&/\.md$/i.test(x.name||'')),cached=readRepeatCache(scope),next=[],out=[],failures=[];
+  for(const item of files){
+    try{
+      assertConfig();
+      let file=cached.get(item.path),obj=null;
+      if(item.sha&&file?.sha===item.sha){try{obj=TL.parseRepeatMarkdown(file.text);if(!obj.id)obj=null}catch{obj=null}}
+      if(!obj){
+        file=await readFile(item.path);assertConfig();
+        if(!file)throw new Error('ファイルが見つかりません');
+        if(item.sha&&file.sha!==item.sha)throw new Error('読込中にRepeatが更新されました。再読込してください。');
+        obj=TL.parseRepeatMarkdown(file.text||'');if(!obj.id)throw new Error('idがありません');
+      }
+      out.push({...obj,_path:item.path,_sha:file.sha});
+      next.push({path:item.path,sha:file.sha,text:file.text});
+    }catch(e){console.warn(item.path,e);failures.push({path:item.path,message:e?.message||String(e)})}
+  }
+  assertConfig();
+  if(failures.length){const detail=failures.slice(0,3).map(x=>x.path.split('/').pop()).join(', '),more=failures.length>3?` ほか${failures.length-3}件`:'';throw new Error(`Repeat ${files.length}件中${failures.length}件の読込に失敗しました: ${detail}${more}`)}
+  writeRepeatCache(scope,next);
+  return out;
+}
 async function saveMaster(master){const result=await putFile(`${base()}/masters/${master.id}.md`,TL.serializeMaster(master),`TaskLiner master: ${master.title}`);const cached=readMasterCache(),i=cached.findIndex(x=>x.id===master.id),next={id:master.id,title:master.title,aliases:master.aliases||[],status:master.status||'active',estimate:Math.max(0,Math.round(Number(master.estimate)||0))};if(i>=0)cached[i]=next;else cached.push(next);writeMasterCache(cached,{...getMasterCacheMeta(),source:'local-after-save'});return result}
 async function deleteMaster(masterId){if(!masterId)throw new Error('Master IDがありません');const deleted=await deleteFile(`${base()}/masters/${masterId}.md`,`Delete TaskLiner master: ${masterId}`);const cached=readMasterCache().filter(x=>x.id!==masterId);writeMasterCache(cached,{...getMasterCacheMeta(),source:'local-after-delete'});const recent=recentIds().filter(x=>x!==masterId);localStorage.setItem(RECENT_KEY,JSON.stringify(recent));return deleted}
 async function saveRepeat(repeat,options={}){return putFile(`${base()}/repeats/${repeat.id}.md`,TL.serializeRepeat(repeat),`TaskLiner repeat: ${repeat.id}`,options)}
