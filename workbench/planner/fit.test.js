@@ -73,7 +73,7 @@ test('DUO has three independent persistent display calibration controls',()=>{
 test('DUO calibration assets are independently versioned through the import chain',()=>{
  const route=read('../app-routing.js'),controller=read('controller.mjs'),notebook=read('notebook.mjs'),index=read('../index.html');
  const version='20261114-slimrails';
- const repeatVersion='20261123-repeat-create1';
+ const repeatVersion='20261124-repeat-cache1';
  const taskController=read('../taskliner/controller.mjs');
  for (const asset of ['view-markup.mjs','repeat-creator.mjs','template-store.mjs']) {
    assert.ok(taskController.includes(asset+'?v='+repeatVersion));
