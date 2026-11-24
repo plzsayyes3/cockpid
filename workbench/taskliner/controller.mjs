@@ -9,10 +9,10 @@ import './sync.js';
 import './recovery.js';
 import './github-client.js';
 import {createTaskApp} from './app.mjs';
-import {createTemplateStore} from './template-store.mjs?v=20261123-repeat-create1';
-import {setupRepeatCreator} from './repeat-creator.mjs?v=20261123-repeat-create1';
+import {createTemplateStore} from './template-store.mjs?v=20261124-repeat-cache1';
+import {setupRepeatCreator} from './repeat-creator.mjs?v=20261124-repeat-cache1';
 import appMarkup from './app-markup.mjs';
-import viewMarkup from './view-markup.mjs?v=20261123-repeat-create1';
+import viewMarkup from './view-markup.mjs?v=20261124-repeat-cache1';
 
 let instance;
 export function mount(container,{mode='normal'}={}){
@@ -28,7 +28,7 @@ function createInstance(ownerDocument){
   element.style.cssText='height:100%;min-height:0;display:block';
   element.dataset.taskliner='native';
   const root=element.attachShadow({mode:'open'});
-  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file+'?v=20261123-repeat-create1',import.meta.url)}">`).join('');
+  const styles=['app.css','view.css'].map(file=>`<link rel="stylesheet" href="${new URL(file+'?v=20261124-repeat-cache1',import.meta.url)}">`).join('');
   root.innerHTML=styles+`<div class="tl-body">${viewMarkup}</div>`;
   const body=root.querySelector('.tl-body'),$=id=>root.getElementById(id);
   $('tlAppContent').innerHTML=appMarkup;
