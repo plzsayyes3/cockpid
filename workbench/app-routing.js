@@ -42,12 +42,14 @@
     backstage: { key: '8', title: '8 / BACKSTAGE', type: 'iframe', src: 'backstage.html?v=20260925-pj-assign-final1' },
     projecttown: { key: '7', title: '7 / AREA', type: 'iframe', src: 'project-town.html' },
     keyboard: { key: 'c', title: 'C / KEYBOARD', type: 'iframe', src: 'https://plzsayyes3.github.io/Keyboard/?v=c83f529' },
-    stan: { key: 'd', title: 'D / STAN', type: 'page', src: 'stan/' },
+    stan: { key: null, title: 'STAN', type: 'page', src: 'stan/' },
+    inbox: { key: 'd', title: 'D / INBOX', type: 'page', src: 'inbox/' },
     formysons: { key: '5', title: '5 / FOR MY SONS', type: 'iframe', src: 'https://plzsayyes3.github.io/for_my_sons/' }
   });
 
 
   const dockIcons = Object.freeze({
+    inbox: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l2 10v5H2v-5zM2 15h6l2 3h4l2-3h6"/></svg>',
     calendar: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3.5v3M17 3.5v3M3.5 9h17M8 13h2M14 13h2M8 17h2"/></svg>',
     tasks: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l2.3 2.3L16 8.8"/></svg>',
     zen: '<svg class="dock-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h10l4 4V20H5zM15 4.5V9h4"/><path d="M8 16l6.8-6.8 1.8 1.8L9.8 17.8 7 18.5z"/></svg>',
@@ -95,7 +97,7 @@
     ['8', 'backstage', 'Backstage'], ['9', 'onhand', 'On Hand'],
     ['0', 'thinking', 'Thinking'], ['a', 'dictionary', 'Dictionary'],
     ['b', 'board', 'Board'], ['c', 'keyboard', 'Keyboard'],
-    ['d', 'stan', 'Stan'], ['e', 'settings', 'Settings']
+    ['d', 'inbox', 'Inbox'], ['e', 'settings', 'Settings']
   ];
   function buildDock() {
     for (const [groupId, entries] of [['dockPrimary', DOCK_PRIMARY], ['dockExtra', DOCK_EXTRA]]) {
