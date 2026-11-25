@@ -37,6 +37,35 @@ export function rewriteImages(raw, links) {
   }
   return result;
 }
+
+export function repairImageLinks(text,time,links) {
+  const lines=text.split(/\r?\n/), heading=lines.map((l,i)=>l.trim()==="#### ショートメモ"?i:-1).filter(i=>i>=0);
+  if(heading.length!==1)return null;
+  const start=heading[0]+1;
+  let end=lines.length;
+  for(let i=start;i<lines.length;i++)if(/^#{1,6}\s/.test(lines[i])){end=i;break;}
+  const matches=[];
+  for(let i=start;i<end;i++)if(lines[i].startsWith("- "+time+" ")||lines[i]==="- "+time)matches.push(i);
+  if(matches.length!==1)return null;
+  const first=matches[0];let last=first+1;
+  while(last<end&&!/^\S/.test(lines[last]))last++;
+  let block=lines.slice(first,last).join("\n"), next=block;
+  for(const [name,link] of Object.entries(links)){
+    let found=false;
+    for(const variant of new Set([name,"./"+name,encodeURIComponent(name),link])){
+      for(const [prefix,suffix] of [["(",")"],["![[","]]"],["[[","]]"]]){
+        const needle=prefix+variant+suffix;
+        if(next.includes(needle)){found=true;next=next.split(needle).join(prefix==="("?"("+link+")":prefix==="![["?"![画像]("+link+")":"[画像]("+link+")");}
+      }
+    }
+    if(!found)return null;
+  }
+  if(!Object.keys(links).length)return null;
+  if(next===block)return {state:"existing",text};
+  lines.splice(first,last-first,...next.split("\n"));
+  return {state:"repair",text:lines.join(text.includes("\r\n")?"\r\n":"\n")};
+}
+
 export async function transfer(store,entry,report=()=>{}) {
   const p=parse(entry.name);if(!p)throw Error("不正な日付");
   const images=entry.images||[], other=entry.other||[], md=entry.md===undefined?entry.name:entry.md;
@@ -57,7 +86,7 @@ export async function transfer(store,entry,report=()=>{}) {
   }
   const raw=rewriteImages(src?.text||"",links);
   report("重複確認");
-  const next=plan(daily.text,p.time,raw);
+  const next=(!src&&images.length?repairImageLinks(daily.text,p.time,links):null)||plan(daily.text,p.time,raw);
   for(const {name,bin,dest} of binaries){
     report("画像保存: "+name);
     let old=await store.readBinary(dest);
@@ -66,9 +95,9 @@ export async function transfer(store,entry,report=()=>{}) {
     old=await store.readBinary(dest);
     if(!old||old.sha!==bin.sha)throw Error("画像確認失敗: "+name);
   }
-  if(next.state==="new"){report("Daily書込");await store.write(path,next.text,daily.sha);}
+  if(next.state==="new"||next.state==="repair"){report(next.state==="repair"?"既存Daily画像リンク修復":"Daily書込");await store.write(path,next.text,daily.sha);}
   report("反映確認");const check=await store.read(path);
-  if(!check||plan(check.text,p.time,raw).state!=="existing")throw Error("反映を確認できません");
+  if(!check||((!src&&images.length?repairImageLinks(check.text,p.time,links):null)||plan(check.text,p.time,raw)).state!=="existing")throw Error("反映を確認できません");
   // Preserve editable companions in Inbox; do not move them without updating their references.
   if(src){
     report("Inbox再確認");
