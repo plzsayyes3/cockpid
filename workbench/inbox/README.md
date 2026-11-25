@@ -1,6 +1,12 @@
 # Inbox Manager
-Independent preview page; no changes to existing workbench. Fixed mynotebook/main source. Pull before running; preview displays target dates only. Sequential transfer, timestamp UID (seconds, legacy-compatible), different content at same time stops safely. No new marker. Existing Daily required. Attached files excluded (not migrated); use existing tooling separately. Verify Daily and archive before deletion. SHA protects writes. Stop after current item. Do not run old merge or another device simultaneously. Test: node --experimental-default-type=module --test workbench/inbox/transfer.test.js
-
-Images: configured via Settings / Paths / Data / Images (default mynotebook/99_assets). Same repository as Daily required. Group matching timestamp files. Copy and verify binary SHA, update Daily relative image links, archive and verify before source deletion. PencilKit/JSON companions remain in Inbox. Old orphan images with conflicting Daily timestamps are held; no automatic repair. Files too large for Contents API are held. Pull again to refresh settings. Do not run old merge simultaneously.
-
-Workbench top INBOX → DAILY and drawer MERGE TO DAILY now open this same page with ?from=merge, automatically Pull when a token exists; explicit transfer confirmation remains required. D shortcut opens ordinary manager. Old merge implementation is no longer attached to the buttons.
+Sequential transfer from configured Inbox to Daily and Images destinations (same repository).
+Timestamp UID uses seconds, no new marker. Text conflicts retain source Markdown.
+Images move independently even if Daily is missing or UID conflicts: verify destination SHA,
+archive original, verify archive, delete source with SHA. Same-name different image is held.
+Image-only groups never add text; exact existing timestamp and filename links are repaired when possible,
+otherwise report link pending. Retained Markdown can recover previously moved referenced images
+by comparing archive and destination SHA. Editable companions remain in Inbox.
+The UI displays text, image and link results separately; partial success is 要確認.
+Do not run from multiple devices at once. Stop after current item.
+Top INBOX → DAILY and drawer MERGE TO DAILY open the same manager and auto-Pull; D opens manager.
+Test: node --experimental-default-type=module --test workbench/inbox/transfer.test.js
