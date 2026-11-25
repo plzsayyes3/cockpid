@@ -28,6 +28,7 @@ async function boot(mode){if(!token()){$('status')&&($('status').textContent='TO
     daily: Object.freeze({ repo: 'mynotebook', dir: '01_Daily' }),
     techo: Object.freeze({ repo: 'mynotebook', dir: '02_techo' }),
     inbox: Object.freeze({ repo: 'mynotebook', dir: '00_inbox' }),
+    images: Object.freeze({ repo: 'mynotebook', dir: '99_assets' }),
     memo: Object.freeze({ repo: 'mynotebook', dir: '00_inbox' }),
     projects: Object.freeze({ repo: 'gpts', dir: 'projects' }),
     taskliner: Object.freeze({ repo: 'mynotebook', dir: '09_taskchute' })

@@ -18,6 +18,7 @@
     { key: 'daily', label: 'Daily / Merge destination', state: 'LIVE' },
     { key: 'techo', label: 'Techo / Calendar', state: 'LIVE' },
     { key: 'inbox', label: 'Inbox', state: 'LIVE' },
+    { key: 'images', label: 'Images / Merge destination', state: 'LIVE' },
     { key: 'memo', label: 'Short Memo', state: 'LIVE' },
     { key: 'projects', label: 'Project root', state: 'LIVE' },
     { key: 'taskliner', label: 'TaskLiner data', state: 'LIVE' }
