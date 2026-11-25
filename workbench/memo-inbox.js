@@ -119,11 +119,9 @@
     const button = topMergeButton || document.getElementById('topMemoMerge');
     if (!button) return;
     const count = currentFiles.filter(isMergeCandidateFile).length;
-    button.disabled = Boolean(topMergeProgress) || merging || loading || !token() || !count;
-    button.textContent = topMergeProgress || (merging ? 'INBOX → DAILY …' : `INBOX → DAILY${count ? ` · ${count}` : ''}`);
-    button.title = topMergeProgress
-      ? topMergeProgress
-      : (count ? `${count}件のInboxメモをDailyへ統合` : 'Dailyへ統合できるInboxメモはありません');
+    button.disabled = false;
+    button.textContent = 'INBOX → DAILY';
+    button.title = 'Inbox Managerで最新のInboxを取得し、転送を確認します（画像対応）';
   }
 
   function ensureTopMergeUi() {
@@ -288,7 +286,7 @@
     currentFiles = files;
     inboxCount.textContent = String(files.length);
     const mergeButton = document.getElementById('memoInboxMerge');
-    if (mergeButton) mergeButton.disabled = merging || !files.some(isMergeCandidateFile);
+    if (mergeButton) mergeButton.disabled = false;
     syncTopMergeButton();
     if (!files.length) {
       inboxList.innerHTML = '<div class="memo-inbox-empty">未処理Memoはありません。</div>';
@@ -310,7 +308,7 @@
       inboxCount.textContent = '—';
       inboxList.innerHTML = '<div class="memo-inbox-empty">GitHub token が必要です。Battery / Settings → GitHub から設定してください。</div>';
       const mergeButton = document.getElementById('memoInboxMerge');
-      if (mergeButton) mergeButton.disabled = true;
+      if (mergeButton) mergeButton.disabled = false;
       syncTopMergeButton();
       return;
     }
@@ -331,7 +329,7 @@
       inboxCount.textContent = '!';
       inboxList.innerHTML = `<div class="memo-inbox-empty">${esc(String(error?.message || error))}</div>`;
       const mergeButton = document.getElementById('memoInboxMerge');
-      if (mergeButton) mergeButton.disabled = true;
+      if (mergeButton) mergeButton.disabled = false;
     } finally {
       loading = false;
       syncTopMergeButton();
@@ -552,7 +550,7 @@
 
     const mergeButton = document.getElementById('memoInboxMerge');
     merging = true;
-    if (mergeButton) mergeButton.disabled = true;
+    if (mergeButton) mergeButton.disabled = false;
     if (refreshButton) refreshButton.disabled = true;
     syncTopMergeButton();
 
@@ -671,8 +669,9 @@
   const { mergeButton } = ensureMergeUi();
   const topButton = ensureTopMergeUi();
   const areaButton = ensureAreaRoutingUi();
-  mergeButton?.addEventListener('click', mergeInboxToDaily);
-  topButton?.addEventListener('click', mergeInboxToDaily);
+  function openInboxManager() { window.location.assign(new URL('inbox/?from=merge', window.location.href).href); }
+  mergeButton?.addEventListener('click', openInboxManager);
+  topButton?.addEventListener('click', openInboxManager);
   areaButton?.addEventListener('click', () => {
     if (areaRoutePanel?.hidden) showAreaRouting();
     else {
