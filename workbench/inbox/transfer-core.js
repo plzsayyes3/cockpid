@@ -113,7 +113,11 @@ export async function transfer(store,entry,report=()=>{}) {
   if(other.some(n=>!/\.(pkdrawing|json)$/i.test(n)))warn("未対応の付随ファイルはInboxに保留");
   if(src||hasLinks){
     try{
-      report("Daily取得");daily=await store.read(path);if(!daily)throw Error("Dailyが存在しません");
+      report("Daily取得");daily=await store.read(path);
+      if(!daily){
+        if(!src||imageFailure||result.warnings.length)throw Error("Dailyが存在しません（本文を安全に転送できる場合のみ自動作成）");
+        daily={text:"#### ショートメモ\n",sha:undefined};
+      }
       report("重複確認");
       const repair=hasLinks?repairImageLinks(daily.text,p.time,links):null;
       if(src&&!imageFailure&&!result.warnings.length){
@@ -131,7 +135,7 @@ export async function transfer(store,entry,report=()=>{}) {
         result.body=md?"保留":"対象なし";
       }else if(src){result.body="保留";next=repair;}
       if(next&&(next.state==="new"||next.state==="repair")){
-        report(next.state==="repair"?"既存Daily画像リンク修復":"Daily書込");
+        report(next.state==="repair"?"既存Daily画像リンク修復":daily.sha?"Daily書込":"Daily新規作成");
         await store.write(path,next.text,daily.sha);
       }
       if(next){
