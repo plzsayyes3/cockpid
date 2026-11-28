@@ -21,3 +21,30 @@ test("missing Daily never created for orphan image",async()=>{const {files,store
 test("concurrent Daily creation retains source on write failure",async()=>{const {files,store}=mock(null,"memo");store.write=async(p)=>{if(p===daily){files.set(daily,{sha:"concurrent",text:"other"});throw Error("HTTP 422");}};const r=await transfer(store,group([md])[0]);assert.equal(r.state,"held");assert.equal(files.get(daily).text,"other");assert.ok(files.has("00_inbox/"+md));});
 test("different destination image never overwritten or deleted",async()=>{const {files,store}=mock("#### ショートメモ\n","memo",true);const r=await transfer(store,group([md,image])[0]);assert.equal(r.state,"held");assert.equal(files.get("99_assets/"+image).sha,"different");assert.ok(files.has("00_inbox/"+image));assert.ok(files.has("00_inbox/"+md));});
 test("new memo with image transfers both",async()=>{const {files,store}=mock("#### ショートメモ\n","memo");const r=await transfer(store,group([md,image])[0]);assert.equal(r.state,"complete");assert.ok(!files.has("00_inbox/"+md));assert.ok(files.get(daily).text.includes("../99_assets/"+image));});
+
+test("handwriting originals stay in place when the memo transfers", async () => {
+  const png = "../handwriting/assets/" + image;
+  const drawing = png.replace(".png", ".pkdrawing");
+  const { files, store } = mock(null, "手書きメモ\n\n![画像](" + png + ")\n[筆跡原本](" + drawing + ")\n\n文字起こし");
+  files.delete("00_inbox/" + image);
+  files.set(png.slice(3), { sha: "original-image" });
+  files.set(drawing.slice(3), { sha: "original-drawing" });
+  const result = await transfer(store, group([md])[0]);
+  assert.equal(result.state, "complete");
+  assert.ok(files.get(daily).text.includes("](" + png + ")"));
+  assert.ok(files.get(daily).text.includes("](" + drawing + ")"));
+  assert.equal(files.get(png.slice(3)).sha, "original-image");
+  assert.equal(files.get(drawing.slice(3)).sha, "original-drawing");
+  assert.ok(!files.has("99_assets/" + image));
+  assert.ok(!files.has("00_inbox/" + md));
+});
+
+test("missing handwriting original leaves the memo in Inbox", async () => {
+  const png = "../handwriting/assets/" + image;
+  const { files, store } = mock(null, "手書きメモ\n\n![画像](" + png + ")\n[筆跡原本](" + png.replace(".png", ".pkdrawing") + ")");
+  files.delete("00_inbox/" + image);
+  files.set(png.slice(3), { sha: "original-image" });
+  assert.equal((await transfer(store, group([md])[0])).state, "held");
+  assert.ok(files.has("00_inbox/" + md));
+  assert.ok(!files.has(daily));
+});

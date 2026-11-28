@@ -77,6 +77,34 @@ export async function transfer(store,entry,report=()=>{}) {
   let src=null, daily=null, next=null, raw="", verified=false;
   report("Inbox取得");
   if(md){try{src=await store.read(inbox+"/"+md);if(!src)throw Error("Inboxが存在しません");}catch(e){result.body="保留";warn("本文取得失敗: "+e.message);}}
+  // Handwriting originals live outside Inbox and stay there during transfer.
+  const handwritingLinks = {};
+  let handwritingImage = null;
+  if (src) {
+    const stem = p.name.slice(0, -3);
+    const originals = [stem + ".png", stem + ".pkdrawing", stem + ".strokes.json"];
+    const linked = originals.filter(name =>
+      src.text.includes("(" + relativeLink(inbox + "/" + md, "handwriting/assets/" + name) + ")")
+    );
+    if (linked.length) {
+      try {
+        if (!linked.includes(originals[0]) || !linked.includes(originals[1])) {
+          throw Error("画像と筆跡原本のリンクが必要です");
+        }
+        if (images.includes(originals[0])) throw Error("同じIDの画像がInboxにもあります");
+        for (const name of linked) {
+          const target = "handwriting/assets/" + name;
+          if (!(await store.readBinary(target))?.sha) throw Error("原本が見つかりません: " + name);
+          handwritingLinks[relativeLink(inbox + "/" + md, target)] = relativeLink(path, target);
+        }
+        handwritingImage = originals[0];
+      } catch (e) {
+        warn("手書き原本の確認失敗: " + e.message);
+        return { ...result, body: "保留", state: "held" };
+      }
+    }
+  }
+
   // Image movement is independent of the Daily UID decision.
   for(const name of images){
     const item={name,state:"未処理"};result.images.push(item);
@@ -100,7 +128,7 @@ export async function transfer(store,entry,report=()=>{}) {
     const stem=p.name.slice(0,-3);
     const refs=src.text.match(/\d{14}(?:\d{3})?\.(?:png|jpe?g|gif|webp|heic|heif|bmp|tiff?)/gi)||[];
     for(const name of new Set(refs)){
-      if(!imageName(name)||name.replace(/\.[^.]+$/,"")!==stem||images.includes(name))continue;
+      if(!imageName(name)||name.replace(/\.[^.]+$/,"")!==stem||images.includes(name)||name===handwritingImage)continue;
       try{
         const archived=await store.readBinary(inbox+"/archive/"+name), saved=await store.readBinary(assets+"/"+name);
         if(archived&&saved&&archived.sha===saved.sha)links[name]=relativeLink(path,assets+"/"+name);
@@ -122,6 +150,9 @@ export async function transfer(store,entry,report=()=>{}) {
       const repair=hasLinks?repairImageLinks(daily.text,p.time,links):null;
       if(src&&!imageFailure&&!result.warnings.length){
         raw=rewriteImages(src.text,links);
+        for (const [from, to] of Object.entries(handwritingLinks)) {
+          raw = raw.replaceAll("(" + from + ")", "(" + to + ")");
+        }
         try{next=plan(daily.text,p.time,raw);}
         catch(e){
           if(e.code!=="UID_CONFLICT")throw e;
